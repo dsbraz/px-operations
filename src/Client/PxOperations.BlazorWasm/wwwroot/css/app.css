@@ -1,0 +1,52 @@
+:root {
+    color-scheme: light;
+    font-family: "Segoe UI", sans-serif;
+    color: #10233d;
+}
+
+body {
+    margin: 0;
+    background: #eef2f8;
+}
+
+.page {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.page-header {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+    color: #526276;
+}
+
+.lead {
+    margin: 0;
+    color: #435468;
+}
+
+.status-card {
+    padding: 1.5rem;
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 16px 40px rgba(16, 35, 61, 0.08);
+}
+
+.status-card p {
+    margin-bottom: 0;
+}
+
+.status-card.ready {
+    border-left: 6px solid #0f8b4c;
+}
+
+.status-card.error {
+    border-left: 6px solid #c23934;
+}

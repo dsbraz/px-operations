@@ -1,0 +1,84 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pxoperations}
+      POSTGRES_USER: ${POSTGRES_USER:-pxoperations}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pxoperations}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pxoperations} -d ${POSTGRES_DB:-pxoperations}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  server:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    working_dir: /src
+    command:
+      - dotnet
+      - watch
+      - run
+      - --project
+      - src/Server/PxOperations.Api
+      - --no-launch-profile
+      - --urls
+      - http://0.0.0.0:8081
+      - --non-interactive
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://0.0.0.0:8081
+      DOTNET_USE_POLLING_FILE_WATCHER: "1"
+      DOTNET_WATCH_SUPPRESS_EMOJIS: "1"
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=${POSTGRES_DB:-pxoperations};Username=${POSTGRES_USER:-pxoperations};Password=${POSTGRES_PASSWORD:-pxoperations}
+      OpenTelemetry__Otlp__Endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    volumes:
+      - .:/src
+      - server-bin:/src/src/Server/PxOperations.Api/bin
+      - server-obj:/src/src/Server/PxOperations.Api/obj
+      - nuget-cache:/root/.nuget/packages
+
+  client:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    working_dir: /src
+    command:
+      - dotnet
+      - watch
+      - run
+      - --project
+      - src/Client/PxOperations.BlazorWasm
+      - --no-launch-profile
+      - --urls
+      - http://0.0.0.0:8080
+      - --non-interactive
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://0.0.0.0:8080
+      DOTNET_USE_POLLING_FILE_WATCHER: "1"
+      DOTNET_WATCH_SUPPRESS_EMOJIS: "1"
+    depends_on:
+      server:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/src
+      - client-bin:/src/src/Client/PxOperations.BlazorWasm/bin
+      - client-obj:/src/src/Client/PxOperations.BlazorWasm/obj
+      - nuget-cache:/root/.nuget/packages
+
+volumes:
+  postgres-data:
+  nuget-cache:
+  client-bin:
+  client-obj:
+  server-bin:
+  server-obj:

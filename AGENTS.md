@@ -1,0 +1,59 @@
+# Repository Guidelines
+
+## Project Structure & Module Organization
+
+- `src/Server` contains the backend in Clean Architecture:
+  - `PxOperations.Api`: ASP.NET Core host, controllers, HTTP setup.
+  - `PxOperations.Application`: use cases and application contracts.
+  - `PxOperations.Domain`: DDD building blocks and business rules.
+  - `PxOperations.Infrastructure`: EF Core, persistence, and external integrations.
+- `src/Client/PxOperations.BlazorWasm` is the Blazor WebAssembly client.
+- `tests/Server` contains architecture, domain unit, and API integration tests.
+- `tests/Client` contains Blazor component tests.
+- `specs/openapi` is reserved for exported API contracts.
+
+## Build, Test, and Development Commands
+
+- `dotnet build px-operations.sln`: build the full solution.
+- `dotnet test px-operations.sln`: run all tests.
+- `dotnet run --project src/Server/PxOperations.Api`: run the API locally.
+- `dotnet run --project src/Client/PxOperations.BlazorWasm`: run the Blazor client locally.
+- `docker compose up`: start PostgreSQL, API, and client with `dotnet watch`.
+
+Use targeted test runs while developing, for example:
+
+```bash
+dotnet test tests/Server/PxOperations.Domain.UnitTests
+dotnet test tests/Client/PxOperations.BlazorWasm.Tests
+```
+
+## Coding Style & Naming Conventions
+
+- Use 4-space indentation and UTF-8 text files.
+- Keep technical names in English: `Api`, `Application`, `Domain`, `Infrastructure`.
+- Use PascalCase for types and public members, camelCase for locals and parameters.
+- Name test classes after the subject under test, such as `HealthEndpointsTests`.
+- Keep API contracts and routes explicit; prefer plural REST resources under `/api/v1/...`.
+
+## Testing Guidelines
+
+- Backend tests use `xUnit`.
+- Blazor component tests use `bUnit`.
+- Integration tests use `WebApplicationFactory` and `Testcontainers.PostgreSql`.
+- Add or update tests with every behavior change; do not merge architecture or endpoint changes without coverage.
+
+## Commit & Pull Request Guidelines
+
+- This repository has no commit history yet; use short imperative commit messages, for example: `Add readiness endpoint skeleton`.
+- Keep commits focused on one change set.
+- PRs should include:
+  - a brief summary,
+  - impacted paths or modules,
+  - test evidence (`dotnet test ...`),
+  - screenshots only for UI changes.
+
+## Security & Configuration Tips
+
+- Do not commit `.env`, secrets, or connection strings with real credentials.
+- Keep local settings in `.env` and project `appsettings.*.json`.
+- Treat OpenAPI as the public contract for future non-.NET clients.

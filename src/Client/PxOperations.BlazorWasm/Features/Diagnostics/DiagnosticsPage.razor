@@ -1,0 +1,56 @@
+@page "/"
+@inject HealthApiClient HealthApiClient
+
+<PageTitle>Diagnostics</PageTitle>
+
+<section class="page">
+    <header class="page-header">
+        <p class="eyebrow">System diagnostics</p>
+        <h1>API readiness</h1>
+        <p class="lead">This client consumes the public API just like any future external consumer.</p>
+    </header>
+
+    @if (isLoading)
+    {
+        <div class="status-card">
+            <strong>Checking API readiness...</strong>
+        </div>
+    }
+    else if (errorMessage is not null)
+    {
+        <div class="status-card error">
+            <strong>Unavailable</strong>
+            <p>@errorMessage</p>
+        </div>
+    }
+    else
+    {
+        <div class="status-card ready">
+            <strong>@status</strong>
+            <p>The public health endpoint is responding.</p>
+        </div>
+    }
+</section>
+
+@code {
+    private bool isLoading = true;
+    private string status = "Unknown";
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var readiness = await HealthApiClient.GetReadinessAsync();
+            status = readiness?.Status ?? "Unknown";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

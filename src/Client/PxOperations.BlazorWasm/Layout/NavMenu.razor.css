@@ -1,0 +1,21 @@
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-bottom: 1px solid #d7deea;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(10px);
+}
+
+.brand {
+    color: #10233d;
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.subtitle {
+    margin: 0.25rem 0 0;
+    color: #526276;
+}
