@@ -16,7 +16,7 @@ public sealed class DiagnosticsPageTests : TestContext
         Services.AddScoped(_ => CreateClient("""
             {"status":"Ready"}
             """, HttpStatusCode.OK));
-        Services.AddScoped<HealthApiClient>();
+        Services.AddScoped<HealthClient>();
 
         var component = RenderComponent<DiagnosticsPage>();
 
@@ -33,7 +33,7 @@ public sealed class DiagnosticsPageTests : TestContext
         Services.AddScoped(_ => CreateClient("""
             {"status":"Database unavailable"}
             """, HttpStatusCode.ServiceUnavailable));
-        Services.AddScoped<HealthApiClient>();
+        Services.AddScoped<HealthClient>();
 
         var component = RenderComponent<DiagnosticsPage>();
 
