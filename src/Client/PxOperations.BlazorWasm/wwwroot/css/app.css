@@ -35,12 +35,7 @@ body {
 }
 
 .logo { display: flex; align-items: center; gap: 16px; }
-.brq {
-    font-size: 20px; font-weight: 700; letter-spacing: -0.04em;
-    display: flex; align-items: flex-start; gap: 1px;
-    color: var(--text); text-decoration: none;
-}
-.brq sup { font-size: 9px; font-weight: 400; color: var(--muted2); margin-top: 4px; }
+.brq-logo { height: 24px; width: auto; }
 .logo-sep { width: 1px; height: 24px; background: var(--border2); }
 .logo-tag { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 
