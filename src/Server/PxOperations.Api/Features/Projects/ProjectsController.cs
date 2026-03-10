@@ -73,10 +73,6 @@ public sealed class ProjectsController(
         {
             return BadRequest(new ProblemDetails { Detail = ex.Message });
         }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new ProblemDetails { Detail = ex.Message });
-        }
     }
 
     [HttpPatch("{id:int}")]
@@ -107,10 +103,6 @@ public sealed class ProjectsController(
             return Ok(ProjectMappings.ToResponse(project));
         }
         catch (BusinessRuleValidationException ex)
-        {
-            return BadRequest(new ProblemDetails { Detail = ex.Message });
-        }
-        catch (ArgumentException ex)
         {
             return BadRequest(new ProblemDetails { Detail = ex.Message });
         }

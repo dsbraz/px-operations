@@ -1,4 +1,7 @@
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
+using PxOperations.Api.Features.Projects;
 using PxOperations.Api.Observability;
 using PxOperations.Infrastructure.DependencyInjection;
 using PxOperations.Infrastructure.Persistence;
@@ -26,6 +29,8 @@ builder.Services.AddCors(options =>
     });
 });
 builder.Services.AddApiOpenTelemetry(builder.Configuration, builder.Environment);
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateProjectRequestValidator>();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
 var app = builder.Build();

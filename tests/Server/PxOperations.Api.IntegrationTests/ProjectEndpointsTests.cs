@@ -173,6 +173,107 @@ public sealed class ProjectEndpointsTests(PostgreSqlFixture fixture)
         Assert.All(projects, p => Assert.Equal("DC1", p.Dc));
     }
 
+    [Fact]
+    public async Task Create_should_return_400_when_dc_is_invalid()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+
+        var request = ValidRequest with { Dc = "DC99" };
+        var response = await client.PostAsJsonAsync("/api/projects", request);
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Dc", body);
+    }
+
+    [Fact]
+    public async Task Create_should_return_400_when_type_is_invalid()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+
+        var request = ValidRequest with { Type = "Invalido" };
+        var response = await client.PostAsJsonAsync("/api/projects", request);
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Type", body);
+    }
+
+    [Fact]
+    public async Task Create_should_return_400_when_name_exceeds_max_length()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+
+        var request = ValidRequest with { Name = new string('A', 201) };
+        var response = await client.PostAsJsonAsync("/api/projects", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Create_should_return_400_when_start_date_format_is_invalid()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+
+        var request = ValidRequest with { StartDate = "not-a-date" };
+        var response = await client.PostAsJsonAsync("/api/projects", request);
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("StartDate", body);
+    }
+
+    [Fact]
+    public async Task Create_should_return_400_with_multiple_errors()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+
+        var request = new CreateProjectRequest(
+            Dc: "DC99",
+            Status: "invalid",
+            Name: "",
+            Client: null,
+            Type: "invalid",
+            StartDate: "not-a-date",
+            EndDate: null,
+            DeliveryManager: null,
+            Renewal: null,
+            RenewalObservation: null);
+
+        var response = await client.PostAsJsonAsync("/api/projects", request);
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Dc", body);
+        Assert.Contains("Status", body);
+        Assert.Contains("Name", body);
+        Assert.Contains("Type", body);
+        Assert.Contains("StartDate", body);
+    }
+
+    [Fact]
+    public async Task Update_should_accept_partial_request()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+
+        var createResponse = await client.PostAsJsonAsync("/api/projects", ValidRequest);
+        var created = await createResponse.Content.ReadFromJsonAsync<ProjectResponse>();
+
+        var patchRequest = new UpdateProjectRequest(Name: "Partial Update");
+        var patchContent = JsonContent.Create(patchRequest);
+        var response = await client.PatchAsync($"/api/projects/{created!.Id}", patchContent);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var updated = await response.Content.ReadFromJsonAsync<ProjectResponse>();
+        Assert.Equal("Partial Update", updated!.Name);
+    }
+
     private static async Task CleanProjectsAsync(ApiWebApplicationFactory factory)
     {
         using var scope = factory.Services.CreateScope();
