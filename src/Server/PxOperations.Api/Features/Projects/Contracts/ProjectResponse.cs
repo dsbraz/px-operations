@@ -1,6 +1,7 @@
-namespace PxOperations.Api.Features.Projects;
+namespace PxOperations.Api.Features.Projects.Contracts;
 
-public sealed record CreateProjectRequest(
+public sealed record ProjectResponse(
+    int Id,
     string Dc,
     string Status,
     string Name,
@@ -9,5 +10,5 @@ public sealed record CreateProjectRequest(
     string? StartDate,
     string? EndDate,
     string? DeliveryManager,
-    string? Renewal,
+    string Renewal,
     string? RenewalObservation);

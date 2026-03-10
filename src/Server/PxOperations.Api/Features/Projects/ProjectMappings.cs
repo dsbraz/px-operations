@@ -1,3 +1,4 @@
+using PxOperations.Api.Features.Projects.Contracts;
 using PxOperations.Domain.Projects;
 
 namespace PxOperations.Api.Features.Projects;

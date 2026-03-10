@@ -1,4 +1,4 @@
-namespace PxOperations.Api.Features.Projects;
+namespace PxOperations.Api.Features.Projects.Contracts;
 
 public sealed record UpdateProjectRequest(
     string? Dc = null,

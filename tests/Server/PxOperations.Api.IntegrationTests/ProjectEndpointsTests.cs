@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
-using PxOperations.Api.Features.Projects;
+using PxOperations.Api.Features.Projects.Contracts;
 using PxOperations.Infrastructure.Persistence;
 
 namespace PxOperations.Api.IntegrationTests;

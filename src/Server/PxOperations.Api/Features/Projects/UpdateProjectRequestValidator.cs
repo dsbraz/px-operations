@@ -1,4 +1,5 @@
 using FluentValidation;
+using PxOperations.Api.Features.Projects.Contracts;
 
 namespace PxOperations.Api.Features.Projects;
 
