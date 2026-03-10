@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using PxOperations.Api.Contracts;
 using PxOperations.Application.Diagnostics;
 
-namespace PxOperations.Api.Controllers;
+namespace PxOperations.Api.Features.Health;
 
 [ApiController]
 [Route("health")]

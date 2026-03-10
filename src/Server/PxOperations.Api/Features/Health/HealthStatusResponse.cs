@@ -1,3 +1,3 @@
-namespace PxOperations.Api.Contracts;
+namespace PxOperations.Api.Features.Health;
 
 public sealed record HealthStatusResponse(string Status);

@@ -1,13 +1,21 @@
+using Microsoft.EntityFrameworkCore;
 using PxOperations.Api.Observability;
 using PxOperations.Infrastructure.DependencyInjection;
+using PxOperations.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProblemDetails();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddOpenApi();
-builder.Services.AddSwaggerGen();
+builder.Services.AddOpenApi(options =>
+{
+    options.AddOperationTransformer((operation, context, ct) =>
+    {
+        operation.OperationId = context.Description.ActionDescriptor.RouteValues["action"];
+        return Task.CompletedTask;
+    });
+});
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("ClientDevelopment", policy =>
@@ -26,9 +34,11 @@ app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    dbContext.Database.Migrate();
+
     app.MapOpenApi();
-    app.UseSwagger();
-    app.UseSwaggerUI();
     app.UseCors("ClientDevelopment");
 }
 
