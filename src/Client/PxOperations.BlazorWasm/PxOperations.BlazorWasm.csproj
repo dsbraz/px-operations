@@ -12,6 +12,19 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.3" PrivateAssets="all" />
+    <PackageReference Include="NSwag.ApiDescription.Client" Version="14.6.3">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <OpenApiReference Include="..\..\..\specs\openapi\PxOperations.Api.json"
+                      CodeGenerator="NSwagCSharp"
+                      Namespace="PxOperations.BlazorWasm.Api"
+                      ClassName="{controller}Client"
+                      OutputPath="PxOperationsApiClient.cs"
+                      Options="/UseBaseUrl:false /InjectHttpClient:true /DisposeHttpClient:false /OperationGenerationMode:MultipleClientsFromFirstTagAndOperationId /GenerateClientInterfaces:false /GenerateExceptionClasses:true /GenerateDtoTypes:true /JsonLibrary:SystemTextJson" />
   </ItemGroup>
 
 </Project>

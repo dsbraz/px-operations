@@ -13,6 +13,7 @@ builder.Services.AddScoped(_ => new HttpClient
 {
     BaseAddress = new Uri(apiBaseUrl, UriKind.Absolute)
 });
-builder.Services.AddScoped<HealthApiClient>();
+builder.Services.AddScoped<HealthClient>();
+builder.Services.AddScoped<ProjectsClient>();
 
 await builder.Build().RunAsync();

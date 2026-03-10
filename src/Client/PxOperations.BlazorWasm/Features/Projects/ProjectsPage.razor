@@ -1,0 +1,334 @@
+@page "/projects"
+
+<PageTitle>Base de Projetos · Operations PX</PageTitle>
+
+<!-- PAGE ACTIONS BAR -->
+<div class="page-actions-bar">
+    <button class="btn btn-ghost">&#8595; Exportar CSV</button>
+    <button class="btn btn-purple" @onclick="OpenCreateModal">+ Novo Projeto</button>
+</div>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+    <div class="stat p">
+        <div class="sico p">&#9672;</div>
+        <div><div class="sval">@projects.Count</div><div class="slbl">Projetos</div></div>
+    </div>
+    <div class="stat g">
+        <div class="sico g">&#10003;</div>
+        <div><div class="sval">@ActiveCount</div><div class="slbl">Em andamento</div></div>
+    </div>
+    <div class="stat b">
+        <div class="sico b">&#9678;</div>
+        <div><div class="sval">@ClientCount</div><div class="slbl">Clientes</div></div>
+    </div>
+    <div class="stat o">
+        <div class="sico o">&#9873;</div>
+        <div><div class="sval">@ExpiringIn60DaysCount</div><div class="slbl">Vencem em 60d</div></div>
+    </div>
+    <div class="stat b">
+        <div class="sico b">&#8635;</div>
+        <div><div class="sval">@RenewingCount</div><div class="slbl">Em renovação</div></div>
+    </div>
+    <div class="stat g">
+        <div class="sico g">&#9733;</div>
+        <div><div class="sval">@ApprovedRenewalCount</div><div class="slbl">Aprovadas</div></div>
+    </div>
+</div>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+    <div class="search-wrap">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="M21 21l-4.35-4.35"/>
+        </svg>
+        <input type="text" @bind="searchTerm" @bind:event="oninput" placeholder="Buscar projeto ou cliente&hellip;" />
+    </div>
+    <select @bind="filterDc">
+        <option value="">Todos os DCs</option>
+        <option value="DC1">DC1</option>
+        <option value="DC2">DC2</option>
+        <option value="DC3">DC3</option>
+        <option value="DC4">DC4</option>
+        <option value="DC5">DC5</option>
+        <option value="DC6">DC6</option>
+    </select>
+    <select @bind="filterStatus">
+        <option value="">Todos os Status</option>
+        <option value="Em andamento">Em andamento</option>
+        <option value="Programado">Programado</option>
+        <option value="Encerrado">Encerrado</option>
+    </select>
+    <select @bind="filterType">
+        <option value="">Todos os Tipos</option>
+        <option value="Squad">Squad</option>
+        <option value="Escopo Fechado">Escopo Fechado</option>
+        <option value="Alocação">Alocação</option>
+    </select>
+    <select @bind="filterRenewal">
+        <option value="">Todas as Renovações</option>
+        <option value="Aprovada">&#10003; Aprovada</option>
+        <option value="Em andamento">&#8635; Em andamento</option>
+        <option value="Pendente">&#9873; Pendente</option>
+        <option value="None">Sem status</option>
+    </select>
+    <div class="view-tabs">
+        <button class="vtab @(activeTab == "lista" ? "active" : "")" @onclick='() => activeTab = "lista"'>Lista</button>
+        <button class="vtab @(activeTab == "renovacoes" ? "active" : "")" @onclick='() => activeTab = "renovacoes"'>Renovações</button>
+    </div>
+</div>
+
+<!-- WEEKLY PULSE -->
+<div class="pulse-wrap">
+    <div class="pulse-header">
+        <div class="pulse-hd-left">
+            <div class="pulse-dot"></div>
+            <span class="pulse-title">O que mudou essa semana</span>
+        </div>
+        <span class="pulse-chevron">&#9662;</span>
+    </div>
+</div>
+
+@if (activeTab == "lista")
+{
+    <!-- TABLE HEADER -->
+    <div class="table-header">
+        <div class="th-left">
+            <span class="th-label">Projetos</span>
+            <span class="th-count">@FilteredProjects.Count @(FilteredProjects.Count == 1 ? "projeto" : "projetos")</span>
+        </div>
+        <button class="collapse-btn">
+            <span>Minimizar lista</span>
+            <span>&#9662;</span>
+        </button>
+    </div>
+
+    <!-- TABLE CONTENT -->
+    <div class="table-wrap">
+        @if (isLoading)
+        {
+            <div class="status-card" style="margin:16px 0">
+                <strong>Carregando projetos...</strong>
+            </div>
+        }
+        else if (errorMessage is not null)
+        {
+            <div class="status-card error" style="margin:16px 0">
+                <strong>Erro</strong>
+                <p>@errorMessage</p>
+            </div>
+        }
+        else if (!FilteredProjects.Any())
+        {
+            <div class="empty">
+                <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+                    <polygon points="28,4 52,18 52,38 28,52 4,38 4,18" stroke="#4B148C" stroke-width="1.5"/>
+                    <polygon points="28,14 42,22 42,34 28,42 14,34 14,22" stroke="#4B148C" stroke-width="1"/>
+                </svg>
+                <p style="font-weight:700;font-size:14px;margin-bottom:4px">Nenhum projeto encontrado</p>
+                <p style="font-size:12px;color:var(--muted2)">Ajuste os filtros ou adicione um novo projeto</p>
+            </div>
+        }
+        else
+        {
+            <table>
+                <thead>
+                    <tr>
+                        <th>DC</th>
+                        <th>Projeto</th>
+                        <th>Tipo</th>
+                        <th>Status</th>
+                        <th>Início</th>
+                        <th>Fim</th>
+                        <th>Dias Rest.</th>
+                        <th>Renovação</th>
+                        <th>DM</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var project in FilteredProjects)
+                    {
+                        <tr>
+                            <td><span class="dc-tag">@project.Dc</span></td>
+                            <td>
+                                <div class="proj-name">@project.Name</div>
+                                <div class="proj-cli">@(project.Client ?? "—")</div>
+                            </td>
+                            <td><span class="tbadge @GetTypeBadgeClass(project.Type)">@project.Type</span></td>
+                            <td>
+                                <span class="sbadge @GetStatusBadgeClass(project.Status)">
+                                    @GetStatusDot(project.Status) @project.Status
+                                </span>
+                            </td>
+                            <td>@FormatDate(project.StartDate)</td>
+                            <td>@FormatDate(project.EndDate)</td>
+                            <td>@RenderRemainingDays(project.EndDate)</td>
+                            <td>
+                                <span class="rbadge @GetRenewalBadgeClass(project.Renewal)">
+                                    @GetRenewalIcon(project.Renewal)
+                                    @(project.Renewal == "None" ? "—" : project.Renewal)
+                                </span>
+                            </td>
+                            <td class="dm-txt">@(project.DeliveryManager ?? "—")</td>
+                            <td>
+                                <div class="row-acts">
+                                    <button class="ibtn" @onclick="() => OpenEditModal(project.Id)" title="Editar">
+                                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                        </svg>
+                                    </button>
+                                    <button class="ibtn del" @onclick="() => DeleteProject(project.Id)" title="Remover">
+                                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+}
+else
+{
+    <!-- RENOVAÇÕES VIEW (visual only) -->
+    <div class="renov-view">
+        <div class="renov-controls">
+            <select disabled><option>2026</option></select>
+            <select disabled><option>Ano completo</option></select>
+            <select disabled><option value="">Todos os DCs</option></select>
+            <div class="renov-indicator">
+                <div class="ri-main">
+                    <div class="ri-pct">—</div>
+                    <div class="ri-lbl">Em breve</div>
+                    <div class="ri-bar-wrap"><div class="ri-bar-fill" style="width:0%"></div></div>
+                </div>
+                <div class="ri-sep"></div>
+                <div class="ri-breakdown">
+                    <div class="ri-item"><div class="ri-num aprov">—</div><div class="ri-sub">Aprovadas</div></div>
+                    <div class="ri-item"><div class="ri-num andamento">—</div><div class="ri-sub">Em trat.</div></div>
+                    <div class="ri-item"><div class="ri-num pend">—</div><div class="ri-sub">Pendentes</div></div>
+                    <div class="ri-item"><div class="ri-num" style="color:var(--muted)">—</div><div class="ri-sub">Sem status</div></div>
+                </div>
+            </div>
+        </div>
+        <div class="empty" style="padding:40px">
+            <p style="font-size:13px;font-weight:600;color:var(--muted)">Vista de renovações em desenvolvimento</p>
+        </div>
+    </div>
+}
+
+<!-- MODAL -->
+@if (showModal)
+{
+    <div class="overlay open" @onclick="CloseModalOnOverlay">
+        <div class="modal" @onclick:stopPropagation>
+            <div class="modal-top">
+                <div>
+                    <div class="modal-ttl">@(editingProjectId.HasValue ? "Editar Projeto" : "Novo Projeto")</div>
+                    <div class="modal-sub">@(editingProjectId.HasValue ? "Atualize os dados do projeto" : "Preencha os dados do projeto")</div>
+                </div>
+                <button class="mcls" @onclick="CloseModal">&#215;</button>
+            </div>
+
+            @if (modalError is not null)
+            {
+                <div class="status-card error" style="margin-bottom:16px;padding:12px 16px;">
+                    <p>@modalError</p>
+                </div>
+            }
+
+            <div class="fgrid">
+                <div class="fg">
+                    <label>DC</label>
+                    <select @bind="formDc">
+                        <option value="DC1">DC1</option>
+                        <option value="DC2">DC2</option>
+                        <option value="DC3">DC3</option>
+                        <option value="DC4">DC4</option>
+                        <option value="DC5">DC5</option>
+                        <option value="DC6">DC6</option>
+                    </select>
+                </div>
+                <div class="fg">
+                    <label>Status do Projeto</label>
+                    <select @bind="formStatus">
+                        <option value="Em andamento">Em andamento</option>
+                        <option value="Programado">Programado</option>
+                        <option value="Encerrado">Encerrado</option>
+                    </select>
+                </div>
+                <div class="fg full">
+                    <label>Nome do Projeto</label>
+                    <input type="text" @bind="formName" placeholder="Ex: Portal CSC" maxlength="200" />
+                </div>
+                <div class="fg">
+                    <label>Cliente</label>
+                    <input type="text" @bind="formClient" placeholder="Ex: CPFL" maxlength="200" />
+                </div>
+                <div class="fg">
+                    <label>Tipo</label>
+                    <select @bind="formType">
+                        <option value="Squad">Squad</option>
+                        <option value="Escopo Fechado">Escopo Fechado</option>
+                        <option value="Alocação">Alocação</option>
+                    </select>
+                </div>
+                <div class="fg">
+                    <label>Início</label>
+                    <input type="date" @bind="formStartDate" />
+                </div>
+                <div class="fg">
+                    <label>Fim</label>
+                    <input type="date" @bind="formEndDate" />
+                </div>
+                <div class="fg full">
+                    <label>Delivery Manager</label>
+                    <select @bind="formDeliveryManager">
+                        <option value="">Sem Delivery Manager</option>
+                        <option value="Pedro Vieira">Pedro Vieira (DC1)</option>
+                        <option value="Flavia de Castro">Flavia de Castro (DC2)</option>
+                        <option value="Juliana Pestana">Juliana Pestana (DC3)</option>
+                        <option value="Matheus Sieiro">Matheus Sieiro (DC4)</option>
+                        <option value="Filipe Bertoncini">Filipe Bertoncini (DC5)</option>
+                    </select>
+                </div>
+                <div class="fg-divider"><span>Renovação</span></div>
+                <div class="fg full">
+                    <label>Status de Renovação</label>
+                    <select @bind="formRenewal">
+                        <option value="None">— Sem status</option>
+                        <option value="Pendente">&#9873; Pendente</option>
+                        <option value="Em andamento">&#8635; Em andamento</option>
+                        <option value="Aprovada">&#10003; Aprovada</option>
+                    </select>
+                </div>
+                <div class="fg full">
+                    <label>Observação sobre renovação</label>
+                    <textarea @bind="formRenewalObservation"
+                              placeholder="Ex: Proposta enviada, aguardando aprovação do sponsor"
+                              maxlength="500"></textarea>
+                </div>
+            </div>
+
+            <div class="mfoot">
+                <button class="btn btn-ghost" @onclick="CloseModal">Cancelar</button>
+                <button class="btn btn-purple" @onclick="SaveProject" disabled="@isSaving">
+                    @(isSaving ? "Salvando..." : "Salvar Projeto")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- TOAST -->
+<div class="toast @(toastMessage is not null ? "show" : "")">
+    <span style="color:var(--green);font-size:14px">&#10003;</span>
+    <span>@toastMessage</span>
+</div>

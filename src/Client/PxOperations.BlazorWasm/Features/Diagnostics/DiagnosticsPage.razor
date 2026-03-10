@@ -1,5 +1,4 @@
 @page "/"
-@inject HealthApiClient HealthApiClient
 
 <PageTitle>Diagnostics</PageTitle>
 
@@ -31,26 +30,3 @@
         </div>
     }
 </section>
-
-@code {
-    private bool isLoading = true;
-    private string status = "Unknown";
-    private string? errorMessage;
-
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            var readiness = await HealthApiClient.GetReadinessAsync();
-            status = readiness?.Status ?? "Unknown";
-        }
-        catch (Exception ex)
-        {
-            errorMessage = ex.Message;
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-}
