@@ -43,7 +43,7 @@
             <circle cx="11" cy="11" r="8"/>
             <path d="M21 21l-4.35-4.35"/>
         </svg>
-        <input type="text" @bind="searchTerm" @bind:event="oninput" placeholder="Buscar projeto ou cliente&hellip;" />
+        <input type="text" @bind="searchTerm" @bind:event="oninput" placeholder="Buscar projeto ou cliente..." />
     </div>
     <select @bind="filterDc">
         <option value="">Todos os DCs</option>
@@ -74,19 +74,130 @@
         <option value="None">Sem status</option>
     </select>
     <div class="view-tabs">
-        <button class="vtab @(activeTab == "lista" ? "active" : "")" @onclick='() => activeTab = "lista"'>Lista</button>
+        <button class="vtab @(activeTab == "lista"      ? "active" : "")" @onclick='() => activeTab = "lista"'>Lista</button>
+        <button class="vtab @(activeTab == "kanban"     ? "active" : "")" @onclick='() => activeTab = "kanban"'>Kanban</button>
         <button class="vtab @(activeTab == "renovacoes" ? "active" : "")" @onclick='() => activeTab = "renovacoes"'>Renovações</button>
     </div>
 </div>
 
 <!-- WEEKLY PULSE -->
 <div class="pulse-wrap">
-    <div class="pulse-header">
+    <div class="pulse-header @(pulseOpen ? "" : "collapsed")" @onclick="TogglePulse">
         <div class="pulse-hd-left">
             <div class="pulse-dot"></div>
             <span class="pulse-title">O que mudou essa semana</span>
+            <span class="pulse-subtitle">@WeekLabel</span>
         </div>
-        <span class="pulse-chevron">&#9662;</span>
+        <span class="pulse-chevron @(pulseOpen ? "open" : "")">&#9662;</span>
+    </div>
+    <div class="pulse-body @(pulseOpen ? "open" : "")">
+        <div class="pulse-inner">
+
+            <!-- Novos programados -->
+            <div class="pulse-card pc-new">
+                <div class="pc-head">
+                    <div class="pc-icon">&#9672;</div>
+                    <div class="pc-count">@PulseNewScheduled.Count</div>
+                </div>
+                <div class="pc-label">Novos programados</div>
+                <div class="pc-items">
+                    @if (PulseNewScheduled.Any())
+                    {
+                        @foreach (var p in PulseNewScheduled.Take(3))
+                        {
+                            <div class="pc-item">@p.Name</div>
+                        }
+                        @if (PulseNewScheduled.Count > 3)
+                        {
+                            <div class="pc-item-more">+@(PulseNewScheduled.Count - 3) mais</div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="pc-empty">Nenhum esta semana</div>
+                    }
+                </div>
+            </div>
+
+            <!-- Iniciados semana anterior -->
+            <div class="pulse-card pc-start">
+                <div class="pc-head">
+                    <div class="pc-icon">&#9654;</div>
+                    <div class="pc-count">@PulseStartedLastWeek.Count</div>
+                </div>
+                <div class="pc-label">Iniciados semana ant.</div>
+                <div class="pc-items">
+                    @if (PulseStartedLastWeek.Any())
+                    {
+                        @foreach (var p in PulseStartedLastWeek.Take(3))
+                        {
+                            <div class="pc-item">@p.Name</div>
+                        }
+                        @if (PulseStartedLastWeek.Count > 3)
+                        {
+                            <div class="pc-item-more">+@(PulseStartedLastWeek.Count - 3) mais</div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="pc-empty">Nenhum na semana anterior</div>
+                    }
+                </div>
+            </div>
+
+            <!-- Encerrados semana anterior -->
+            <div class="pulse-card pc-end">
+                <div class="pc-head">
+                    <div class="pc-icon">&#9632;</div>
+                    <div class="pc-count">@PulseEndedLastWeek.Count</div>
+                </div>
+                <div class="pc-label">Encerrados semana ant.</div>
+                <div class="pc-items">
+                    @if (PulseEndedLastWeek.Any())
+                    {
+                        @foreach (var p in PulseEndedLastWeek.Take(3))
+                        {
+                            <div class="pc-item">@p.Name</div>
+                        }
+                        @if (PulseEndedLastWeek.Count > 3)
+                        {
+                            <div class="pc-item-more">+@(PulseEndedLastWeek.Count - 3) mais</div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="pc-empty">Nenhum na semana anterior</div>
+                    }
+                </div>
+            </div>
+
+            <!-- Renovações aprovadas -->
+            <div class="pulse-card pc-renew">
+                <div class="pc-head">
+                    <div class="pc-icon">&#10003;</div>
+                    <div class="pc-count">@PulseRenewalApproved.Count</div>
+                </div>
+                <div class="pc-label">Renova&ccedil;&otilde;es aprovadas</div>
+                <div class="pc-items">
+                    @if (PulseRenewalApproved.Any())
+                    {
+                        @foreach (var p in PulseRenewalApproved.Take(3))
+                        {
+                            <div class="pc-item">@p.Name</div>
+                        }
+                        @if (PulseRenewalApproved.Count > 3)
+                        {
+                            <div class="pc-item-more">+@(PulseRenewalApproved.Count - 3) mais</div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="pc-empty">Nenhuma aprovada</div>
+                    }
+                </div>
+            </div>
+
+        </div>
     </div>
 </div>
 
@@ -98,14 +209,14 @@
             <span class="th-label">Projetos</span>
             <span class="th-count">@FilteredProjects.Count @(FilteredProjects.Count == 1 ? "projeto" : "projetos")</span>
         </div>
-        <button class="collapse-btn">
-            <span>Minimizar lista</span>
-            <span>&#9662;</span>
+        <button class="collapse-btn" @onclick="ToggleTable">
+            <span>@(tableOpen ? "Minimizar lista" : "Expandir lista")</span>
+            <span>@(tableOpen ? "▲" : "▼")</span>
         </button>
     </div>
 
     <!-- TABLE CONTENT -->
-    <div class="table-wrap">
+    <div class="table-wrap @(tableOpen ? "open" : "")" style="@(tableOpen ? "" : "display:none")"  >
         @if (isLoading)
         {
             <div class="status-card" style="margin:16px 0">
@@ -195,32 +306,188 @@
         }
     </div>
 }
+else if (activeTab == "kanban")
+{
+    <!-- KANBAN VIEW -->
+    <div class="kanban-wrap">
+        <div class="kanban-controls">
+            <label>Agrupar por</label>
+            <div class="kanban-group-tabs">
+                <button class="kgtab @(kanbanGroupBy == "status"  ? "active" : "")" @onclick='() => kanbanGroupBy = "status"'>Status</button>
+                <button class="kgtab @(kanbanGroupBy == "renewal" ? "active" : "")" @onclick='() => kanbanGroupBy = "renewal"'>Renova&ccedil;&atilde;o</button>
+                <button class="kgtab @(kanbanGroupBy == "dc"      ? "active" : "")" @onclick='() => kanbanGroupBy = "dc"'>DC</button>
+            </div>
+        </div>
+        <div class="kanban-board">
+            @foreach (var col in KanbanColumns)
+            {
+                var colKey = col.Key;
+                <div class="kanban-column @col.ColorClass">
+                    <div class="kanban-col-header">
+                        <span class="kanban-col-title">@col.Label</span>
+                        <span class="kanban-col-count">@col.Items.Count</span>
+                    </div>
+                    <div class="kanban-col-body @(dragOverColumnKey == colKey ? "drag-over" : "")"
+                         @ondragover:preventDefault
+                         @ondragenter="() => OnDragEnter(colKey)"
+                         @ondragleave="() => OnDragLeave(colKey)"
+                         @ondrop="() => OnDrop(colKey)">
+                        @if (col.Items.Any())
+                        {
+                            @foreach (var p in col.Items)
+                            {
+                                var proj = p;
+                                <div class="kanban-card @(draggedProject?.Id == proj.Id ? "dragging" : "")"
+                                     draggable="true"
+                                     @ondragstart="() => OnDragStart(proj)"
+                                     @ondragend="OnDragEnd"
+                                     @onclick="() => OpenEditModal(proj.Id)">
+                                    <div class="kanban-card-top">
+                                        <span class="dc-tag">@proj.Dc</span>
+                                        <span class="sbadge @GetStatusBadgeClass(proj.Status)">
+                                            @GetStatusDot(proj.Status) @proj.Status
+                                        </span>
+                                    </div>
+                                    <div class="kanban-card-name">@proj.Name</div>
+                                    <div class="kanban-card-meta">
+                                        <span>@(proj.Client ?? "—")</span>
+                                        <span class="kanban-card-sep">·</span>
+                                        <span class="tbadge @GetTypeBadgeClass(proj.Type)">@proj.Type</span>
+                                    </div>
+                                    <div class="kanban-card-dates">
+                                        @FormatDate(proj.StartDate)
+                                        <span class="kanban-card-sep">→</span>
+                                        @FormatDate(proj.EndDate)
+                                        @RenderRemainingDays(proj.EndDate)
+                                    </div>
+                                    <div>
+                                        <span class="rbadge @GetRenewalBadgeClass(proj.Renewal)">
+                                            @GetRenewalIcon(proj.Renewal) @(proj.Renewal == "None" ? "—" : proj.Renewal)
+                                        </span>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(proj.DeliveryManager))
+                                    {
+                                        <div class="kanban-card-dm">@proj.DeliveryManager</div>
+                                    }
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="kanban-empty">Nenhum projeto</div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
 else
 {
-    <!-- RENOVAÇÕES VIEW (visual only) -->
+    <!-- RENOVAÇÕES VIEW -->
     <div class="renov-view">
+
+        <!-- CONTROLS + INDICATOR -->
         <div class="renov-controls">
-            <select disabled><option>2026</option></select>
-            <select disabled><option>Ano completo</option></select>
-            <select disabled><option value="">Todos os DCs</option></select>
+            <select @bind="renovYear">
+                <option value="2025">2025</option>
+                <option value="2026">2026</option>
+                <option value="2027">2027</option>
+            </select>
+            <select @bind="renovPeriod">
+                <option value="ano">Ano completo</option>
+                <option value="q1">Q1 (Jan–Mar)</option>
+                <option value="q2">Q2 (Abr–Jun)</option>
+                <option value="q3">Q3 (Jul–Set)</option>
+                <option value="q4">Q4 (Out–Dez)</option>
+            </select>
+            <select @bind="renovDc">
+                <option value="">Todos os DCs</option>
+                <option value="DC1">DC1</option>
+                <option value="DC2">DC2</option>
+                <option value="DC3">DC3</option>
+                <option value="DC4">DC4</option>
+                <option value="DC5">DC5</option>
+                <option value="DC6">DC6</option>
+            </select>
+
             <div class="renov-indicator">
                 <div class="ri-main">
-                    <div class="ri-pct">—</div>
-                    <div class="ri-lbl">Em breve</div>
-                    <div class="ri-bar-wrap"><div class="ri-bar-fill" style="width:0%"></div></div>
+                    <div class="ri-pct">@RenovCoveragePct%</div>
+                    <div class="ri-lbl">Cobertura @RenovPeriodLabel @renovYear@(string.IsNullOrEmpty(renovDc) ? "" : $" · {renovDc}")</div>
+                    <div class="ri-bar-wrap"><div class="ri-bar-fill" style="width:@(RenovCoveragePct)%"></div></div>
                 </div>
                 <div class="ri-sep"></div>
                 <div class="ri-breakdown">
-                    <div class="ri-item"><div class="ri-num aprov">—</div><div class="ri-sub">Aprovadas</div></div>
-                    <div class="ri-item"><div class="ri-num andamento">—</div><div class="ri-sub">Em trat.</div></div>
-                    <div class="ri-item"><div class="ri-num pend">—</div><div class="ri-sub">Pendentes</div></div>
-                    <div class="ri-item"><div class="ri-num" style="color:var(--muted)">—</div><div class="ri-sub">Sem status</div></div>
+                    <div class="ri-item"><div class="ri-num aprov">@RenovApproved</div><div class="ri-sub">Aprovadas</div></div>
+                    <div class="ri-item"><div class="ri-num andamento">@RenovInProgress</div><div class="ri-sub">Em trat.</div></div>
+                    <div class="ri-item"><div class="ri-num pend">@RenovPending</div><div class="ri-sub">Pendentes</div></div>
+                    <div class="ri-item"><div class="ri-num" style="color:var(--muted)">@RenovNoStatus</div><div class="ri-sub">Sem status</div></div>
                 </div>
             </div>
         </div>
-        <div class="empty" style="padding:40px">
-            <p style="font-size:13px;font-weight:600;color:var(--muted)">Vista de renovações em desenvolvimento</p>
+
+        <!-- DC BARS — only when "Todos os DCs" -->
+        @if (string.IsNullOrEmpty(renovDc))
+        {
+            <div class="dc-section">
+                <div class="sec-label">% de cobertura por DC — @RenovPeriodLabel @renovYear</div>
+                <div class="dc-bars-grid">
+                    @foreach (var bar in RenovDcBars.Where(b => b.Total > 0))
+                    {
+                        <div class="dc-bar-card">
+                            <div class="dcb-name">@bar.Dc</div>
+                            <div class="bar-track"><div class="bar-fill" style="width:@(bar.Pct)%"></div></div>
+                            <div class="dcb-nums">
+                                <span style="color:var(--muted);font-size:11px">@bar.WithStatus/@bar.Total com status</span>
+                                <span class="dcb-pct">@(bar.Pct)%</span>
+                            </div>
+                            <div class="dcb-sub">@bar.Approved aprovada@(bar.Approved != 1 ? "s" : "")</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- PROJECT CARDS -->
+        <div class="cards-section">
+            <div class="sec-label">
+                Projetos com renova&ccedil;&atilde;o registrada — @RenovPeriodLabel @renovYear
+            </div>
+            @if (RenovCards.Any())
+            {
+                <div class="cards-grid">
+                    @foreach (var p in RenovCards)
+                    {
+                        <div class="proj-card highlighted" @onclick="() => OpenEditModal(p.Id)" title="Clique para editar">
+                            <div class="pc-left">
+                                <div class="pc-name">@p.Name</div>
+                                <div class="pc-meta">@(p.Client ?? "—") · <strong>@p.Dc</strong> · @(p.DeliveryManager ?? "—")</div>
+                                @if (!string.IsNullOrWhiteSpace(p.RenewalObservation))
+                                {
+                                    <div class="pc-obs">@p.RenewalObservation</div>
+                                }
+                            </div>
+                            <div class="pc-right">
+                                <span class="rbadge @GetRenewalBadgeClass(p.Renewal)">
+                                    @GetRenewalIcon(p.Renewal) @p.Renewal
+                                </span>
+                                @FormatDate(p.EndDate)
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="empty" style="padding:40px">
+                    <p style="font-size:13px;font-weight:600;color:var(--muted)">
+                        Nenhuma renova&ccedil;&atilde;o registrada para este per&iacute;odo
+                    </p>
+                </div>
+            }
         </div>
+
     </div>
 }
 
