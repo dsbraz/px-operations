@@ -2,16 +2,19 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using PxOperations.BlazorWasm;
 using PxOperations.BlazorWasm.Api;
+using PxOperations.BlazorWasm.Configuration;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-var apiBaseUrl = builder.Configuration["Api:BaseUrl"] ?? "http://localhost:8081/";
+var apiBaseAddress = ApiBaseUrlResolver.Resolve(
+    builder.Configuration["Api:BaseUrl"],
+    builder.HostEnvironment.BaseAddress);
 
 builder.Services.AddScoped(_ => new HttpClient
 {
-    BaseAddress = new Uri(apiBaseUrl, UriKind.Absolute)
+    BaseAddress = apiBaseAddress
 });
 builder.Services.AddScoped<HealthClient>();
 builder.Services.AddScoped<ProjectsClient>();
