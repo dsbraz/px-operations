@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PxOperations.BlazorWasm.Api;
 using PxOperations.BlazorWasm.Features.Diagnostics;
 
-namespace PxOperations.BlazorWasm.Tests;
+namespace PxOperations.BlazorWasm.Tests.Features.Diagnostics;
 
 public sealed class DiagnosticsPageTests : TestContext
 {

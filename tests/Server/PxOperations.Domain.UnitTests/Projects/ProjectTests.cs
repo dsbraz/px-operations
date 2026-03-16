@@ -1,7 +1,7 @@
 using PxOperations.Domain.Exceptions;
 using PxOperations.Domain.Projects;
 
-namespace PxOperations.Domain.UnitTests;
+namespace PxOperations.Domain.UnitTests.Projects;
 
 public sealed class ProjectTests
 {

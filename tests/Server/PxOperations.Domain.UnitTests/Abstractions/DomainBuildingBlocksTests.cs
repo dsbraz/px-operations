@@ -2,7 +2,7 @@ using PxOperations.Domain.Abstractions;
 using PxOperations.Domain.Exceptions;
 using PxOperations.Domain.Rules;
 
-namespace PxOperations.Domain.UnitTests;
+namespace PxOperations.Domain.UnitTests.Abstractions;
 
 public sealed class DomainBuildingBlocksTests
 {
