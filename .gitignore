@@ -6,6 +6,7 @@ obj\\
 riderModule.iml
 /_ReSharper.Caches/
 .env
+.env.gcp
 .DS_Store
 TestResults/
 

@@ -1,0 +1,117 @@
+@using PxOperations.BlazorWasm.Api
+
+<div class="pulse-wrap">
+    <div class="pulse-header @(pulseOpen ? "" : "collapsed")" @onclick="TogglePulse">
+        <div class="pulse-hd-left">
+            <div class="pulse-dot"></div>
+            <span class="pulse-title">O que mudou essa semana</span>
+            <span class="pulse-subtitle">@WeekLabel</span>
+        </div>
+        <span class="pulse-chevron @(pulseOpen ? "open" : "")">&#9662;</span>
+    </div>
+    <div class="pulse-body @(pulseOpen ? "open" : "")">
+        <div class="pulse-inner">
+
+            <div class="pulse-card pc-new">
+                <div class="pc-head">
+                    <div class="pc-icon">&#9672;</div>
+                    <div class="pc-count">@NewScheduled.Count</div>
+                </div>
+                <div class="pc-label">Novos programados</div>
+                <div class="pc-items">
+                    @if (NewScheduled.Any())
+                    {
+                        @foreach (var p in NewScheduled.Take(3))
+                        {
+                            <div class="pc-item">@p.Name</div>
+                        }
+                        @if (NewScheduled.Count > 3)
+                        {
+                            <div class="pc-item-more">+@(NewScheduled.Count - 3) mais</div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="pc-empty">Nenhum esta semana</div>
+                    }
+                </div>
+            </div>
+
+            <div class="pulse-card pc-start">
+                <div class="pc-head">
+                    <div class="pc-icon">&#9654;</div>
+                    <div class="pc-count">@StartedLastWeek.Count</div>
+                </div>
+                <div class="pc-label">Iniciados semana ant.</div>
+                <div class="pc-items">
+                    @if (StartedLastWeek.Any())
+                    {
+                        @foreach (var p in StartedLastWeek.Take(3))
+                        {
+                            <div class="pc-item">@p.Name</div>
+                        }
+                        @if (StartedLastWeek.Count > 3)
+                        {
+                            <div class="pc-item-more">+@(StartedLastWeek.Count - 3) mais</div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="pc-empty">Nenhum na semana anterior</div>
+                    }
+                </div>
+            </div>
+
+            <div class="pulse-card pc-end">
+                <div class="pc-head">
+                    <div class="pc-icon">&#9632;</div>
+                    <div class="pc-count">@EndedLastWeek.Count</div>
+                </div>
+                <div class="pc-label">Encerrados semana ant.</div>
+                <div class="pc-items">
+                    @if (EndedLastWeek.Any())
+                    {
+                        @foreach (var p in EndedLastWeek.Take(3))
+                        {
+                            <div class="pc-item">@p.Name</div>
+                        }
+                        @if (EndedLastWeek.Count > 3)
+                        {
+                            <div class="pc-item-more">+@(EndedLastWeek.Count - 3) mais</div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="pc-empty">Nenhum na semana anterior</div>
+                    }
+                </div>
+            </div>
+
+            <div class="pulse-card pc-renew">
+                <div class="pc-head">
+                    <div class="pc-icon">&#10003;</div>
+                    <div class="pc-count">@RenewalApproved.Count</div>
+                </div>
+                <div class="pc-label">Renova&ccedil;&otilde;es aprovadas</div>
+                <div class="pc-items">
+                    @if (RenewalApproved.Any())
+                    {
+                        @foreach (var p in RenewalApproved.Take(3))
+                        {
+                            <div class="pc-item">@p.Name</div>
+                        }
+                        @if (RenewalApproved.Count > 3)
+                        {
+                            <div class="pc-item-more">+@(RenewalApproved.Count - 3) mais</div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="pc-empty">Nenhuma aprovada</div>
+                    }
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>

@@ -19,3 +19,25 @@
 7. Open `http://localhost:8081/health/ready` for readiness.
 
 The development environment uses `dotnet watch` inside the `client` and `server` containers, so changes under `src/Client/` and `src/Server/` trigger rebuilds and browser refresh when supported.
+
+## Deploy to Google Cloud Run
+
+The production deployment publishes the API and the Blazor WebAssembly client as separate Cloud Run services, with a dedicated Cloud Run Job for EF Core migrations.
+
+1. Copy `.env.gcp.example` to `.env.gcp` and adjust the values if needed.
+2. Run `./scripts/gcp-bootstrap.sh` to provision Artifact Registry, service account, Cloud SQL, database user, and the database connection secret.
+3. Run `./deploy.sh` or `./scripts/gcp-deploy.sh`.
+
+The deploy flow uses:
+
+- Cloud Build to generate the container images remotely
+- Cloud Run Job to execute EF Core migrations before the service rollout
+- Secret Manager to inject `ConnectionStrings__Default`
+
+Defaults:
+
+- `PROJECT_ID=px-operations`
+- `REGION=us-central1`
+- `API_SERVICE_NAME=px-operations-api`
+- `WEB_SERVICE_NAME=px-operations-web`
+- `SQL_INSTANCE=px-operations-pg-us`

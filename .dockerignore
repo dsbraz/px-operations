@@ -1,0 +1,8 @@
+**/bin/
+**/obj/
+**/.DS_Store
+**/.git
+**/.vs
+**/.vscode
+.env
+TestResults/

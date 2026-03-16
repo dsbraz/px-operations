@@ -1,0 +1,74 @@
+@using PxOperations.BlazorWasm.Api
+
+<div class="kanban-wrap">
+    <div class="kanban-controls">
+        <label>Agrupar por</label>
+        <div class="kanban-group-tabs">
+            <button class="kgtab @(groupBy == "status"  ? "active" : "")" @onclick='() => groupBy = "status"'>Status</button>
+            <button class="kgtab @(groupBy == "renewal" ? "active" : "")" @onclick='() => groupBy = "renewal"'>Renova&ccedil;&atilde;o</button>
+            <button class="kgtab @(groupBy == "dc"      ? "active" : "")" @onclick='() => groupBy = "dc"'>DC</button>
+        </div>
+    </div>
+    <div class="kanban-board">
+        @foreach (var col in Columns)
+        {
+            var colKey = col.Key;
+            <div class="kanban-column @col.ColorClass">
+                <div class="kanban-col-header">
+                    <span class="kanban-col-title">@col.Label</span>
+                    <span class="kanban-col-count">@col.Items.Count</span>
+                </div>
+                <div class="kanban-col-body @(dragOverColumnKey == colKey ? "drag-over" : "")"
+                     @ondragover:preventDefault
+                     @ondragenter="() => OnDragEnter(colKey)"
+                     @ondragleave="() => OnDragLeave(colKey)"
+                     @ondrop="() => OnDrop(colKey)">
+                    @if (col.Items.Any())
+                    {
+                        @foreach (var p in col.Items)
+                        {
+                            var proj = p;
+                            <div class="kanban-card @(draggedProject?.Id == proj.Id ? "dragging" : "")"
+                                 draggable="true"
+                                 @ondragstart="() => OnDragStart(proj)"
+                                 @ondragend="OnDragEnd"
+                                 @onclick="() => OnEdit.InvokeAsync(proj.Id)">
+                                <div class="kanban-card-top">
+                                    <span class="dc-tag">@proj.Dc</span>
+                                    <span class="sbadge @ProjectBadgeHelper.GetStatusBadgeClass(proj.Status)">
+                                        @ProjectBadgeHelper.GetStatusDot(proj.Status) @proj.Status
+                                    </span>
+                                </div>
+                                <div class="kanban-card-name">@proj.Name</div>
+                                <div class="kanban-card-meta">
+                                    <span>@(proj.Client ?? "—")</span>
+                                    <span class="kanban-card-sep">·</span>
+                                    <span class="tbadge @ProjectBadgeHelper.GetTypeBadgeClass(proj.Type)">@proj.Type</span>
+                                </div>
+                                <div class="kanban-card-dates">
+                                    @ProjectBadgeHelper.FormatDate(proj.StartDate)
+                                    <span class="kanban-card-sep">→</span>
+                                    @ProjectBadgeHelper.FormatDate(proj.EndDate)
+                                    @ProjectBadgeHelper.RenderRemainingDays(proj.EndDate)
+                                </div>
+                                <div>
+                                    <span class="rbadge @ProjectBadgeHelper.GetRenewalBadgeClass(proj.Renewal)">
+                                        @ProjectBadgeHelper.GetRenewalIcon(proj.Renewal) @(proj.Renewal == "None" ? "—" : proj.Renewal)
+                                    </span>
+                                </div>
+                                @if (!string.IsNullOrEmpty(proj.DeliveryManager))
+                                {
+                                    <div class="kanban-card-dm">@proj.DeliveryManager</div>
+                                }
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="kanban-empty">Nenhum projeto</div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>

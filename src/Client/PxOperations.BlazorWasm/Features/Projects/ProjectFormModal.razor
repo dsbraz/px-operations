@@ -1,0 +1,100 @@
+@using PxOperations.BlazorWasm.Api
+
+<div class="overlay open" @onclick="() => OnClose.InvokeAsync()">
+    <div class="modal" @onclick:stopPropagation>
+        <div class="modal-top">
+            <div>
+                <div class="modal-ttl">@(EditingProject is not null ? "Editar Projeto" : "Novo Projeto")</div>
+                <div class="modal-sub">@(EditingProject is not null ? "Atualize os dados do projeto" : "Preencha os dados do projeto")</div>
+            </div>
+            <button class="mcls" @onclick="() => OnClose.InvokeAsync()">&#215;</button>
+        </div>
+
+        @if (error is not null)
+        {
+            <div class="status-card error" style="margin-bottom:16px;padding:12px 16px;">
+                <p>@error</p>
+            </div>
+        }
+
+        <div class="fgrid">
+            <div class="fg">
+                <label>DC</label>
+                <select @bind="formDc">
+                    <option value="DC1">DC1</option>
+                    <option value="DC2">DC2</option>
+                    <option value="DC3">DC3</option>
+                    <option value="DC4">DC4</option>
+                    <option value="DC5">DC5</option>
+                    <option value="DC6">DC6</option>
+                </select>
+            </div>
+            <div class="fg">
+                <label>Status do Projeto</label>
+                <select @bind="formStatus">
+                    <option value="Em andamento">Em andamento</option>
+                    <option value="Programado">Programado</option>
+                    <option value="Encerrado">Encerrado</option>
+                </select>
+            </div>
+            <div class="fg full">
+                <label>Nome do Projeto</label>
+                <input type="text" @bind="formName" placeholder="Ex: Portal CSC" maxlength="200" />
+            </div>
+            <div class="fg">
+                <label>Cliente</label>
+                <input type="text" @bind="formClient" placeholder="Ex: CPFL" maxlength="200" />
+            </div>
+            <div class="fg">
+                <label>Tipo</label>
+                <select @bind="formType">
+                    <option value="Squad">Squad</option>
+                    <option value="Escopo Fechado">Escopo Fechado</option>
+                    <option value="Alocação">Alocação</option>
+                </select>
+            </div>
+            <div class="fg">
+                <label>Início</label>
+                <input type="date" @bind="formStartDate" />
+            </div>
+            <div class="fg">
+                <label>Fim</label>
+                <input type="date" @bind="formEndDate" />
+            </div>
+            <div class="fg full">
+                <label>Delivery Manager</label>
+                <select @bind="formDeliveryManager">
+                    <option value="">Sem Delivery Manager</option>
+                    <option value="Pedro Vieira">Pedro Vieira (DC1)</option>
+                    <option value="Flavia de Castro">Flavia de Castro (DC2)</option>
+                    <option value="Juliana Pestana">Juliana Pestana (DC3)</option>
+                    <option value="Matheus Sieiro">Matheus Sieiro (DC4)</option>
+                    <option value="Filipe Bertoncini">Filipe Bertoncini (DC5)</option>
+                </select>
+            </div>
+            <div class="fg-divider"><span>Renovação</span></div>
+            <div class="fg full">
+                <label>Status de Renovação</label>
+                <select @bind="formRenewal">
+                    <option value="None">— Sem status</option>
+                    <option value="Pendente">&#9873; Pendente</option>
+                    <option value="Em andamento">&#8635; Em andamento</option>
+                    <option value="Aprovada">&#10003; Aprovada</option>
+                </select>
+            </div>
+            <div class="fg full">
+                <label>Observação sobre renovação</label>
+                <textarea @bind="formRenewalObservation"
+                          placeholder="Ex: Proposta enviada, aguardando aprovação do sponsor"
+                          maxlength="500"></textarea>
+            </div>
+        </div>
+
+        <div class="mfoot">
+            <button class="btn btn-ghost" @onclick="() => OnClose.InvokeAsync()">Cancelar</button>
+            <button class="btn btn-purple" @onclick="Save" disabled="@isSaving">
+                @(isSaving ? "Salvando..." : "Salvar Projeto")
+            </button>
+        </div>
+    </div>
+</div>

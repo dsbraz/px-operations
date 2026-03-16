@@ -1,6 +1,6 @@
 using System.Xml.Linq;
 
-namespace PxOperations.ArchitectureTests;
+namespace PxOperations.ArchitectureTests.Layers;
 
 public sealed class DependencyRulesTests
 {

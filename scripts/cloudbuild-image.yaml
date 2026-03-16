@@ -1,0 +1,15 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_IMAGE_URI}
+      - --target
+      - ${_DOCKER_TARGET}
+      - -f
+      - ${_DOCKERFILE}
+      - .
+substitutions:
+  _DOCKERFILE: Dockerfile
+images:
+  - ${_IMAGE_URI}

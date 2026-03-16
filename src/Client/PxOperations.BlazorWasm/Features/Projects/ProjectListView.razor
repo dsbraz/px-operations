@@ -1,0 +1,102 @@
+@using PxOperations.BlazorWasm.Api
+
+<div class="table-header">
+    <div class="th-left">
+        <span class="th-label">Projetos</span>
+        <span class="th-count">@Projects.Count @(Projects.Count == 1 ? "projeto" : "projetos")</span>
+    </div>
+    <button class="collapse-btn" @onclick="ToggleTable">
+        <span>@(tableOpen ? "Minimizar lista" : "Expandir lista")</span>
+        <span>@(tableOpen ? "▲" : "▼")</span>
+    </button>
+</div>
+
+<div class="table-wrap @(tableOpen ? "open" : "")" style="@(tableOpen ? "" : "display:none")">
+    @if (IsLoading)
+    {
+        <div class="status-card" style="margin:16px 0">
+            <strong>Carregando projetos...</strong>
+        </div>
+    }
+    else if (ErrorMessage is not null)
+    {
+        <div class="status-card error" style="margin:16px 0">
+            <strong>Erro</strong>
+            <p>@ErrorMessage</p>
+        </div>
+    }
+    else if (!Projects.Any())
+    {
+        <div class="empty">
+            <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+                <polygon points="28,4 52,18 52,38 28,52 4,38 4,18" stroke="#4B148C" stroke-width="1.5"/>
+                <polygon points="28,14 42,22 42,34 28,42 14,34 14,22" stroke="#4B148C" stroke-width="1"/>
+            </svg>
+            <p style="font-weight:700;font-size:14px;margin-bottom:4px">Nenhum projeto encontrado</p>
+            <p style="font-size:12px;color:var(--muted2)">Ajuste os filtros ou adicione um novo projeto</p>
+        </div>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr>
+                    <th>DC</th>
+                    <th>Projeto</th>
+                    <th>Tipo</th>
+                    <th>Status</th>
+                    <th>Início</th>
+                    <th>Fim</th>
+                    <th>Dias Rest.</th>
+                    <th>Renovação</th>
+                    <th>DM</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var project in Projects)
+                {
+                    <tr>
+                        <td><span class="dc-tag">@project.Dc</span></td>
+                        <td>
+                            <div class="proj-name">@project.Name</div>
+                            <div class="proj-cli">@(project.Client ?? "—")</div>
+                        </td>
+                        <td><span class="tbadge @ProjectBadgeHelper.GetTypeBadgeClass(project.Type)">@project.Type</span></td>
+                        <td>
+                            <span class="sbadge @ProjectBadgeHelper.GetStatusBadgeClass(project.Status)">
+                                @ProjectBadgeHelper.GetStatusDot(project.Status) @project.Status
+                            </span>
+                        </td>
+                        <td>@ProjectBadgeHelper.FormatDate(project.StartDate)</td>
+                        <td>@ProjectBadgeHelper.FormatDate(project.EndDate)</td>
+                        <td>@ProjectBadgeHelper.RenderRemainingDays(project.EndDate)</td>
+                        <td>
+                            <span class="rbadge @ProjectBadgeHelper.GetRenewalBadgeClass(project.Renewal)">
+                                @ProjectBadgeHelper.GetRenewalIcon(project.Renewal)
+                                @(project.Renewal == "None" ? "—" : project.Renewal)
+                            </span>
+                        </td>
+                        <td class="dm-txt">@(project.DeliveryManager ?? "—")</td>
+                        <td>
+                            <div class="row-acts">
+                                <button class="ibtn" @onclick="() => OnEdit.InvokeAsync(project.Id)" title="Editar">
+                                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                </button>
+                                <button class="ibtn del" @onclick="() => OnDelete.InvokeAsync(project.Id)" title="Remover">
+                                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>

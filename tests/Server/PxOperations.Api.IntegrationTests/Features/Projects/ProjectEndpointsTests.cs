@@ -2,9 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 using PxOperations.Api.Features.Projects.Contracts;
+using PxOperations.Api.IntegrationTests.Infrastructure;
 using PxOperations.Infrastructure.Persistence;
 
-namespace PxOperations.Api.IntegrationTests;
+namespace PxOperations.Api.IntegrationTests.Features.Projects;
 
 [Collection(ApiIntegrationCollection.Name)]
 public sealed class ProjectEndpointsTests(PostgreSqlFixture fixture)
