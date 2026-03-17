@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using PxOperations.Application.Diagnostics;
+using PxOperations.Application.Features.Diagnostics;
 using PxOperations.Infrastructure.Persistence;
 
-namespace PxOperations.Infrastructure.Diagnostics;
+namespace PxOperations.Infrastructure.Features.Diagnostics;
 
 public sealed class DatabaseReadinessService(AppDbContext dbContext) : IReadinessService
 {

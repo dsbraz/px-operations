@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using PxOperations.Application.Diagnostics;
+using PxOperations.Application.Features.Diagnostics;
 
 namespace PxOperations.Api.Features.Health;
 

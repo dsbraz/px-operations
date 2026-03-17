@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PxOperations.Api.Features.Projects.Contracts;
-using PxOperations.Application.Projects;
-using PxOperations.Application.Projects.UseCases;
+using PxOperations.Application.Features.Projects;
+using PxOperations.Application.Features.Projects.UseCases;
 using PxOperations.Domain.Exceptions;
 
 namespace PxOperations.Api.Features.Projects;

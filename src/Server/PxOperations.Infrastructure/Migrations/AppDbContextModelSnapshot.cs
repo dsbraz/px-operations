@@ -22,6 +22,49 @@ namespace PxOperations.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("PxOperations.Domain.Milestones.Milestone", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date")
+                        .HasColumnName("date");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("integer")
+                        .HasColumnName("project_id");
+
+                    b.Property<TimeOnly?>("Time")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("time");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer")
+                        .HasColumnName("type");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId");
+
+                    b.ToTable("milestones", (string)null);
+                });
+
             modelBuilder.Entity("PxOperations.Domain.Projects.Project", b =>
                 {
                     b.Property<int>("Id")
@@ -79,6 +122,22 @@ namespace PxOperations.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("projects", (string)null);
+                });
+
+            modelBuilder.Entity("PxOperations.Domain.Milestones.Milestone", b =>
+                {
+                    b.HasOne("PxOperations.Domain.Projects.Project", "Project")
+                        .WithMany("Milestones")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("PxOperations.Domain.Projects.Project", b =>
+                {
+                    b.Navigation("Milestones");
                 });
 #pragma warning restore 612, 618
         }

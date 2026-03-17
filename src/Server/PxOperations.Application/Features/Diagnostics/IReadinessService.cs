@@ -1,4 +1,4 @@
-namespace PxOperations.Application.Diagnostics;
+namespace PxOperations.Application.Features.Diagnostics;
 
 public interface IReadinessService
 {

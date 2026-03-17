@@ -1,15 +1,20 @@
 using Microsoft.EntityFrameworkCore;
-using PxOperations.Application.Projects;
+using PxOperations.Application.Features.Projects;
 using PxOperations.Domain.Projects;
 using PxOperations.Infrastructure.Persistence;
 
-namespace PxOperations.Infrastructure.Projects;
+namespace PxOperations.Infrastructure.Features.Projects;
 
 public sealed class ProjectRepository(AppDbContext dbContext) : IProjectRepository
 {
     public async Task<Project?> GetByIdAsync(int id, CancellationToken ct)
     {
         return await dbContext.Projects.FirstOrDefaultAsync(p => p.Id == id, ct);
+    }
+
+    public async Task<bool> ExistsAsync(int id, CancellationToken ct)
+    {
+        return await dbContext.Projects.AnyAsync(p => p.Id == id, ct);
     }
 
     public async Task<IReadOnlyList<Project>> ListAsync(ProjectFilter filter, CancellationToken ct)

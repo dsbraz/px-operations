@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PxOperations.Domain.Projects;
 
-namespace PxOperations.Infrastructure.Projects;
+namespace PxOperations.Infrastructure.Features.Projects;
 
 public sealed class ProjectConfiguration : IEntityTypeConfiguration<Project>
 {

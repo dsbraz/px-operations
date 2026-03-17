@@ -1,4 +1,5 @@
 using PxOperations.Domain.Abstractions;
+using PxOperations.Domain.Milestones;
 using PxOperations.Domain.Projects.Rules;
 using PxOperations.Domain.Rules;
 
@@ -18,6 +19,7 @@ public sealed class Project : AggregateRoot<int>
     public string? DeliveryManager { get; private set; }
     public RenewalStatus Renewal { get; private set; }
     public string? RenewalObservation { get; private set; }
+    public ICollection<Milestone> Milestones { get; } = [];
 
     public static Project Create(
         DeliveryCenter dc,

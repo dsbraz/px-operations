@@ -1,6 +1,6 @@
 using PxOperations.Application.Abstractions;
 
-namespace PxOperations.Application.Projects.UseCases;
+namespace PxOperations.Application.Features.Projects.UseCases;
 
 public sealed class DeleteProjectUseCase(
     IProjectRepository repository,

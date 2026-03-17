@@ -1,6 +1,6 @@
 using PxOperations.Domain.Projects;
 
-namespace PxOperations.Application.Projects.UseCases;
+namespace PxOperations.Application.Features.Projects.UseCases;
 
 public sealed class ListProjectsUseCase(IProjectRepository repository)
 {
