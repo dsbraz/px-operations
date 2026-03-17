@@ -8,77 +8,30 @@
     <button class="btn btn-purple" @onclick="OpenCreateModal">+ Novo Projeto</button>
 </div>
 
-<!-- STATS BAR -->
-<div class="stats-bar">
-    <div class="stat p">
-        <div class="sico p">&#9672;</div>
-        <div><div class="sval">@projects.Count</div><div class="slbl">Projetos</div></div>
-    </div>
-    <div class="stat g">
-        <div class="sico g">&#10003;</div>
-        <div><div class="sval">@ActiveCount</div><div class="slbl">Em andamento</div></div>
-    </div>
-    <div class="stat b">
-        <div class="sico b">&#9678;</div>
-        <div><div class="sval">@ClientCount</div><div class="slbl">Clientes</div></div>
-    </div>
-    <div class="stat o">
-        <div class="sico o">&#9873;</div>
-        <div><div class="sval">@ExpiringIn60DaysCount</div><div class="slbl">Vencem em 60d</div></div>
-    </div>
-    <div class="stat b">
-        <div class="sico b">&#8635;</div>
-        <div><div class="sval">@RenewingCount</div><div class="slbl">Em renovação</div></div>
-    </div>
-    <div class="stat g">
-        <div class="sico g">&#9733;</div>
-        <div><div class="sval">@ApprovedRenewalCount</div><div class="slbl">Aprovadas</div></div>
-    </div>
-</div>
+<ProjectsStatsBar
+    TotalCount="@projects.Count"
+    ActiveCount="@ActiveCount"
+    ClientCount="@ClientCount"
+    ExpiringIn60DaysCount="@ExpiringIn60DaysCount"
+    RenewingCount="@RenewingCount"
+    ApprovedRenewalCount="@ApprovedRenewalCount" />
 
-<!-- TOOLBAR -->
-<div class="toolbar">
-    <div class="search-wrap">
-        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"/>
-            <path d="M21 21l-4.35-4.35"/>
-        </svg>
-        <input type="text" @bind="searchTerm" @bind:event="oninput" placeholder="Buscar projeto ou cliente..." />
-    </div>
-    <select @bind="filterDc">
-        <option value="">Todos os DCs</option>
-        <option value="DC1">DC1</option>
-        <option value="DC2">DC2</option>
-        <option value="DC3">DC3</option>
-        <option value="DC4">DC4</option>
-        <option value="DC5">DC5</option>
-        <option value="DC6">DC6</option>
-    </select>
-    <select @bind="filterStatus">
-        <option value="">Todos os Status</option>
-        <option value="Em andamento">Em andamento</option>
-        <option value="Programado">Programado</option>
-        <option value="Encerrado">Encerrado</option>
-    </select>
-    <select @bind="filterType">
-        <option value="">Todos os Tipos</option>
-        <option value="Squad">Squad</option>
-        <option value="Escopo Fechado">Escopo Fechado</option>
-        <option value="Alocação">Alocação</option>
-    </select>
-    <select @bind="filterRenewal">
-        <option value="">Todas as Renovações</option>
-        <option value="Aprovada">&#10003; Aprovada</option>
-        <option value="Em andamento">&#8635; Em andamento</option>
-        <option value="Pendente">&#9873; Pendente</option>
-        <option value="None">Sem status</option>
-    </select>
-    <div class="view-tabs">
-        <button class="vtab @(activeTab == "lista"   ? "active" : "")" @onclick='() => activeTab = "lista"'>Lista</button>
-        <button class="vtab @(activeTab == "kanban"  ? "active" : "")" @onclick='() => activeTab = "kanban"'>Kanban</button>
-        <button class="vtab @(activeTab == "renewals"? "active" : "")" @onclick='() => activeTab = "renewals"'>Renovações</button>
-    </div>
-</div>
+<ProjectsToolbar
+    DeliveryCenters="@deliveryCenters"
+    Statuses="@statuses"
+    Types="@projectTypes"
+    SearchTerm="@searchTerm"
+    FilterDc="@filterDc"
+    FilterStatus="@filterStatus"
+    FilterType="@filterType"
+    FilterRenewal="@filterRenewal"
+    ActiveTab="@activeTab"
+    OnSearchTermChanged="@(value => searchTerm = value)"
+    OnFilterDcChanged="@(value => filterDc = value)"
+    OnFilterStatusChanged="@(value => filterStatus = value)"
+    OnFilterTypeChanged="@(value => filterType = value)"
+    OnFilterRenewalChanged="@(value => filterRenewal = value)"
+    OnActiveTabChanged="@(value => activeTab = value)" />
 
 <!-- WEEKLY PULSE -->
 <WeeklyPulse Projects="@projects" />

@@ -6,6 +6,10 @@ namespace PxOperations.BlazorWasm.Features.Projects;
 
 public partial class ProjectsPage : ComponentBase
 {
+    private static readonly string[] deliveryCenters = ["DC1", "DC2", "DC3", "DC4", "DC5", "DC6"];
+    private static readonly string[] statuses = ["Em andamento", "Programado", "Encerrado"];
+    private static readonly string[] projectTypes = ["Squad", "Escopo Fechado", "Alocação"];
+
     [Inject] private ProjectsClient ProjectsClient { get; set; } = default!;
 
     // ── Data ─────────────────────────────────────────────────────────────────

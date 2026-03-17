@@ -1,0 +1,42 @@
+<div class="toolbar">
+    <div class="search-wrap">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="M21 21l-4.35-4.35"/>
+        </svg>
+        <input type="text" value="@SearchTerm" @oninput="OnSearchChanged" placeholder="Buscar projeto ou cliente..." />
+    </div>
+    <select value="@FilterDc" @onchange="OnDcChanged">
+        <option value="">Todos os DCs</option>
+        @foreach (var dc in DeliveryCenters)
+        {
+            <option value="@dc">@dc</option>
+        }
+    </select>
+    <select value="@FilterStatus" @onchange="OnStatusChanged">
+        <option value="">Todos os Status</option>
+        @foreach (var status in Statuses)
+        {
+            <option value="@status">@status</option>
+        }
+    </select>
+    <select value="@FilterType" @onchange="OnTypeChanged">
+        <option value="">Todos os Tipos</option>
+        @foreach (var type in Types)
+        {
+            <option value="@type">@type</option>
+        }
+    </select>
+    <select value="@FilterRenewal" @onchange="OnRenewalChanged">
+        <option value="">Todas as Renovações</option>
+        <option value="Aprovada">&#10003; Aprovada</option>
+        <option value="Em andamento">&#8635; Em andamento</option>
+        <option value="Pendente">&#9873; Pendente</option>
+        <option value="None">Sem status</option>
+    </select>
+    <div class="view-tabs">
+        <button class="vtab @(ActiveTab == "lista" ? "active" : "")" @onclick='() => OnActiveTabChanged.InvokeAsync("lista")'>Lista</button>
+        <button class="vtab @(ActiveTab == "kanban" ? "active" : "")" @onclick='() => OnActiveTabChanged.InvokeAsync("kanban")'>Kanban</button>
+        <button class="vtab @(ActiveTab == "renewals" ? "active" : "")" @onclick='() => OnActiveTabChanged.InvokeAsync("renewals")'>Renovações</button>
+    </div>
+</div>

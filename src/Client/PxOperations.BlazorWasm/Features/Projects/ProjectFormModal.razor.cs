@@ -109,7 +109,7 @@ public partial class ProjectFormModal : ComponentBase
         }
         catch (Exception ex)
         {
-            error = ex.Message;
+            error = ApiErrorFormatter.Format(ex, "Não foi possível salvar o projeto.");
         }
         finally
         {

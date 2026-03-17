@@ -100,4 +100,27 @@ public sealed class ProjectFormModalTests : TestContext
 
         cut.WaitForAssertion(() => Assert.NotNull(result));
     }
+
+    [Fact]
+    public void Should_show_friendly_api_error_when_create_returns_bad_request()
+    {
+        Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(
+            """
+            {"detail":"Project end date must not precede start date."}
+            """,
+            HttpStatusCode.BadRequest));
+        Services.AddScoped<ProjectsClient>();
+
+        var cut = RenderComponent<ProjectFormModal>();
+
+        cut.Find("input[type=text]").Change("Projeto Teste");
+        cut.FindAll("input[type=date]")[0].Change("2026-12-31");
+        cut.FindAll("input[type=date]")[1].Change("2026-01-01");
+        cut.Find(".mfoot .btn-purple").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Project end date must not precede start date.", cut.Markup);
+        });
+    }
 }
