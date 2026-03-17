@@ -1,0 +1,46 @@
+@using PxOperations.BlazorWasm.Api
+
+<div class="week-view">
+    <div class="week-nav">
+        <div>
+            <div class="week-nav-label">@WeekLabel</div>
+            <div class="week-nav-sub">Marcos agrupados por dia útil</div>
+        </div>
+        <div class="nav-btns">
+            <button class="nav-btn" @onclick='() => OnShiftWeek.InvokeAsync(-1)'>‹</button>
+            <button class="nav-btn today-btn" @onclick="OnGoToday">Hoje</button>
+            <button class="nav-btn" @onclick='() => OnShiftWeek.InvokeAsync(1)'>›</button>
+        </div>
+    </div>
+
+    <div class="week-grid">
+        @foreach (var day in WeekDays)
+        {
+            var items = GetItems(day);
+            <div class="day-col @(day == Today ? "today" : null)">
+                <div class="day-head">
+                    <span class="day-num">@day.Day.ToString("00")</span>
+                    <span class="day-name">@day.ToDateTime(TimeOnly.MinValue).ToString("ddd", Culture)</span>
+                </div>
+                <div class="day-events">
+                    @if (items.Count == 0)
+                    {
+                        <div class="no-events">Sem marcos</div>
+                    }
+                    else
+                    {
+                        @foreach (var item in items)
+                        {
+                            <button class="event-pill @TypeCss(item.Type)" @onclick='() => OnOpenDetail.InvokeAsync(item)'>
+                                <div class="ep-tipo">@item.Type</div>
+                                <div class="ep-nome">@item.Title</div>
+                                <div class="ep-proj">@item.ProjectName</div>
+                                <div class="ep-dc">@item.ProjectDc @(item.Time is not null ? $"· {item.Time}" : null)</div>
+                            </button>
+                        }
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>

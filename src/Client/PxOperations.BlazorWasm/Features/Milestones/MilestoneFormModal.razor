@@ -1,0 +1,68 @@
+@using PxOperations.BlazorWasm.Api
+
+<div class="overlay open" @onclick="CloseOnOverlay">
+    <div class="modal" @onclick:stopPropagation="true">
+        <div class="modal-top">
+            <div>
+                <div class="modal-ttl">@(EditingMilestone is null ? "Novo Marco" : "Editar Marco")</div>
+                <div class="modal-sub">Registre um evento relevante do projeto</div>
+            </div>
+            <button class="mcls" @onclick='() => OnClose.InvokeAsync()'>×</button>
+        </div>
+
+        @if (errorMessage is not null)
+        {
+            <div class="status-card error" style="margin-bottom:16px">
+                <strong>Não foi possível salvar</strong>
+                <p>@errorMessage</p>
+            </div>
+        }
+
+        <div class="fgrid">
+            <div class="fg full">
+                <label>Projeto</label>
+                <select @bind="formProjectId">
+                    @foreach (var project in Projects.OrderBy(p => p.Name))
+                    {
+                        <option value="@project.Id">@project.Name (@project.Dc)</option>
+                    }
+                </select>
+            </div>
+
+            <div class="fg full">
+                <label>Tipo de Marco</label>
+                <select @bind="formType">
+                    @foreach (var type in milestoneTypes)
+                    {
+                        <option value="@type">@type</option>
+                    }
+                </select>
+            </div>
+
+            <div class="fg full">
+                <label>Título</label>
+                <input type="text" @bind="formTitle" placeholder="Ex: Apresentação de resultados Q1" />
+            </div>
+
+            <div class="fg">
+                <label>Data</label>
+                <input type="date" @bind="formDate" />
+            </div>
+
+            <div class="fg">
+                <label>Horário</label>
+                <input type="time" @bind="formTime" />
+            </div>
+
+            <div class="fg full">
+                <label>Observações</label>
+                <textarea @bind="formNotes" placeholder="Contexto adicional, local, participantes..."></textarea>
+            </div>
+        </div>
+
+        <div class="mfoot">
+            <button class="btn btn-ghost" @onclick='() => OnClose.InvokeAsync()'>Cancelar</button>
+            <button class="btn btn-purple" @onclick="SaveAsync" disabled="@isSaving">Salvar Marco</button>
+        </div>
+    </div>
+</div>

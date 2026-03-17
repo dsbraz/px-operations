@@ -1,0 +1,85 @@
+@page "/milestones"
+
+<PageTitle>Marcos de Projeto · Operations PX</PageTitle>
+
+<div class="page-actions-bar">
+    <button class="btn btn-purple" @onclick="OpenCreateModal">+ Novo Marco</button>
+</div>
+
+<MilestonesStatsBar
+    TotalCount="@FilteredMilestones.Count"
+    WeekCount="@ThisWeekCount"
+    MonthCount="@ThisMonthCount"
+    SponsorCount="@SponsorCount" />
+
+<MilestonesToolbar
+    DeliveryCenters="@deliveryCenters"
+    MilestoneTypes="@milestoneTypes"
+    Projects="@projects"
+    SearchTerm="@searchTerm"
+    FilterDc="@filterDc"
+    FilterType="@filterType"
+    FilterProjectId="@filterProjectId"
+    ActiveView="@activeView"
+    TypeCss="@TypeCss"
+    OnSearchTermChanged="@(value => searchTerm = value)"
+    OnFilterDcChanged="@(value => filterDc = value)"
+    OnFilterTypeChanged="@(value => filterType = value)"
+    OnFilterProjectIdChanged="@(value => filterProjectId = value)"
+    OnViewChanged="@(value => activeView = value)" />
+
+@if (isLoading)
+{
+    <div class="status-card"><strong>Carregando marcos...</strong></div>
+}
+else if (errorMessage is not null)
+{
+    <div class="status-card error"><strong>Falha ao carregar</strong><p>@errorMessage</p></div>
+}
+else if (activeView == "semana")
+{
+    <MilestonesWeekView
+        WeekDays="@WeekDays"
+        WeekLabel="@WeekLabel"
+        Today="@today"
+        Culture="@portugueseCulture"
+        GetItems="@WeekItems"
+        TypeCss="@TypeCss"
+        OnShiftWeek="ShiftWeek"
+        OnGoToday="GoToday"
+        OnOpenDetail="OpenDetail" />
+}
+else
+{
+    <MilestonesMonthView
+        CalendarDays="@CalendarDays"
+        CurrentMonth="@currentMonth"
+        Today="@today"
+        MonthLabel="@MonthLabel"
+        GetItems="@CalendarItems"
+        TypeCss="@TypeCss"
+        OnShiftMonth="ShiftMonth"
+        OnOpenDetail="OpenDetail" />
+}
+
+@if (selectedMilestone is not null)
+{
+    <MilestoneDetailModal
+        Milestone="@selectedMilestone"
+        OnClose="CloseDetail"
+        OnEdit="EditSelected"
+        OnDelete="DeleteSelectedAsync" />
+}
+
+@if (showModal)
+{
+    <MilestoneFormModal
+        Projects="@projects"
+        EditingMilestone="@editingMilestone"
+        OnClose="@CloseModal"
+        OnSaved="@HandleSavedAsync" />
+}
+
+<div class="toast @(toastMessage is not null ? "show" : "")">
+    <span>@toastMessage</span>
+</div>

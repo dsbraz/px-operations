@@ -1,0 +1,41 @@
+@using PxOperations.BlazorWasm.Api
+
+<div class="cal-view" style="display:block">
+    <div class="cal-nav">
+        <button class="nav-btn" @onclick='() => OnShiftMonth.InvokeAsync(-1)'>‹</button>
+        <div class="cal-label">@MonthLabel</div>
+        <button class="nav-btn" @onclick='() => OnShiftMonth.InvokeAsync(1)'>›</button>
+    </div>
+
+    <div class="cal-grid">
+        <div class="cal-weekdays">
+            <div class="cal-wd">Dom</div><div class="cal-wd">Seg</div><div class="cal-wd">Ter</div>
+            <div class="cal-wd">Qua</div><div class="cal-wd">Qui</div><div class="cal-wd">Sex</div><div class="cal-wd">Sáb</div>
+        </div>
+        <div class="cal-days">
+            @foreach (var day in CalendarDays)
+            {
+                var items = GetItems(day);
+                <div class="cal-day @(day.Month != CurrentMonth.Month ? "other-month" : null) @(day == Today ? "today-cal" : null)">
+                    <div class="cal-dn">@day.Day</div>
+                    <div class="cal-events">
+                        @foreach (var item in items.Take(3))
+                        {
+                            <button class="cal-ev @TypeCss(item.Type)" @onclick='() => OnOpenDetail.InvokeAsync(item)'>
+                                @if (item.Time is not null)
+                                {
+                                    <span class="ev-hora">@item.Time</span>
+                                }
+                                <span>@item.Title</span>
+                            </button>
+                        }
+                        @if (items.Count > 3)
+                        {
+                            <div class="cal-more">+@(items.Count - 3) marcos</div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>

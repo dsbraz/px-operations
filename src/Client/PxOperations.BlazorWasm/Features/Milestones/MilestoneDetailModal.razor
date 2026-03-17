@@ -1,0 +1,23 @@
+@using PxOperations.BlazorWasm.Api
+
+<div class="overlay open" @onclick='() => OnClose.InvokeAsync()'>
+    <div class="modal detail-modal" @onclick:stopPropagation="true">
+        <div class="modal-top">
+            <div>
+                <div class="modal-ttl">@Milestone.Title</div>
+                <div class="modal-sub">@Milestone.ProjectName · @Milestone.ProjectDc</div>
+            </div>
+            <button class="mcls" @onclick='() => OnClose.InvokeAsync()'>×</button>
+        </div>
+        <div class="dm-field"><div class="dm-field-lbl">Tipo</div><div class="dm-field-val">@Milestone.Type</div></div>
+        <div class="dm-field"><div class="dm-field-lbl">Data</div><div class="dm-field-val">@Milestone.Date @(Milestone.Time is not null ? $"às {Milestone.Time}" : null)</div></div>
+        @if (!string.IsNullOrWhiteSpace(Milestone.Notes))
+        {
+            <div class="dm-field"><div class="dm-field-lbl">Observações</div><div class="dm-field-val">@Milestone.Notes</div></div>
+        }
+        <div class="dm-actions">
+            <button class="btn btn-ghost btn-sm" @onclick="OnEdit">✎ Editar</button>
+            <button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:var(--red)" @onclick="OnDelete">✕ Remover</button>
+        </div>
+    </div>
+</div>
