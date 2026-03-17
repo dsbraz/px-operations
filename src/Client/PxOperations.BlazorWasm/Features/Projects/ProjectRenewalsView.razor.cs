@@ -11,7 +11,6 @@ public partial class ProjectRenewalsView : ComponentBase
 
     private string renovYear   = "2026";
     private string renovPeriod = "ano";
-    private string renovDc     = "";
 
     private bool InRenovPeriod(string? endDate)
     {
@@ -29,16 +28,22 @@ public partial class ProjectRenewalsView : ComponentBase
     }
 
     private List<ProjectResponse> Scope => Projects
-        .Where(p => p.Status == "Em andamento")
-        .Where(p => string.IsNullOrEmpty(renovDc) || p.Dc == renovDc)
         .Where(p => InRenovPeriod(p.EndDate))
         .ToList();
 
-    private int Total      => Scope.Count;
-    private int Approved   => Scope.Count(p => p.Renewal == "Aprovada");
-    private int InProgress => Scope.Count(p => p.Renewal == "Em andamento");
-    private int Pending    => Scope.Count(p => p.Renewal == "Pendente");
-    private int NoStatus   => Total - Approved - InProgress - Pending;
+    private List<string> ScopedDcs => Scope
+        .Select(p => p.Dc)
+        .Distinct()
+        .OrderBy(d => d)
+        .ToList();
+
+    private bool ShowDcBars => ScopedDcs.Count > 1;
+
+    private int Total       => Scope.Count;
+    private int Approved    => Scope.Count(p => p.Renewal == "Aprovada");
+    private int InProgress  => Scope.Count(p => p.Renewal == "Em andamento");
+    private int Pending     => Scope.Count(p => p.Renewal == "Pendente");
+    private int NoStatus    => Total - Approved - InProgress - Pending;
     private int CoveragePct => Total == 0 ? 0 : (Approved + InProgress + Pending) * 100 / Total;
 
     private string PeriodLabel => renovPeriod switch
@@ -47,23 +52,19 @@ public partial class ProjectRenewalsView : ComponentBase
         _    => "Ano completo"
     };
 
-    private List<(string Dc, int Total, int WithStatus, int Approved, int Pct)> DcBars
-    {
-        get
+    private List<(string Dc, int Total, int WithStatus, int Approved, int Pct)> DcBars => ScopedDcs
+        .Select(dc =>
         {
-            var dcs = Projects.Select(p => p.Dc).Distinct().OrderBy(d => d).ToList();
-            return dcs.Select(dc =>
-            {
-                var scoped     = Projects.Where(p => p.Status == "Em andamento" && p.Dc == dc && InRenovPeriod(p.EndDate)).ToList();
-                var total      = scoped.Count;
-                var withStatus = scoped.Count(p => p.Renewal is not ("None" or null or ""));
-                var approved   = scoped.Count(p => p.Renewal == "Aprovada");
-                var pct        = total == 0 ? 0 : withStatus * 100 / total;
-                return (dc, total, withStatus, approved, pct);
-            }).ToList();
-        }
-    }
+            var scoped     = Scope.Where(p => p.Dc == dc).ToList();
+            var total      = scoped.Count;
+            var withStatus = scoped.Count(p => p.Renewal is not ("None" or null or ""));
+            var approved   = scoped.Count(p => p.Renewal == "Aprovada");
+            var pct        = total == 0 ? 0 : withStatus * 100 / total;
+            return (dc, total, withStatus, approved, pct);
+        })
+        .ToList();
 
-    private List<ProjectResponse> Cards =>
-        Scope.Where(p => p.Renewal is not ("None" or null or "")).ToList();
+    private List<ProjectResponse> Cards => Scope
+        .Where(p => p.Renewal is not ("None" or null or ""))
+        .ToList();
 }

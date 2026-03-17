@@ -15,20 +15,11 @@
             <option value="q3">Q3 (Jul–Set)</option>
             <option value="q4">Q4 (Out–Dez)</option>
         </select>
-        <select @bind="renovDc">
-            <option value="">Todos os DCs</option>
-            <option value="DC1">DC1</option>
-            <option value="DC2">DC2</option>
-            <option value="DC3">DC3</option>
-            <option value="DC4">DC4</option>
-            <option value="DC5">DC5</option>
-            <option value="DC6">DC6</option>
-        </select>
 
         <div class="renov-indicator">
             <div class="ri-main">
                 <div class="ri-pct">@CoveragePct%</div>
-                <div class="ri-lbl">Cobertura @PeriodLabel @renovYear@(string.IsNullOrEmpty(renovDc) ? "" : $" · {renovDc}")</div>
+                <div class="ri-lbl">Cobertura @PeriodLabel @renovYear</div>
                 <div class="ri-bar-wrap"><div class="ri-bar-fill" style="width:@(CoveragePct)%"></div></div>
             </div>
             <div class="ri-sep"></div>
@@ -41,7 +32,7 @@
         </div>
     </div>
 
-    @if (string.IsNullOrEmpty(renovDc))
+    @if (ShowDcBars)
     {
         <div class="dc-section">
             <div class="sec-label">% de cobertura por DC — @PeriodLabel @renovYear</div>

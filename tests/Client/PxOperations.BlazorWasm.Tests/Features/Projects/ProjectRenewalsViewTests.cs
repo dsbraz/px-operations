@@ -33,7 +33,7 @@ public sealed class ProjectRenewalsViewTests : TestContext
     }
 
     [Fact]
-    public void Should_show_dc_bars_when_all_dcs_selected()
+    public void Should_show_dc_bars_when_scope_contains_multiple_dcs()
     {
         var projects = new[]
         {
@@ -50,6 +50,23 @@ public sealed class ProjectRenewalsViewTests : TestContext
         Assert.Contains("dc-bar-card", cut.Markup);
         Assert.Contains("DC1", cut.Markup);
         Assert.Contains("DC2", cut.Markup);
+    }
+
+    [Fact]
+    public void Should_hide_dc_bars_when_scope_contains_single_dc()
+    {
+        var projects = new[]
+        {
+            ProjectsTestHelpers.MakeProject(id: 1, dc: "DC1", status: "Em andamento", name: "P1",
+                endDate: "2026-06-30", renewal: "Aprovada"),
+            ProjectsTestHelpers.MakeProject(id: 2, dc: "DC1", status: "Encerrado", name: "P2",
+                endDate: "2026-09-30", renewal: "Pendente")
+        };
+
+        var cut = RenderComponent<ProjectRenewalsView>(p => p
+            .Add(c => c.Projects, projects.ToList()));
+
+        Assert.DoesNotContain("dc-bars-grid", cut.Markup);
     }
 
     [Fact]
@@ -85,6 +102,22 @@ public sealed class ProjectRenewalsViewTests : TestContext
             .Add(c => c.Projects, projects.ToList()));
 
         Assert.Contains("Nenhuma renova", cut.Markup);
+    }
+
+    [Fact]
+    public void Should_include_non_in_progress_statuses_when_provided_by_parent_scope()
+    {
+        var projects = new[]
+        {
+            ProjectsTestHelpers.MakeProject(id: 1, dc: "DC2", status: "Programado",
+                name: "Scheduled Renewal", endDate: "2026-12-31", renewal: "Aprovada")
+        };
+
+        var cut = RenderComponent<ProjectRenewalsView>(p => p
+            .Add(c => c.Projects, projects.ToList()));
+
+        Assert.Contains("Scheduled Renewal", cut.Markup);
+        Assert.Contains("100%", cut.Markup);
     }
 
     [Fact]

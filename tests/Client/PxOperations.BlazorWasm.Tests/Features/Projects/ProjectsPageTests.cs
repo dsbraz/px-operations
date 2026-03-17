@@ -86,6 +86,121 @@ public sealed class ProjectsPageTests : TestContext
         });
     }
 
+    [Fact]
+    public void Page_should_apply_global_search_filter_to_renewals_tab()
+    {
+        var projects = new[]
+        {
+            ProjectsTestHelpers.MakeProject(id: 1, name: "Alpha Renewal", client: "CPFL",
+                endDate: "2026-12-31", renewal: "Aprovada"),
+            ProjectsTestHelpers.MakeProject(id: 2, name: "Beta Renewal", client: "Alelo",
+                endDate: "2026-12-31", renewal: "Pendente")
+        };
+
+        Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(ProjectsTestHelpers.ProjectsJson(projects)));
+        Services.AddScoped<ProjectsClient>();
+
+        var cut = RenderComponent<ProjectsPage>();
+
+        cut.WaitForAssertion(() => Assert.Contains("Alpha Renewal", cut.Markup));
+
+        cut.FindAll("button.vtab")[2].Click();
+        cut.Find(".toolbar input[type=text]").Input("Alpha");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Alpha Renewal", cut.Markup);
+            Assert.DoesNotContain("Beta Renewal", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public void Page_should_apply_global_dc_filter_to_renewals_tab()
+    {
+        var projects = new[]
+        {
+            ProjectsTestHelpers.MakeProject(id: 1, dc: "DC1", name: "Renewal One",
+                endDate: "2026-12-31", renewal: "Aprovada"),
+            ProjectsTestHelpers.MakeProject(id: 2, dc: "DC2", name: "Renewal Two",
+                endDate: "2026-12-31", renewal: "Pendente")
+        };
+
+        Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(ProjectsTestHelpers.ProjectsJson(projects)));
+        Services.AddScoped<ProjectsClient>();
+
+        var cut = RenderComponent<ProjectsPage>();
+
+        cut.WaitForAssertion(() => Assert.Contains("Renewal One", cut.Markup));
+
+        cut.FindAll("button.vtab")[2].Click();
+        cut.FindAll(".toolbar select")[0].Change("DC1");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Renewal One", cut.Markup);
+            Assert.DoesNotContain("Renewal Two", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public void Page_should_apply_global_status_filter_to_renewals_tab()
+    {
+        var projects = new[]
+        {
+            ProjectsTestHelpers.MakeProject(id: 1, status: "Programado", name: "Scheduled Renewal",
+                endDate: "2026-12-31", renewal: "Aprovada"),
+            ProjectsTestHelpers.MakeProject(id: 2, status: "Em andamento", name: "In Progress Renewal",
+                endDate: "2026-12-31", renewal: "Pendente")
+        };
+
+        Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(ProjectsTestHelpers.ProjectsJson(projects)));
+        Services.AddScoped<ProjectsClient>();
+
+        var cut = RenderComponent<ProjectsPage>();
+
+        cut.WaitForAssertion(() => Assert.Contains("Scheduled Renewal", cut.Markup));
+
+        cut.FindAll("button.vtab")[2].Click();
+        cut.FindAll(".toolbar select")[1].Change("Programado");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Scheduled Renewal", cut.Markup);
+            Assert.DoesNotContain("In Progress Renewal", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public void Page_should_apply_global_renewal_filter_to_renewals_tab()
+    {
+        var projects = new[]
+        {
+            ProjectsTestHelpers.MakeProject(id: 1, name: "Approved Renewal",
+                endDate: "2026-12-31", renewal: "Aprovada"),
+            ProjectsTestHelpers.MakeProject(id: 2, name: "Pending Renewal",
+                endDate: "2026-12-31", renewal: "Pendente"),
+            ProjectsTestHelpers.MakeProject(id: 3, name: "No Renewal",
+                endDate: "2026-12-31", renewal: "None")
+        };
+
+        Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(ProjectsTestHelpers.ProjectsJson(projects)));
+        Services.AddScoped<ProjectsClient>();
+
+        var cut = RenderComponent<ProjectsPage>();
+
+        cut.WaitForAssertion(() => Assert.Contains("Approved Renewal", cut.Markup));
+
+        cut.FindAll("button.vtab")[2].Click();
+        cut.FindAll(".toolbar select")[3].Change("Aprovada");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Approved Renewal", cut.Markup);
+            Assert.DoesNotContain("Pending Renewal", cut.Markup);
+            Assert.DoesNotContain("No Renewal", cut.Markup);
+        });
+    }
+
     // ── MODAL ────────────────────────────────────────────────────────────────
 
     [Fact]
