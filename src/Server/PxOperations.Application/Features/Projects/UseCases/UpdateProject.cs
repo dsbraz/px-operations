@@ -1,19 +1,20 @@
 using PxOperations.Application.Abstractions;
+using PxOperations.Domain.Abstractions;
 using PxOperations.Domain.Projects;
 
 namespace PxOperations.Application.Features.Projects.UseCases;
 
 public sealed record UpdateProjectCommand(
-    DeliveryCenter? Dc = null,
-    ProjectStatus? Status = null,
-    string? Name = null,
-    string? Client = null,
-    ProjectType? Type = null,
-    DateOnly? StartDate = null,
-    DateOnly? EndDate = null,
-    string? DeliveryManager = null,
-    RenewalStatus? Renewal = null,
-    string? RenewalObservation = null);
+    Optional<DeliveryCenter> Dc = default,
+    Optional<ProjectStatus> Status = default,
+    Optional<string> Name = default,
+    Optional<string?> Client = default,
+    Optional<ProjectType> Type = default,
+    Optional<DateOnly?> StartDate = default,
+    Optional<DateOnly?> EndDate = default,
+    Optional<string?> DeliveryManager = default,
+    Optional<RenewalStatus> Renewal = default,
+    Optional<string?> RenewalObservation = default);
 
 public sealed class UpdateProjectUseCase(
     IProjectRepository repository,
@@ -26,16 +27,16 @@ public sealed class UpdateProjectUseCase(
         if (project is null) return null;
 
         project.Update(
-            command.Dc ?? project.Dc,
-            command.Status ?? project.Status,
-            command.Name ?? project.Name,
-            command.Client ?? project.Client,
-            command.Type ?? project.Type,
-            command.StartDate ?? project.StartDate,
-            command.EndDate ?? project.EndDate,
-            command.DeliveryManager ?? project.DeliveryManager,
-            command.Renewal ?? project.Renewal,
-            command.RenewalObservation ?? project.RenewalObservation);
+            command.Dc.Resolve(project.Dc),
+            command.Status.Resolve(project.Status),
+            command.Name.Resolve(project.Name),
+            command.Client.Resolve(project.Client),
+            command.Type.Resolve(project.Type),
+            command.StartDate.Resolve(project.StartDate),
+            command.EndDate.Resolve(project.EndDate),
+            command.DeliveryManager.Resolve(project.DeliveryManager),
+            command.Renewal.Resolve(project.Renewal),
+            command.RenewalObservation.Resolve(project.RenewalObservation));
 
         await unitOfWork.SaveChangesAsync(ct);
         return project;

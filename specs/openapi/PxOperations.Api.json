@@ -965,6 +965,15 @@
           }
         }
       },
+      "OptionalOfint": {
+        "type": "integer"
+      },
+      "OptionalOfstring": {
+        "type": [
+          "null",
+          "string"
+        ]
+      },
       "ProblemDetails": {
         "type": "object",
         "properties": {
@@ -1078,43 +1087,22 @@
         "type": "object",
         "properties": {
           "projectId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "null",
-              "integer",
-              "string"
-            ],
-            "format": "int32"
+            "$ref": "#/components/schemas/OptionalOfint"
           },
           "type": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "$ref": "#/components/schemas/OptionalOfstring"
           },
           "title": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "$ref": "#/components/schemas/OptionalOfstring"
           },
           "date": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "$ref": "#/components/schemas/OptionalOfstring"
           },
           "time": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "$ref": "#/components/schemas/OptionalOfstring"
           },
           "notes": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "$ref": "#/components/schemas/OptionalOfstring"
           }
         }
       },
@@ -1122,64 +1110,34 @@
         "type": "object",
         "properties": {
           "dc": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "$ref": "#/components/schemas/OptionalOfstring"
           },
           "status": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "$ref": "#/components/schemas/OptionalOfstring"
           },
           "name": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "$ref": "#/components/schemas/OptionalOfstring"
           },
           "client": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "$ref": "#/components/schemas/OptionalOfstring"
           },
           "type": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "$ref": "#/components/schemas/OptionalOfstring"
           },
           "startDate": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "$ref": "#/components/schemas/OptionalOfstring"
           },
           "endDate": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "$ref": "#/components/schemas/OptionalOfstring"
           },
           "deliveryManager": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "$ref": "#/components/schemas/OptionalOfstring"
           },
           "renewal": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "$ref": "#/components/schemas/OptionalOfstring"
           },
           "renewalObservation": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "$ref": "#/components/schemas/OptionalOfstring"
           }
         }
       }

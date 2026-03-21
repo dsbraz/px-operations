@@ -3,16 +3,20 @@ using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using PxOperations.Api.Features.Projects;
 using PxOperations.Api.Observability;
+using PxOperations.Api.Serialization;
+using PxOperations.Domain.Abstractions;
 using PxOperations.Infrastructure.DependencyInjection;
 using PxOperations.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProblemDetails();
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Insert(0, new OptionalJsonConverterFactory()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi(options =>
 {
+    options.AddSchemaTransformer<OptionalSchemaTransformer>();
     options.AddOperationTransformer((operation, context, ct) =>
     {
         operation.OperationId = context.Description.ActionDescriptor.RouteValues["action"];

@@ -16,33 +16,33 @@ public sealed class UpdateMilestoneRequestValidator : AbstractValidator<UpdateMi
 
     public UpdateMilestoneRequestValidator()
     {
-        RuleFor(x => x.ProjectId)
+        RuleFor(x => x.ProjectId.Value)
             .GreaterThan(0)
             .When(x => x.ProjectId.HasValue);
 
-        RuleFor(x => x.Type)
+        RuleFor(x => x.Type.Value)
             .Must(v => ValidTypes.Contains(v!, StringComparer.OrdinalIgnoreCase))
-            .When(x => x.Type is not null)
+            .When(x => x.Type.HasValue)
             .WithMessage("Type must be one of: Apresentação Sponsor, Entrega Final, Presencial com Cliente, Kickoff, Outros.");
 
-        RuleFor(x => x.Title)
+        RuleFor(x => x.Title.Value)
             .NotEmpty()
             .MaximumLength(200)
-            .When(x => x.Title is not null);
+            .When(x => x.Title.HasValue);
 
-        RuleFor(x => x.Date)
+        RuleFor(x => x.Date.Value)
             .Must(BeValidDate)
-            .When(x => x.Date is not null)
+            .When(x => x.Date.HasValue)
             .WithMessage("Date must be a valid date in yyyy-MM-dd format.");
 
-        RuleFor(x => x.Time)
+        RuleFor(x => x.Time.Value)
             .Must(BeValidTime)
-            .When(x => x.Time is not null)
+            .When(x => x.Time.HasValue && x.Time.Value is not null)
             .WithMessage("Time must be a valid time in HH:mm format.");
 
-        RuleFor(x => x.Notes)
+        RuleFor(x => x.Notes.Value)
             .MaximumLength(1000)
-            .When(x => x.Notes is not null);
+            .When(x => x.Notes.HasValue && x.Notes.Value is not null);
     }
 
     private static bool BeValidDate(string? value) =>

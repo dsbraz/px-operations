@@ -94,10 +94,10 @@ public sealed class MilestonesController(
                 id,
                 new UpdateMilestoneCommand(
                     request.ProjectId,
-                    request.Type is not null ? MilestoneMappings.ParseMilestoneType(request.Type) : null,
+                    request.Type.Map(MilestoneMappings.ParseMilestoneType),
                     request.Title,
-                    request.Date is not null ? DateOnly.Parse(request.Date) : null,
-                    request.Time is not null ? TimeOnly.Parse(request.Time) : null,
+                    request.Date.Map(DateOnly.Parse),
+                    request.Time.Map(s => s is not null ? TimeOnly.Parse(s) : (TimeOnly?)null),
                     request.Notes),
                 ct);
 

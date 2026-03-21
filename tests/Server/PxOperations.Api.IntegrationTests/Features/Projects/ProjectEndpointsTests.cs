@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using PxOperations.Api.Features.Projects.Contracts;
 using PxOperations.Api.IntegrationTests.Infrastructure;
@@ -105,8 +106,7 @@ public sealed class ProjectEndpointsTests(PostgreSqlFixture fixture)
         var createResponse = await client.PostAsJsonAsync("/api/projects", ValidRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<ProjectResponse>();
 
-        var patchRequest = new UpdateProjectRequest(Name: "Updated Name");
-        var patchContent = JsonContent.Create(patchRequest);
+        var patchContent = new StringContent("""{"name": "Updated Name"}""", Encoding.UTF8, "application/json");
         var response = await client.PatchAsync($"/api/projects/{created!.Id}", patchContent);
         var updated = await response.Content.ReadFromJsonAsync<ProjectResponse>();
 
@@ -123,8 +123,7 @@ public sealed class ProjectEndpointsTests(PostgreSqlFixture fixture)
         await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
         using var client = factory.CreateClient();
 
-        var patchRequest = new UpdateProjectRequest(Name: "Updated");
-        var patchContent = JsonContent.Create(patchRequest);
+        var patchContent = new StringContent("""{"name": "Updated"}""", Encoding.UTF8, "application/json");
         var response = await client.PatchAsync("/api/projects/99999", patchContent);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -266,13 +265,51 @@ public sealed class ProjectEndpointsTests(PostgreSqlFixture fixture)
         var createResponse = await client.PostAsJsonAsync("/api/projects", ValidRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<ProjectResponse>();
 
-        var patchRequest = new UpdateProjectRequest(Name: "Partial Update");
-        var patchContent = JsonContent.Create(patchRequest);
+        var patchContent = new StringContent("""{"name": "Partial Update"}""", Encoding.UTF8, "application/json");
         var response = await client.PatchAsync($"/api/projects/{created!.Id}", patchContent);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var updated = await response.Content.ReadFromJsonAsync<ProjectResponse>();
         Assert.Equal("Partial Update", updated!.Name);
+    }
+
+    [Fact]
+    public async Task Patch_with_explicit_null_should_clear_nullable_field()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+
+        var createResponse = await client.PostAsJsonAsync("/api/projects", ValidRequest);
+        var created = await createResponse.Content.ReadFromJsonAsync<ProjectResponse>();
+        Assert.Equal("Test Client", created!.Client);
+
+        var patchContent = new StringContent("""{"client": null}""", Encoding.UTF8, "application/json");
+        var response = await client.PatchAsync($"/api/projects/{created.Id}", patchContent);
+        var updated = await response.Content.ReadFromJsonAsync<ProjectResponse>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(updated);
+        Assert.Null(updated.Client);
+    }
+
+    [Fact]
+    public async Task Patch_without_field_should_preserve_existing_value()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+
+        var createResponse = await client.PostAsJsonAsync("/api/projects", ValidRequest);
+        var created = await createResponse.Content.ReadFromJsonAsync<ProjectResponse>();
+
+        var patchContent = new StringContent("""{"name": "New Name"}""", Encoding.UTF8, "application/json");
+        var response = await client.PatchAsync($"/api/projects/{created!.Id}", patchContent);
+        var updated = await response.Content.ReadFromJsonAsync<ProjectResponse>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(updated);
+        Assert.Equal("New Name", updated.Name);
+        Assert.Equal("Test Client", updated.Client);
+        Assert.Equal("John Doe", updated.DeliveryManager);
     }
 
     private static async Task CleanProjectsAsync(ApiWebApplicationFactory factory)

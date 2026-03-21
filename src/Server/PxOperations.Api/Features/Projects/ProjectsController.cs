@@ -88,15 +88,15 @@ public sealed class ProjectsController(
         try
         {
             var command = new UpdateProjectCommand(
-                Dc: request.Dc is not null ? ProjectMappings.ParseDeliveryCenter(request.Dc) : null,
-                Status: request.Status is not null ? ProjectMappings.ParseProjectStatus(request.Status) : null,
+                Dc: request.Dc.Map(ProjectMappings.ParseDeliveryCenter),
+                Status: request.Status.Map(ProjectMappings.ParseProjectStatus),
                 Name: request.Name,
                 Client: request.Client,
-                Type: request.Type is not null ? ProjectMappings.ParseProjectType(request.Type) : null,
-                StartDate: request.StartDate is not null ? DateOnly.Parse(request.StartDate) : null,
-                EndDate: request.EndDate is not null ? DateOnly.Parse(request.EndDate) : null,
+                Type: request.Type.Map(ProjectMappings.ParseProjectType),
+                StartDate: request.StartDate.Map(s => s is not null ? DateOnly.Parse(s) : (DateOnly?)null),
+                EndDate: request.EndDate.Map(s => s is not null ? DateOnly.Parse(s) : (DateOnly?)null),
                 DeliveryManager: request.DeliveryManager,
-                Renewal: request.Renewal is not null ? ProjectMappings.ParseRenewalStatus(request.Renewal) : null,
+                Renewal: request.Renewal.Map(ProjectMappings.ParseRenewalStatus),
                 RenewalObservation: request.RenewalObservation);
 
             var project = await updateProject.ExecuteAsync(id, command, ct);

@@ -1,16 +1,17 @@
 using PxOperations.Application.Abstractions;
 using PxOperations.Application.Features.Projects;
+using PxOperations.Domain.Abstractions;
 using PxOperations.Domain.Milestones;
 
 namespace PxOperations.Application.Features.Milestones.UseCases;
 
 public sealed record UpdateMilestoneCommand(
-    int? ProjectId = null,
-    MilestoneType? Type = null,
-    string? Title = null,
-    DateOnly? Date = null,
-    TimeOnly? Time = null,
-    string? Notes = null);
+    Optional<int> ProjectId = default,
+    Optional<MilestoneType> Type = default,
+    Optional<string> Title = default,
+    Optional<DateOnly> Date = default,
+    Optional<TimeOnly?> Time = default,
+    Optional<string?> Notes = default);
 
 public sealed class UpdateMilestoneUseCase(
     IMilestoneRepository repository,
@@ -22,7 +23,7 @@ public sealed class UpdateMilestoneUseCase(
         var milestone = await repository.GetByIdAsync(id, ct);
         if (milestone is null) return null;
 
-        var projectId = command.ProjectId ?? milestone.ProjectId;
+        var projectId = command.ProjectId.Resolve(milestone.ProjectId);
         if (projectId != milestone.ProjectId)
         {
             var projectExists = await projectRepository.ExistsAsync(projectId, ct);
@@ -31,11 +32,11 @@ public sealed class UpdateMilestoneUseCase(
 
         milestone.Update(
             projectId,
-            command.Type ?? milestone.Type,
-            command.Title ?? milestone.Title,
-            command.Date ?? milestone.Date,
-            command.Time ?? milestone.Time,
-            command.Notes ?? milestone.Notes);
+            command.Type.Resolve(milestone.Type),
+            command.Title.Resolve(milestone.Title),
+            command.Date.Resolve(milestone.Date),
+            command.Time.Resolve(milestone.Time),
+            command.Notes.Resolve(milestone.Notes));
 
         await unitOfWork.SaveChangesAsync(ct);
         return milestone;

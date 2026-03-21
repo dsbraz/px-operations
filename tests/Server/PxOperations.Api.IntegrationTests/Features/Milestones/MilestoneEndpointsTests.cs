@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using PxOperations.Api.Features.Milestones.Contracts;
 using PxOperations.Api.Features.Projects.Contracts;
@@ -70,7 +71,7 @@ public sealed class MilestoneEndpointsTests(PostgreSqlFixture fixture)
         var created = await createResponse.Content.ReadFromJsonAsync<MilestoneResponse>();
 
         var patchResponse = await client.PatchAsync($"/api/milestones/{created!.Id}",
-            JsonContent.Create(new UpdateMilestoneRequest(Title: "Atualizado", Type: "Entrega Final")));
+            new StringContent("""{"title": "Atualizado", "type": "Entrega Final"}""", Encoding.UTF8, "application/json"));
         var updated = await patchResponse.Content.ReadFromJsonAsync<MilestoneResponse>();
 
         Assert.Equal(HttpStatusCode.OK, patchResponse.StatusCode);
