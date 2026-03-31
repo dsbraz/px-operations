@@ -1,0 +1,9 @@
+#!include:.gitignore
+**/bin/
+**/obj/
+**/bin\\*/
+**/obj\\*/
+.git/
+.idea/
+TestResults/
+tests/
