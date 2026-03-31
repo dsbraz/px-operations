@@ -1,0 +1,20 @@
+@using PxOperations.BlazorWasm.Api
+
+<div class="stats-bar">
+    <div class="stat pu">
+        <div class="sico">◈</div>
+        <div><div class="sval">@(TotalProjects?.ToString() ?? "—")</div><div class="slbl">Projetos</div></div>
+    </div>
+    <div class="stat pu">
+        <div class="sico">◎</div>
+        <div><div class="sval">@(AverageScore?.ToString("0.0") ?? "—")</div><div class="slbl">Média / 10</div></div>
+    </div>
+    <div class="stat re">
+        <div class="sico">▼</div>
+        <div><div class="sval">@(CriticalCount?.ToString() ?? "—")</div><div class="slbl">Críticos</div></div>
+    </div>
+    <div class="stat or">
+        <div class="sico">!</div>
+        <div><div class="sval">@(NoResponseCount?.ToString() ?? "—")</div><div class="slbl">Sem resp</div></div>
+    </div>
+</div>

@@ -1,0 +1,27 @@
+<div class="toolbar">
+    <div class="search-wrap">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" placeholder="Buscar projeto ou cliente…"
+               value="@SearchTerm"
+               @oninput="e => OnSearchChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" />
+    </div>
+    <select value="@FilterDc" @onchange="e => OnFilterDcChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)">
+        <option value="">Todos os DCs</option>
+        <option value="DC1">DC1</option>
+        <option value="DC2">DC2</option>
+        <option value="DC3">DC3</option>
+        <option value="DC4">DC4</option>
+        <option value="DC5">DC5</option>
+        <option value="DC6">DC6</option>
+    </select>
+    <select value="@FilterScore" @onchange="e => OnFilterScoreChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)">
+        <option value="">Todas as notas</option>
+        <option value="hi">Saudável (7–10)</option>
+        <option value="md">Atenção (4–6)</option>
+        <option value="lo">Crítico (0–3)</option>
+    </select>
+    <div class="view-tabs">
+        <button class="vtab @(ActiveTab == "dash" ? "active" : "")" @onclick='() => OnTabChanged.InvokeAsync("dash")'>Dashboard</button>
+        <button class="vtab @(ActiveTab == "lista" ? "active" : "")" @onclick='() => OnTabChanged.InvokeAsync("lista")'>Projetos</button>
+    </div>
+</div>

@@ -1,0 +1,179 @@
+@page "/health/new"
+@page "/health/{Id:int}/edit"
+@using PxOperations.BlazorWasm.Api
+
+<div class="health-hero">
+    <div class="health-hero-inner">
+        <div class="health-hero-eyebrow">BRQ · Operations PX</div>
+        <div class="health-hero-title">Project Health</div>
+        <div class="health-hero-desc">
+            Reflexão semanal da evolução do projeto sob 5 dimensões: práticas, escopo, cronograma, qualidade e relacionamento.
+            <strong>O preenchimento semanal deve ser realizado pelo líder do projeto.</strong>
+        </div>
+    </div>
+    <div class="health-progress">
+        <span class="hp-label">Progresso</span>
+        <div class="hp-track"><div class="hp-fill" style="width:@(ProgressPercent)%"></div></div>
+        <span class="hp-pct">@(ProgressPercent)%</span>
+    </div>
+</div>
+
+@if (submitted)
+{
+    <div class="health-success">
+        <div class="health-success-icon">✓</div>
+        <div class="health-success-title">Resposta registrada!</div>
+        <div class="health-success-desc">Obrigado pelo preenchimento. Sua reflexão foi enviada e estará disponível no painel de saúde da operação PX.</div>
+        <button class="btn btn-purple" @onclick="ResetForm">Preencher outro projeto</button>
+    </div>
+}
+else
+{
+    <div class="health-form-wrap">
+
+        @if (error is not null)
+        {
+            <div class="status-card error" style="margin-bottom:12px;padding:12px 16px;"><p>@error</p></div>
+        }
+
+        <!-- 01. EMAIL -->
+        <div class="hfield">
+            <div class="hfield-num">01</div>
+            <div class="hfield-label">Seu e-mail <span class="req">*</span></div>
+            <input type="email" class="fi" @bind="formEmail" placeholder="nome@brq.com" />
+        </div>
+
+        <!-- 02. DC -->
+        <div class="hfield">
+            <div class="hfield-num">02</div>
+            <div class="hfield-label">Qual o Delivery Center? <span class="req">*</span></div>
+            <select class="fi" @bind="formDc" @bind:after="OnDcChanged">
+                <option value="">Selecione…</option>
+                <option value="DC1">DC1</option>
+                <option value="DC2">DC2</option>
+                <option value="DC3">DC3</option>
+                <option value="DC4">DC4</option>
+                <option value="DC5">DC5</option>
+                <option value="DC6">DC6</option>
+            </select>
+        </div>
+
+        <!-- 03. PROJETO -->
+        <div class="hfield">
+            <div class="hfield-num">03</div>
+            <div class="hfield-label">Qual o Projeto? <span class="req">*</span></div>
+            <select class="fi" @bind="formProjectId">
+                @if (filteredProjects.Count == 0)
+                {
+                    <option value="0">@(string.IsNullOrEmpty(formDc) ? "Selecione o DC primeiro…" : "Nenhum projeto encontrado")</option>
+                }
+                else
+                {
+                    <option value="0">Selecione o projeto…</option>
+                    @foreach (var p in filteredProjects)
+                    {
+                        <option value="@p.Id">@p.Name</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <!-- 03b. SUB-PROJETO -->
+        <div class="hfield">
+            <div class="hfield-num">03b</div>
+            <div class="hfield-label">Sub-projeto <span class="hfield-opt">(opcional)</span></div>
+            <div class="hfield-desc">Se o projeto tem mais de uma frente de trabalho independente, indique qual.</div>
+            <input type="text" class="fi" @bind="formSubProject" placeholder="Deixe em branco se não se aplica" />
+        </div>
+
+        <!-- 04. PRÁTICAS -->
+        <div class="hfield">
+            <div class="hfield-num">04</div>
+            <div class="hfield-label">Checklist de Práticas <span class="req">*</span></div>
+            <div class="hfield-desc">Marque apenas os itens que estão atualizados nesta semana.</div>
+            <div class="practice-list">
+                @for (var i = 0; i < PracticeLabels.Length; i++)
+                {
+                    var idx = i;
+                    <div class="practice-item @(practiceChecks[idx] ? "checked" : "")" @onclick="() => TogglePractice(idx)">
+                        <div class="practice-box"></div>
+                        <div class="practice-text">@PracticeLabels[idx]</div>
+                    </div>
+                }
+            </div>
+            <div class="practice-count">@practiceChecks.Count(c => c) de 5 itens marcados</div>
+        </div>
+
+        <div class="health-divider"><div class="health-divider-line"></div><span>Avaliação das 4 dimensões</span><div class="health-divider-line"></div></div>
+
+        <!-- 05-08. RAG DIMENSIONS -->
+        @foreach (var dim in RagDimensions)
+        {
+            <div class="hfield">
+                <div class="hfield-num">@dim.Number</div>
+                <div class="hfield-label">@dim.Label <span class="req">*</span></div>
+                <div class="hfield-desc">@dim.Description</div>
+                <div class="rag-list">
+                    @foreach (var opt in RagOptions)
+                    {
+                        var isSelected = GetRagValue(dim.Key) == opt.Value;
+                        <div class="rag-item @opt.CssClass @(isSelected ? "selected" : "")" @onclick="() => SetRagValue(dim.Key, opt.Value)">
+                            <div class="rag-dot"></div>
+                            <div>
+                                <div class="rag-label">@opt.Label</div>
+                                <div class="rag-desc">@dim.GetDescription(opt.Value)</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="health-divider"><div class="health-divider-line"></div><span>Expansão e próximos passos</span><div class="health-divider-line"></div></div>
+
+        <!-- 09. EXPANSÃO -->
+        <div class="hfield">
+            <div class="hfield-num">09</div>
+            <div class="hfield-label">Já foi mapeada alguma oportunidade de expansão? <span class="req">*</span></div>
+            <div class="yn-row">
+                <div class="yn-item @(formExpansion == true ? "selected" : "")" @onclick='() => { formExpansion = true; }'>Sim</div>
+                <div class="yn-item @(formExpansion == false ? "selected" : "")" @onclick='() => { formExpansion = false; }'>Não</div>
+            </div>
+        </div>
+
+        @if (formExpansion == true)
+        {
+            <!-- 10. COMENTÁRIO EXPANSÃO -->
+            <div class="hfield">
+                <div class="hfield-num">10</div>
+                <div class="hfield-label">Comentário sobre a oportunidade de expansão</div>
+                <textarea class="fi" @bind="formExpansionComment" placeholder="Descreva a oportunidade identificada…"></textarea>
+            </div>
+        }
+
+        <!-- 11. PLANO DE AÇÃO -->
+        <div class="hfield">
+            <div class="hfield-num">11</div>
+            <div class="hfield-label">Será preciso construir um plano de ação para este projeto? <span class="req">*</span></div>
+            <div class="yn-row">
+                <div class="yn-item @(formActionPlan == true ? "selected" : "")" @onclick='() => { formActionPlan = true; }'>Sim</div>
+                <div class="yn-item @(formActionPlan == false ? "selected" : "")" @onclick='() => { formActionPlan = false; }'>Não</div>
+            </div>
+        </div>
+
+        <!-- 12. DESTAQUES -->
+        <div class="hfield">
+            <div class="hfield-num">12</div>
+            <div class="hfield-label">Destaques positivos e negativos do projeto na semana <span class="req">*</span></div>
+            <textarea class="fi" @bind="formHighlights" placeholder="Compartilhe conquistas, riscos, bloqueios e qualquer contexto relevante…" style="min-height:110px;"></textarea>
+        </div>
+
+    </div>
+
+    <div class="health-footer">
+        <div class="health-footer-note">Campos com <b>*</b> são obrigatórios</div>
+        <button class="btn btn-purple" disabled="@isSaving" @onclick="HandleSubmit">
+            @(isSaving ? "Enviando…" : "Enviar resposta")
+        </button>
+    </div>
+}

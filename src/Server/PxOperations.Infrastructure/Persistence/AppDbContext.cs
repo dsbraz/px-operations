@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PxOperations.Application.Abstractions;
 using PxOperations.Domain.Abstractions;
+using PxOperations.Domain.HealthChecks;
 using PxOperations.Domain.Milestones;
 using PxOperations.Domain.Projects;
 
@@ -11,6 +12,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 {
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<Milestone> Milestones => Set<Milestone>();
+    public DbSet<HealthCheck> HealthChecks => Set<HealthCheck>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
