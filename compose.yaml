@@ -52,6 +52,7 @@ services:
     command:
       - dotnet
       - watch
+      - --no-hot-reload
       - run
       - --project
       - src/Client/PxOperations.BlazorWasm
@@ -71,14 +72,10 @@ services:
       - "8080:8080"
     volumes:
       - .:/src
-      - client-bin:/src/src/Client/PxOperations.BlazorWasm/bin
-      - client-obj:/src/src/Client/PxOperations.BlazorWasm/obj
       - nuget-cache:/root/.nuget/packages
 
 volumes:
   postgres-data:
   nuget-cache:
-  client-bin:
-  client-obj:
   server-bin:
   server-obj:
