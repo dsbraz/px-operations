@@ -1,3 +1,4 @@
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -21,6 +22,7 @@ public static class OpenTelemetryExtensions
             {
                 tracing.AddAspNetCoreInstrumentation();
                 tracing.AddHttpClientInstrumentation();
+                tracing.AddEntityFrameworkCoreInstrumentation();
 
                 if (!string.IsNullOrWhiteSpace(otlpEndpoint))
                 {
@@ -36,6 +38,13 @@ public static class OpenTelemetryExtensions
                 if (!string.IsNullOrWhiteSpace(otlpEndpoint))
                 {
                     metrics.AddOtlpExporter(options => options.Endpoint = new Uri(otlpEndpoint));
+                }
+            })
+            .WithLogging(logging =>
+            {
+                if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+                {
+                    logging.AddOtlpExporter(options => options.Endpoint = new Uri(otlpEndpoint));
                 }
             });
 
