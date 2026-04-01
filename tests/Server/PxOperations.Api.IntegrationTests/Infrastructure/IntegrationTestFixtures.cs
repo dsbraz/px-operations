@@ -14,7 +14,7 @@ public sealed class ApiIntegrationCollection : ICollectionFixture<PostgreSqlFixt
 
 public sealed class PostgreSqlFixture : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17-alpine")
+    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:18-alpine")
         .WithDatabase("pxoperations")
         .WithUsername("pxoperations")
         .WithPassword("pxoperations")
