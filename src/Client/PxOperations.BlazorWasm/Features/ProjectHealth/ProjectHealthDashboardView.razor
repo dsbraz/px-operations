@@ -1,0 +1,154 @@
+@using PxOperations.BlazorWasm.Api
+
+<div class="ph-dash">
+
+    @if (Summary is not null)
+    {
+        <div class="ph-2col">
+            <!-- Overall Score -->
+            <div class="ph-card">
+                <div class="ph-card-eye">Saúde Geral da Operação</div>
+                <div class="sg-score">
+                    <div class="sg-num">@Summary.AverageScore.ToString("0.0")</div>
+                    <div class="sg-den">/ 10</div>
+                </div>
+                <div class="sg-bar"><div class="sg-bar-fill" style="width:@((Summary.AverageScore / 10 * 100).ToString("0"))%"></div></div>
+                <div class="dim-row"><span class="dim-lbl">Escopo</span><div class="dim-bar"><div class="dim-fill" style="width:@((Summary.AverageScope / 2 * 100).ToString("0"))%"></div></div><span class="dim-val">@Summary.AverageScope.ToString("0.0")</span></div>
+                <div class="dim-row"><span class="dim-lbl">Cronograma</span><div class="dim-bar"><div class="dim-fill" style="width:@((Summary.AverageSchedule / 2 * 100).ToString("0"))%"></div></div><span class="dim-val">@Summary.AverageSchedule.ToString("0.0")</span></div>
+                <div class="dim-row"><span class="dim-lbl">Qualidade</span><div class="dim-bar"><div class="dim-fill" style="width:@((Summary.AverageQuality / 2 * 100).ToString("0"))%"></div></div><span class="dim-val">@Summary.AverageQuality.ToString("0.0")</span></div>
+                <div class="dim-row"><span class="dim-lbl">Satisfação</span><div class="dim-bar"><div class="dim-fill" style="width:@((Summary.AverageSatisfaction / 2 * 100).ToString("0"))%"></div></div><span class="dim-val">@Summary.AverageSatisfaction.ToString("0.0")</span></div>
+            </div>
+
+            <!-- Weekly Evolution -->
+            <div class="ph-card" style="display:flex;flex-direction:column;">
+                <div class="ph-card-eye">Evolução Semanal — Nota Média</div>
+                <div class="ph-chart-wrap">
+                    @if (Summary.WeeklyEvolution.Count >= 2)
+                    {
+                        <svg viewBox="0 0 560 130" preserveAspectRatio="none" style="width:100%;height:100%">
+                            @{ var pts = Summary.WeeklyEvolution.ToList();
+                               var xStep = 520.0 / (pts.Count - 1);
+                               var points = string.Join(" ", pts.Select((p, i) => $"{20 + i * xStep},{118 - p.AverageScore / 10 * 106}"));
+                               var areaPoints = points + $" {20 + (pts.Count - 1) * xStep},118 20,118"; }
+                            <polygon points="@areaPoints" fill="rgba(75,20,140,0.07)" />
+                            <polyline points="@points" fill="none" stroke="#4B148C" stroke-width="2.5" stroke-linejoin="round" />
+                            @for (var i = 0; i < pts.Count; i++)
+                            {
+                                var x = 20 + i * xStep;
+                                var y = 118 - pts[i].AverageScore / 10 * 106;
+                                <circle cx="@x" cy="@y" r="4" fill="#4B148C" />
+                                @((MarkupString)$"<text x=\"{x}\" y=\"128\" text-anchor=\"middle\" font-size=\"9\" fill=\"#4A4A4A\" font-family=\"Inter,sans-serif\">{FormatWeek(pts[i].Week)}</text>")
+                            }
+                            @foreach (var v in new[] { 0, 5, 10 })
+                            {
+                                var yy = 118 - v / 10.0 * 106;
+                                <line x1="20" y1="@yy" x2="540" y2="@yy" stroke="#D9D9D9" stroke-width="1" />
+                                @((MarkupString)$"<text x=\"4\" y=\"{yy + 4}\" font-size=\"9\" fill=\"#B1B1B1\" font-family=\"Space Mono,monospace\">{v}</text>")
+                            }
+                        </svg>
+                    }
+                    else
+                    {
+                        <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted2);font-size:12px">Dados insuficientes</div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="ph-kpi-row">
+            <div class="ph-kpi re"><div class="ph-kpi-icon">▼</div><div><div class="ph-kpi-val">@Summary.CriticalCount</div><div class="ph-kpi-lbl">Críticos (0–3)</div></div></div>
+            <div class="ph-kpi or"><div class="ph-kpi-icon">!</div><div><div class="ph-kpi-val">@Summary.AttentionCount</div><div class="ph-kpi-lbl">Atenção (4–6)</div></div></div>
+            <div class="ph-kpi pu"><div class="ph-kpi-icon">◉</div><div><div class="ph-kpi-val">@Summary.NoResponseCount</div><div class="ph-kpi-lbl">Sem resp</div></div></div>
+            <div class="ph-kpi gr"><div class="ph-kpi-icon">↗</div><div><div class="ph-kpi-val">@Summary.WithExpansionCount</div><div class="ph-kpi-lbl">Com expansão</div></div></div>
+        </div>
+
+        <!-- Expansion & Action Plans -->
+        <div style="margin-bottom:18px">
+            <div class="ph-sec-label"><span>Expansão e Planos de Ação</span></div>
+            <div class="ph-exp-kpis">
+                <div><div class="ph-exp-val">@Summary.WithExpansionCount</div><div class="ph-exp-lbl">Com oportunidade</div></div>
+                <div><div class="ph-exp-val">@(Summary.TotalProjects > 0 ? (Summary.WithExpansionCount * 100 / Summary.TotalProjects).ToString() : "0")%</div><div class="ph-exp-lbl">% da carteira</div></div>
+                <div><div class="ph-exp-val">@Summary.WithActionPlanCount</div><div class="ph-exp-lbl">Com plano de ação</div></div>
+            </div>
+            @{ var expansionEntries = Entries.Where(e => e.ExpansionOpportunity).GroupBy(e => e.ProjectId).ToList();
+               var actionEntries = Entries.Where(e => e.ActionPlanNeeded).GroupBy(e => e.ProjectId).ToList(); }
+            <div class="ph-exp-cols">
+                <div>
+                    <div class="ph-exp-col-title" style="color:var(--green)"><div style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div>Oportunidades de Expansão</div>
+                    @if (expansionEntries.Any())
+                    {
+                        @foreach (var g in expansionEntries)
+                        {
+                            var first = g.First();
+                            var obs = g.Where(e => !string.IsNullOrEmpty(e.ExpansionComment)).Select(e => e.ExpansionComment).LastOrDefault();
+                            <div class="ph-ecard exp-bdr">
+                                <div class="ph-ecard-name">@first.ProjectName</div>
+                                <div class="ph-ecard-meta">@first.ProjectClient · @first.ProjectDc</div>
+                                @if (!string.IsNullOrEmpty(obs)) { <div class="ph-ecard-obs">"@obs"</div> }
+                                <div style="margin-top:7px"><span class="score-badge @ScoreClass(first.Score)">@first.Score/10</span></div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div style="color:var(--muted2);font-size:12px;padding:20px 0">Nenhuma oportunidade mapeada.</div>
+                    }
+                </div>
+                <div>
+                    <div class="ph-exp-col-title" style="color:var(--orange)"><div style="width:8px;height:8px;border-radius:50%;background:var(--orange)"></div>Planos de Ação Necessários</div>
+                    @if (actionEntries.Any())
+                    {
+                        @foreach (var g in actionEntries)
+                        {
+                            var first = g.First();
+                            var dest = g.Where(e => !string.IsNullOrEmpty(e.Highlights)).Select(e => e.Highlights).LastOrDefault();
+                            <div class="ph-ecard pla-bdr">
+                                <div class="ph-ecard-name">@first.ProjectName</div>
+                                <div class="ph-ecard-meta">@first.ProjectClient · @first.ProjectDc</div>
+                                @if (!string.IsNullOrEmpty(dest)) { <div class="ph-ecard-obs">"@dest"</div> }
+                                <div style="margin-top:7px;display:flex;gap:5px">
+                                    <span class="score-badge @ScoreClass(first.Score)">@first.Score/10</span>
+                                    <span class="ph-etag o">⚑ Plano de ação</span>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div style="color:var(--muted2);font-size:12px;padding:20px 0">Nenhum projeto com plano de ação.</div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Highlights -->
+        <div>
+            <div class="ph-sec-label"><span>Destaques da semana</span></div>
+            @{ var highlights = Entries.Where(e => !string.IsNullOrWhiteSpace(e.Highlights)).Take(10).ToList(); }
+            @if (highlights.Any())
+            {
+                @foreach (var e in highlights)
+                {
+                    <div class="ph-com-card">
+                        <div class="ph-com-top">
+                            <div>
+                                <div class="ph-com-proj">@e.ProjectName @(e.SubProject is not null ? $"· {e.SubProject}" : "")</div>
+                                <div class="ph-com-sub">@e.ProjectClient · @e.ProjectDc</div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <span class="score-badge @ScoreClass(e.Score)">@e.Score/10</span>
+                                <span style="font-size:10px;color:var(--muted)">@FormatWeek(e.Week)</span>
+                            </div>
+                        </div>
+                        <div class="ph-com-text">"@e.Highlights"</div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div style="text-align:center;padding:40px;color:var(--muted2);font-size:12px">Nenhum comentário encontrado</div>
+            }
+        </div>
+    }
+</div>

@@ -12,17 +12,17 @@ public partial class MilestonesClient
         string? from,
         string? to,
         CancellationToken cancellationToken = default)
-        => List2Async(search, dc, type, projectId, from, to, cancellationToken);
+        => List3Async(search, dc, type, projectId, from, to, cancellationToken);
 
     public Task<MilestoneResponse> GetByIdAsync(int id, CancellationToken cancellationToken = default)
-        => GetById2Async(id, cancellationToken);
+        => GetById3Async(id, cancellationToken);
 
     public Task<MilestoneResponse> CreateAsync(CreateMilestoneRequest body, CancellationToken cancellationToken = default)
-        => Create2Async(body, cancellationToken);
+        => Create3Async(body, cancellationToken);
 
     public Task<MilestoneResponse> UpdateAsync(int id, UpdateMilestoneRequest body, CancellationToken cancellationToken = default)
-        => Update2Async(id, body, cancellationToken);
+        => Update3Async(id, body, cancellationToken);
 
     public Task DeleteAsync(int id, CancellationToken cancellationToken = default)
-        => Delete2Async(id, cancellationToken);
+        => Delete3Async(id, cancellationToken);
 }

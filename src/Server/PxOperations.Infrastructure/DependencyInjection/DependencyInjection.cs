@@ -3,14 +3,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PxOperations.Application.Abstractions;
 using PxOperations.Application.Features.Diagnostics;
-using PxOperations.Application.Features.HealthChecks;
-using PxOperations.Application.Features.HealthChecks.UseCases;
+using PxOperations.Application.Features.ProjectHealth;
+using PxOperations.Application.Features.ProjectHealth.UseCases;
 using PxOperations.Application.Features.Milestones;
 using PxOperations.Application.Features.Milestones.UseCases;
 using PxOperations.Application.Features.Projects;
 using PxOperations.Application.Features.Projects.UseCases;
 using PxOperations.Infrastructure.Features.Diagnostics;
-using PxOperations.Infrastructure.Features.HealthChecks;
+using PxOperations.Infrastructure.Features.ProjectHealth;
 using PxOperations.Infrastructure.Features.Milestones;
 using PxOperations.Infrastructure.Persistence;
 using PxOperations.Infrastructure.Features.Projects;
@@ -43,13 +43,13 @@ public static class DependencyInjection
         services.AddScoped<GetMilestoneUseCase>();
         services.AddScoped<ListMilestonesUseCase>();
 
-        services.AddScoped<IHealthCheckRepository, HealthCheckRepository>();
-        services.AddScoped<CreateHealthCheckUseCase>();
-        services.AddScoped<UpdateHealthCheckUseCase>();
-        services.AddScoped<DeleteHealthCheckUseCase>();
-        services.AddScoped<GetHealthCheckUseCase>();
-        services.AddScoped<ListHealthChecksUseCase>();
-        services.AddScoped<GetHealthCheckSummaryUseCase>();
+        services.AddScoped<IProjectHealthRepository, ProjectHealthRepository>();
+        services.AddScoped<CreateProjectHealthUseCase>();
+        services.AddScoped<UpdateProjectHealthUseCase>();
+        services.AddScoped<DeleteProjectHealthUseCase>();
+        services.AddScoped<GetProjectHealthUseCase>();
+        services.AddScoped<ListProjectHealthUseCase>();
+        services.AddScoped<GetProjectHealthSummaryUseCase>();
 
         services.AddScoped<IReadinessService, DatabaseReadinessService>();
 

@@ -1,0 +1,30 @@
+@page "/project-health"
+@using PxOperations.BlazorWasm.Api
+
+<div class="ph-header">
+    <div class="ph-header-title">Operations PX · Saúde de Projetos</div>
+    <a class="ph-header-link" href="/project-health/new">↗ Formulário do Líder</a>
+</div>
+
+<ProjectHealthStatsBar TotalProjects="@summary?.TotalProjects"
+                AverageScore="@summary?.AverageScore"
+                CriticalCount="@summary?.CriticalCount"
+                NoResponseCount="@summary?.NoResponseCount" />
+
+<ProjectHealthToolbar SearchTerm="@searchTerm" OnSearchChanged="OnSearchChanged"
+               FilterDc="@filterDc" OnFilterDcChanged="OnFilterDcChanged"
+               FilterScore="@filterScore" OnFilterScoreChanged="OnFilterScoreChanged"
+               ActiveTab="@activeTab" OnTabChanged="OnTabChanged" />
+
+@if (isLoading)
+{
+    <div style="text-align:center;padding:60px;color:var(--muted)">Carregando…</div>
+}
+else if (activeTab == "dash")
+{
+    <ProjectHealthDashboardView Summary="@summary" Entries="@FilteredEntries" />
+}
+else
+{
+    <ProjectHealthProjectsView Entries="@FilteredEntries" />
+}
