@@ -33,7 +33,7 @@ public partial class ProjectHealthFormPage : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
-        allProjects = (await ProjectsClient.ListAsync(null, null, "InProgress", null, null, default)).ToList();
+        allProjects = (await ProjectsClient.ListAsync(null, null, "in_progress", null, null, default)).ToList();
 
         if (Id.HasValue)
         {
