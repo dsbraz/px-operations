@@ -41,6 +41,7 @@ EXPOSE 8080
 ENTRYPOINT ["dotnet", "PxOperations.Api.dll"]
 
 FROM nginx:1.27-alpine AS frontend
+COPY src/Client/PxOperations.BlazorWasm/Hosting/security-headers.conf /etc/nginx/security-headers.conf
 COPY src/Client/PxOperations.BlazorWasm/Hosting/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=source /app/client-publish/wwwroot /usr/share/nginx/html
 RUN set -e; \

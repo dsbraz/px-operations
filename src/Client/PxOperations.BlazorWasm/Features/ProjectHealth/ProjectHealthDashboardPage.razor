@@ -20,6 +20,13 @@
 {
     <div style="text-align:center;padding:60px;color:var(--muted)">Carregando…</div>
 }
+else if (loadError is not null)
+{
+    <div class="status-card error" style="margin:40px auto;max-width:480px;text-align:center;padding:24px;">
+        <p>@loadError</p>
+        <button class="btn btn-purple" style="margin-top:12px" @onclick="LoadDataAsync">Tentar novamente</button>
+    </div>
+}
 else if (activeTab == "dash")
 {
     <ProjectHealthDashboardView Summary="@summary" Entries="@FilteredEntries" />

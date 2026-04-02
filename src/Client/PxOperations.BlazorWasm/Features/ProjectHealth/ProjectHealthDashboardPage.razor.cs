@@ -10,6 +10,7 @@ public partial class ProjectHealthDashboardPage : ComponentBase
     private ProjectHealthSummaryResponse? summary;
     private List<ProjectHealthResponse> entries = [];
     private bool isLoading = true;
+    private string? loadError;
 
     private string searchTerm = "";
     private string filterDc = "";
@@ -24,13 +25,25 @@ public partial class ProjectHealthDashboardPage : ComponentBase
     private async Task LoadDataAsync()
     {
         isLoading = true;
-        var dc = string.IsNullOrEmpty(filterDc) ? null : filterDc;
-        int? minScore = filterScore switch { "hi" => 7, "md" => 4, "lo" => 0, _ => null };
-        int? maxScore = filterScore switch { "hi" => 10, "md" => 6, "lo" => 3, _ => null };
+        loadError = null;
 
-        summary = await ProjectHealthClient.GetSummaryAsync(null, dc, null, null, minScore, maxScore, default);
-        entries = (await ProjectHealthClient.List2Async(null, dc, null, null, minScore, maxScore, default)).ToList();
-        isLoading = false;
+        try
+        {
+            var dc = string.IsNullOrEmpty(filterDc) ? null : filterDc;
+            int? minScore = filterScore switch { "hi" => 7, "md" => 4, "lo" => 0, _ => null };
+            int? maxScore = filterScore switch { "hi" => 10, "md" => 6, "lo" => 3, _ => null };
+
+            summary = await ProjectHealthClient.GetSummaryAsync(null, dc, null, null, minScore, maxScore, default);
+            entries = (await ProjectHealthClient.List2Async(null, dc, null, null, minScore, maxScore, default)).ToList();
+        }
+        catch (Exception)
+        {
+            loadError = "Não foi possível carregar os dados. Tente recarregar a página.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private List<ProjectHealthResponse> FilteredEntries
