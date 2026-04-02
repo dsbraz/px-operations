@@ -16,7 +16,6 @@ builder.Services.AddScoped(_ => new HttpClient
 {
     BaseAddress = apiBaseAddress
 });
-builder.Services.AddScoped<HealthClient>();
 builder.Services.AddScoped<ProjectHealthClient>();
 builder.Services.AddScoped<ProjectsClient>();
 builder.Services.AddScoped<MilestonesClient>();
