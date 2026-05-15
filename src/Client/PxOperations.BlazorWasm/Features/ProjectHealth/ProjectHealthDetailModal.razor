@@ -1,0 +1,96 @@
+@using PxOperations.BlazorWasm.Api
+
+<div class="overlay open" @onclick="() => OnClose.InvokeAsync()">
+    <div class="modal" style="width:680px;max-width:95vw" @onclick:stopPropagation>
+
+        <div class="modal-top">
+            <div>
+                <div class="modal-ttl" style="display:flex;align-items:center;gap:10px">
+                    @Entry.ProjectName
+                    <span class="score-badge @ScoreClass">@Entry.Score/10</span>
+                </div>
+                <div class="modal-sub">
+                    Semana @FormatWeek(Entry.Week)
+                    @if (Entry.SubProject is not null) { <span> · @Entry.SubProject</span> }
+                    <span> · @Entry.ProjectDc</span>
+                    @if (Entry.ProjectDeliveryManager is not null) { <span> · @Entry.ProjectDeliveryManager</span> }
+                </div>
+            </div>
+            <button class="mcls" @onclick="() => OnClose.InvokeAsync()">&#215;</button>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+
+            <!-- PRÁTICAS -->
+            <div class="ph-detail-section">
+                <div class="ph-detail-label">Práticas</div>
+                <div class="ph-detail-value">@Entry.PracticesCount <span style="color:var(--muted2)">/5 marcadas</span></div>
+            </div>
+
+            <!-- RAG DIMENSIONS -->
+            <div class="ph-detail-section">
+                <div class="ph-detail-label">Dimensões RAG</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+                    @foreach (var (label, value) in RagFields)
+                    {
+                        <div class="ph-detail-rag">
+                            <span class="rag-dot-inline @RagDotClass(value)"></span>
+                            <span class="ph-detail-rag-lbl">@label</span>
+                            <span class="ph-detail-rag-val">@Capitalize(value)</span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- EXPANSÃO -->
+            <div class="ph-detail-section">
+                <div class="ph-detail-label">Oportunidade de Expansão</div>
+                <div class="ph-detail-value">
+                    <span class="ph-etag @(Entry.ExpansionOpportunity ? "g" : "")">
+                        @(Entry.ExpansionOpportunity ? "Sim" : "Não")
+                    </span>
+                    @if (Entry.ExpansionOpportunity && !string.IsNullOrWhiteSpace(Entry.ExpansionComment))
+                    {
+                        <div style="margin-top:6px;font-size:13px;color:var(--text)">@Entry.ExpansionComment</div>
+                    }
+                </div>
+            </div>
+
+            <!-- PLANO DE AÇÃO -->
+            <div class="ph-detail-section">
+                <div class="ph-detail-label">Plano de Ação</div>
+                <div class="ph-detail-value">
+                    <span class="ph-etag @(Entry.ActionPlanNeeded ? "o" : "")">
+                        @(Entry.ActionPlanNeeded ? "Sim" : "Não")
+                    </span>
+                    @if (Entry.ActionPlanNeeded && !string.IsNullOrWhiteSpace(Entry.ActionPlanComment))
+                    {
+                        <div style="margin-top:6px;font-size:13px;color:var(--text)">@Entry.ActionPlanComment</div>
+                    }
+                </div>
+            </div>
+
+            <!-- DESTAQUES -->
+            <div class="ph-detail-section">
+                <div class="ph-detail-label">Destaques da semana</div>
+                <div style="font-size:13px;color:var(--text);line-height:1.6;margin-top:4px">@Entry.Highlights</div>
+            </div>
+
+            <!-- METADADOS -->
+            <div class="ph-detail-section" style="border-bottom:none">
+                <div style="display:flex;gap:24px;flex-wrap:wrap">
+                    <div><span class="ph-detail-meta-lbl">Respondido por</span><span class="ph-detail-meta-val">@Entry.ReporterEmail</span></div>
+                    @if (Entry.ProjectClient is not null)
+                    {
+                        <div><span class="ph-detail-meta-lbl">Cliente</span><span class="ph-detail-meta-val">@Entry.ProjectClient</span></div>
+                    }
+                </div>
+            </div>
+
+        </div>
+
+        <div class="mfoot">
+            <button class="btn btn-ghost" @onclick="() => OnClose.InvokeAsync()">Fechar</button>
+        </div>
+    </div>
+</div>

@@ -6,6 +6,7 @@ namespace PxOperations.BlazorWasm.Features.ProjectHealth;
 public partial class ProjectHealthProjectsView : ComponentBase
 {
     [Parameter, EditorRequired] public List<ProjectHealthResponse> Entries { get; set; } = [];
+    [Parameter] public EventCallback<ProjectHealthResponse> OnCardClick { get; set; }
 
     private HashSet<int> expandedProjects = [];
 

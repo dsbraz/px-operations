@@ -29,6 +29,7 @@ public static class ProjectHealthMappings
             view.ExpansionOpportunity,
             view.ExpansionComment,
             view.ActionPlanNeeded,
+            view.ActionPlanComment,
             view.Highlights);
     }
 

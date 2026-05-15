@@ -167,6 +167,7 @@ public sealed class ProjectHealthRepository(AppDbContext dbContext) : IProjectHe
             projectHealth.ExpansionOpportunity,
             projectHealth.ExpansionComment,
             projectHealth.ActionPlanNeeded,
+            projectHealth.ActionPlanComment,
             projectHealth.Highlights);
     }
 

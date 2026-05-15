@@ -48,6 +48,7 @@ public sealed class ProjectHealthEndpointsTests(PostgreSqlFixture fixture)
             false,
             null,
             false,
+            null,
             "Sprint entregue no prazo."));
 
         var ph = await response.Content.ReadFromJsonAsync<ProjectHealthResponse>();
@@ -72,7 +73,7 @@ public sealed class ProjectHealthEndpointsTests(PostgreSqlFixture fixture)
         var response = await client.PostAsJsonAsync("/api/project-health", new CreateProjectHealthRequest(
             projectId, null, "2026-03-30", "joao@brq.com", 3,
             "verde", "verde", "verde", "verde",
-            false, null, false, ""));
+            false, null, false, null, ""));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -87,7 +88,7 @@ public sealed class ProjectHealthEndpointsTests(PostgreSqlFixture fixture)
         var response = await client.PostAsJsonAsync("/api/project-health", new CreateProjectHealthRequest(
             99999, null, "2026-03-30", "joao@brq.com", 3,
             "verde", "verde", "verde", "verde",
-            false, null, false, "Teste."));
+            false, null, false, null, "Teste."));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -103,7 +104,7 @@ public sealed class ProjectHealthEndpointsTests(PostgreSqlFixture fixture)
         var response = await client.PostAsJsonAsync("/api/project-health", new CreateProjectHealthRequest(
             projectId, null, "2026-03-30", "joao@brq.com", 3,
             "invalid", "verde", "verde", "verde",
-            false, null, false, "Teste."));
+            false, null, false, null, "Teste."));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -253,7 +254,7 @@ public sealed class ProjectHealthEndpointsTests(PostgreSqlFixture fixture)
         return new CreateProjectHealthRequest(
             projectId, subProject, "2026-03-30", "joao@brq.com", practicesCount,
             scope, schedule, quality, satisfaction,
-            false, null, false, highlights);
+            false, null, false, null, highlights);
     }
 
     private static async Task<int> CreateProjectAsync(HttpClient client, string name, string dc = "DC1")

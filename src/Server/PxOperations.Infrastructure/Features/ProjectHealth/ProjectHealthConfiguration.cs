@@ -24,6 +24,7 @@ public sealed class ProjectHealthConfiguration : IEntityTypeConfiguration<Domain
         builder.Property(h => h.ExpansionOpportunity).HasColumnName("expansion_opportunity");
         builder.Property(h => h.ExpansionComment).HasColumnName("expansion_comment").HasMaxLength(500);
         builder.Property(h => h.ActionPlanNeeded).HasColumnName("action_plan_needed");
+        builder.Property(h => h.ActionPlanComment).HasColumnName("action_plan_comment").HasMaxLength(500);
         builder.Property(h => h.Highlights).HasColumnName("highlights").HasMaxLength(2000);
         builder.Property(h => h.Score).HasColumnName("score");
 

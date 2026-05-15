@@ -21,6 +21,7 @@ public sealed class ProjectHealth : AggregateRoot<int>
     public bool ExpansionOpportunity { get; private set; }
     public string? ExpansionComment { get; private set; }
     public bool ActionPlanNeeded { get; private set; }
+    public string? ActionPlanComment { get; private set; }
     public string Highlights { get; private set; } = string.Empty;
     public int Score { get; private set; }
     public Project Project { get; private set; } = default!;
@@ -38,9 +39,10 @@ public sealed class ProjectHealth : AggregateRoot<int>
         bool expansionOpportunity,
         string? expansionComment,
         bool actionPlanNeeded,
+        string? actionPlanComment,
         string highlights)
     {
-        CheckRules(reporterEmail, practicesCount, week, expansionOpportunity, expansionComment, highlights);
+        CheckRules(reporterEmail, practicesCount, week, expansionOpportunity, expansionComment, actionPlanNeeded, actionPlanComment, highlights);
 
         return new ProjectHealth
         {
@@ -56,6 +58,7 @@ public sealed class ProjectHealth : AggregateRoot<int>
             ExpansionOpportunity = expansionOpportunity,
             ExpansionComment = expansionComment,
             ActionPlanNeeded = actionPlanNeeded,
+            ActionPlanComment = actionPlanComment,
             Highlights = highlights,
             Score = ComputeScore(practicesCount, scope, schedule, quality, satisfaction)
         };
@@ -74,9 +77,10 @@ public sealed class ProjectHealth : AggregateRoot<int>
         bool expansionOpportunity,
         string? expansionComment,
         bool actionPlanNeeded,
+        string? actionPlanComment,
         string highlights)
     {
-        CheckRules(reporterEmail, practicesCount, week, expansionOpportunity, expansionComment, highlights);
+        CheckRules(reporterEmail, practicesCount, week, expansionOpportunity, expansionComment, actionPlanNeeded, actionPlanComment, highlights);
 
         ProjectId = projectId;
         SubProject = subProject;
@@ -90,6 +94,7 @@ public sealed class ProjectHealth : AggregateRoot<int>
         ExpansionOpportunity = expansionOpportunity;
         ExpansionComment = expansionComment;
         ActionPlanNeeded = actionPlanNeeded;
+        ActionPlanComment = actionPlanComment;
         Highlights = highlights;
         Score = ComputeScore(practicesCount, scope, schedule, quality, satisfaction);
     }
@@ -100,12 +105,15 @@ public sealed class ProjectHealth : AggregateRoot<int>
         DateOnly week,
         bool expansionOpportunity,
         string? expansionComment,
+        bool actionPlanNeeded,
+        string? actionPlanComment,
         string highlights)
     {
         RuleChecker.Check(new ReporterEmailMustNotBeEmptyRule(reporterEmail));
         RuleChecker.Check(new PracticesCountMustBeInRangeRule(practicesCount));
         RuleChecker.Check(new WeekMustBeMondayRule(week));
         RuleChecker.Check(new ExpansionCommentRequiredWhenExpansionRule(expansionOpportunity, expansionComment));
+        RuleChecker.Check(new ActionPlanCommentRequiredWhenActionPlanRule(actionPlanNeeded, actionPlanComment));
         RuleChecker.Check(new HighlightsMustNotBeEmptyRule(highlights));
     }
 

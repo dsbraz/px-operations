@@ -23,6 +23,7 @@ public sealed class ProjectHealthTests
             expansionOpportunity: true,
             expansionComment: "Novas trilhas de UX",
             actionPlanNeeded: false,
+            actionPlanComment: null,
             highlights: "Sprint entregue no prazo.");
 
         Assert.Equal(1, ph.ProjectId);
@@ -37,6 +38,7 @@ public sealed class ProjectHealthTests
         Assert.True(ph.ExpansionOpportunity);
         Assert.Equal("Novas trilhas de UX", ph.ExpansionComment);
         Assert.False(ph.ActionPlanNeeded);
+        Assert.Null(ph.ActionPlanComment);
         Assert.Equal("Sprint entregue no prazo.", ph.Highlights);
     }
 
@@ -137,6 +139,7 @@ public sealed class ProjectHealthTests
                 expansionOpportunity: true,
                 expansionComment: null,
                 actionPlanNeeded: false,
+                actionPlanComment: null,
                 highlights: "Tudo certo."));
 
         Assert.Equal("Expansion comment is required when there is an expansion opportunity.", ex.Message);
@@ -158,10 +161,57 @@ public sealed class ProjectHealthTests
             expansionOpportunity: false,
             expansionComment: null,
             actionPlanNeeded: false,
+            actionPlanComment: null,
             highlights: "Tudo certo.");
 
         Assert.False(ph.ExpansionOpportunity);
         Assert.Null(ph.ExpansionComment);
+    }
+
+    [Fact]
+    public void Create_should_fail_when_action_plan_true_but_comment_empty()
+    {
+        var ex = Assert.Throws<BusinessRuleValidationException>(() =>
+            Domain.ProjectHealth.ProjectHealth.Create(
+                projectId: 1,
+                subProject: null,
+                week: Monday,
+                reporterEmail: "joao@brq.com",
+                practicesCount: 3,
+                scope: RagStatus.Green,
+                schedule: RagStatus.Green,
+                quality: RagStatus.Green,
+                satisfaction: RagStatus.Green,
+                expansionOpportunity: false,
+                expansionComment: null,
+                actionPlanNeeded: true,
+                actionPlanComment: null,
+                highlights: "Tudo certo."));
+
+        Assert.Equal("Action plan comment is required when an action plan is needed.", ex.Message);
+    }
+
+    [Fact]
+    public void Create_should_accept_null_action_plan_comment_when_no_action_plan()
+    {
+        var ph = Domain.ProjectHealth.ProjectHealth.Create(
+            projectId: 1,
+            subProject: null,
+            week: Monday,
+            reporterEmail: "joao@brq.com",
+            practicesCount: 3,
+            scope: RagStatus.Green,
+            schedule: RagStatus.Green,
+            quality: RagStatus.Green,
+            satisfaction: RagStatus.Green,
+            expansionOpportunity: false,
+            expansionComment: null,
+            actionPlanNeeded: false,
+            actionPlanComment: null,
+            highlights: "Tudo certo.");
+
+        Assert.False(ph.ActionPlanNeeded);
+        Assert.Null(ph.ActionPlanComment);
     }
 
     [Fact]
@@ -186,6 +236,7 @@ public sealed class ProjectHealthTests
             expansionOpportunity: false,
             expansionComment: null,
             actionPlanNeeded: true,
+            actionPlanComment: "Plano emergencial necessário.",
             highlights: "Semana critica.");
 
         Assert.Equal(0, ph.Score);
@@ -210,6 +261,7 @@ public sealed class ProjectHealthTests
                 expansionOpportunity: false,
                 expansionComment: null,
                 actionPlanNeeded: false,
+                actionPlanComment: null,
                 highlights: ""));
     }
 
@@ -236,6 +288,7 @@ public sealed class ProjectHealthTests
             expansionOpportunity: false,
             expansionComment: null,
             actionPlanNeeded: false,
+            actionPlanComment: null,
             highlights: highlights);
     }
 }

@@ -17,6 +17,7 @@ public sealed record CreateProjectHealthCommand(
     bool ExpansionOpportunity,
     string? ExpansionComment,
     bool ActionPlanNeeded,
+    string? ActionPlanComment,
     string Highlights);
 
 public sealed class CreateProjectHealthUseCase(
@@ -42,6 +43,7 @@ public sealed class CreateProjectHealthUseCase(
             command.ExpansionOpportunity,
             command.ExpansionComment,
             command.ActionPlanNeeded,
+            command.ActionPlanComment,
             command.Highlights);
 
         repository.Add(projectHealth);

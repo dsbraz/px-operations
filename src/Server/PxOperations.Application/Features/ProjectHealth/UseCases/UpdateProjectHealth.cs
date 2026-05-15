@@ -18,6 +18,7 @@ public sealed record UpdateProjectHealthCommand(
     Optional<bool> ExpansionOpportunity = default,
     Optional<string?> ExpansionComment = default,
     Optional<bool> ActionPlanNeeded = default,
+    Optional<string?> ActionPlanComment = default,
     Optional<string> Highlights = default);
 
 public sealed class UpdateProjectHealthUseCase(
@@ -50,6 +51,7 @@ public sealed class UpdateProjectHealthUseCase(
             command.ExpansionOpportunity.Resolve(projectHealth.ExpansionOpportunity),
             command.ExpansionComment.Resolve(projectHealth.ExpansionComment),
             command.ActionPlanNeeded.Resolve(projectHealth.ActionPlanNeeded),
+            command.ActionPlanComment.Resolve(projectHealth.ActionPlanComment),
             command.Highlights.Resolve(projectHealth.Highlights));
 
         await unitOfWork.SaveChangesAsync(ct);

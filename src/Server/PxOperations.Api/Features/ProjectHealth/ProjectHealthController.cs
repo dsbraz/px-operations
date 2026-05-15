@@ -93,6 +93,7 @@ public sealed class ProjectHealthController(
                     request.ExpansionOpportunity,
                     request.ExpansionComment,
                     request.ActionPlanNeeded,
+                    request.ActionPlanComment,
                     request.Highlights),
                 ct);
 
@@ -135,6 +136,7 @@ public sealed class ProjectHealthController(
                     request.ExpansionOpportunity,
                     request.ExpansionComment,
                     request.ActionPlanNeeded,
+                    request.ActionPlanComment,
                     request.Highlights),
                 ct);
 

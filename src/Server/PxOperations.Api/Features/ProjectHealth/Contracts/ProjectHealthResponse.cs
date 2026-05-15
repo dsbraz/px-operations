@@ -19,4 +19,5 @@ public sealed record ProjectHealthResponse(
     bool ExpansionOpportunity,
     string? ExpansionComment,
     bool ActionPlanNeeded,
+    string? ActionPlanComment,
     string Highlights);

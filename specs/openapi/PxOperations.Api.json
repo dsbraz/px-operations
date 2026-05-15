@@ -1297,6 +1297,7 @@
           "expansionOpportunity",
           "expansionComment",
           "actionPlanNeeded",
+          "actionPlanComment",
           "highlights"
         ],
         "type": "object",
@@ -1352,6 +1353,12 @@
           },
           "actionPlanNeeded": {
             "type": "boolean"
+          },
+          "actionPlanComment": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "highlights": {
             "type": "string"
@@ -1570,6 +1577,7 @@
           "expansionOpportunity",
           "expansionComment",
           "actionPlanNeeded",
+          "actionPlanComment",
           "highlights"
         ],
         "type": "object",
@@ -1659,6 +1667,12 @@
           },
           "actionPlanNeeded": {
             "type": "boolean"
+          },
+          "actionPlanComment": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "highlights": {
             "type": "string"
@@ -1928,6 +1942,9 @@
           },
           "actionPlanNeeded": {
             "$ref": "#/components/schemas/OptionalOfboolean"
+          },
+          "actionPlanComment": {
+            "$ref": "#/components/schemas/OptionalOfstring"
           },
           "highlights": {
             "$ref": "#/components/schemas/OptionalOfstring"

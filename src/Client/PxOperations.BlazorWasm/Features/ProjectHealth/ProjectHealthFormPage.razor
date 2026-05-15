@@ -143,27 +143,37 @@ else
 
         @if (formExpansion == true)
         {
-            <!-- 10. COMENTÁRIO EXPANSÃO -->
+            <!-- 09b. COMENTÁRIO EXPANSÃO -->
             <div class="hfield">
-                <div class="hfield-num">10</div>
+                <div class="hfield-num">09b</div>
                 <div class="hfield-label">Comentário sobre a oportunidade de expansão</div>
                 <textarea class="fi" @bind="formExpansionComment" placeholder="Descreva a oportunidade identificada…"></textarea>
             </div>
         }
 
-        <!-- 11. PLANO DE AÇÃO -->
+        <!-- 10. PLANO DE AÇÃO -->
         <div class="hfield">
-            <div class="hfield-num">11</div>
+            <div class="hfield-num">10</div>
             <div class="hfield-label">Será preciso construir um plano de ação para este projeto? <span class="req">*</span></div>
             <div class="yn-row">
                 <div class="yn-item @(formActionPlan == true ? "selected" : "")" @onclick='() => { formActionPlan = true; }'>Sim</div>
-                <div class="yn-item @(formActionPlan == false ? "selected" : "")" @onclick='() => { formActionPlan = false; }'>Não</div>
+                <div class="yn-item @(formActionPlan == false ? "selected" : "")" @onclick='() => { formActionPlan = false; formActionPlanComment = ""; }'>Não</div>
             </div>
         </div>
 
-        <!-- 12. DESTAQUES -->
+        @if (formActionPlan == true)
+        {
+            <!-- 10b. COMENTÁRIO PLANO DE AÇÃO -->
+            <div class="hfield">
+                <div class="hfield-num">10b</div>
+                <div class="hfield-label">Comentário sobre o plano de ação</div>
+                <textarea class="fi" @bind="formActionPlanComment" placeholder="Descreva o plano de ação necessário…"></textarea>
+            </div>
+        }
+
+        <!-- 11. DESTAQUES -->
         <div class="hfield">
-            <div class="hfield-num">12</div>
+            <div class="hfield-num">11</div>
             <div class="hfield-label">Destaques positivos e negativos do projeto na semana <span class="req">*</span></div>
             <textarea class="fi" @bind="formHighlights" placeholder="Compartilhe conquistas, riscos, bloqueios e qualquer contexto relevante…" style="min-height:110px;"></textarea>
         </div>

@@ -1,0 +1,6 @@
+<Project>
+  <!-- .NET SDK defaults IntermediateOutputPath with backslashes; override with forward slashes for Linux containers -->
+  <PropertyGroup>
+    <IntermediateOutputPath>obj/$(Configuration)/$(TargetFramework)/</IntermediateOutputPath>
+  </PropertyGroup>
+</Project>

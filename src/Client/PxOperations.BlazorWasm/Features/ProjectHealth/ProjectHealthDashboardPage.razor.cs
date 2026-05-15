@@ -17,6 +17,12 @@ public partial class ProjectHealthDashboardPage : ComponentBase
     private string filterScore = "";
     private string activeTab = "dash";
 
+    private bool showDetailModal;
+    private ProjectHealthResponse? detailEntry;
+
+    private void OpenDetailModal(ProjectHealthResponse entry) { detailEntry = entry; showDetailModal = true; }
+    private void CloseDetailModal() { showDetailModal = false; detailEntry = null; }
+
     protected override async Task OnInitializedAsync()
     {
         await LoadDataAsync();

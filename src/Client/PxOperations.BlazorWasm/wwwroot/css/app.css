@@ -777,6 +777,16 @@ textarea.fi { resize: vertical; min-height: 90px; line-height: 1.65; }
 .ph-etag.g { background: var(--gl); color: var(--green); }
 .ph-etag.o { background: var(--ol); color: var(--orange); }
 
+/* Detail modal */
+.ph-detail-section { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.ph-detail-label { font-size: 10px; font-weight: 700; color: var(--muted2); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+.ph-detail-value { font-size: 13px; color: var(--text); }
+.ph-detail-rag { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.ph-detail-rag-lbl { font-size: 11px; color: var(--muted); flex: 1; }
+.ph-detail-rag-val { font-size: 11px; font-weight: 700; color: var(--text); }
+.ph-detail-meta-lbl { font-size: 10px; color: var(--muted2); margin-right: 6px; }
+.ph-detail-meta-val { font-size: 12px; font-weight: 600; color: var(--text); }
+
 /* Highlight cards */
 .ph-com-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--purple); border-radius: 8px; padding: 13px 17px; margin-bottom: 8px; }
 .ph-com-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; }

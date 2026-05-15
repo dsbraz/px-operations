@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace PxOperations.Domain.Abstractions;
 
 public readonly struct Optional<T> : IEquatable<Optional<T>>
@@ -19,6 +21,7 @@ public readonly struct Optional<T> : IEquatable<Optional<T>>
 
     public static Optional<T> Of(T? value) => new(value);
 
+    [return: NotNullIfNotNull(nameof(fallback))]
     public T? Resolve(T? fallback) => _hasValue ? _value : fallback;
 
     public Optional<TResult> Map<TResult>(Func<T, TResult> mapper)

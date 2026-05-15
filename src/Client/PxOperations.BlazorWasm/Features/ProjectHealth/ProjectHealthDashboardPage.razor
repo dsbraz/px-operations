@@ -29,9 +29,14 @@ else if (loadError is not null)
 }
 else if (activeTab == "dash")
 {
-    <ProjectHealthDashboardView Summary="@summary" Entries="@FilteredEntries" />
+    <ProjectHealthDashboardView Summary="@summary" Entries="@FilteredEntries" OnCardClick="OpenDetailModal" />
 }
 else
 {
-    <ProjectHealthProjectsView Entries="@FilteredEntries" />
+    <ProjectHealthProjectsView Entries="@FilteredEntries" OnCardClick="OpenDetailModal" />
+}
+
+@if (showDetailModal && detailEntry is not null)
+{
+    <ProjectHealthDetailModal Entry="@detailEntry" OnClose="CloseDetailModal" />
 }

@@ -16,5 +16,6 @@ public sealed class UpdateProjectHealthRequest
     public Optional<bool> ExpansionOpportunity { get; init; }
     public Optional<string?> ExpansionComment { get; init; }
     public Optional<bool> ActionPlanNeeded { get; init; }
+    public Optional<string?> ActionPlanComment { get; init; }
     public Optional<string> Highlights { get; init; }
 }

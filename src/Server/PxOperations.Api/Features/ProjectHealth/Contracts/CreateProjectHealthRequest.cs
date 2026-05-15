@@ -13,4 +13,5 @@ public sealed record CreateProjectHealthRequest(
     bool ExpansionOpportunity,
     string? ExpansionComment,
     bool ActionPlanNeeded,
+    string? ActionPlanComment,
     string Highlights);

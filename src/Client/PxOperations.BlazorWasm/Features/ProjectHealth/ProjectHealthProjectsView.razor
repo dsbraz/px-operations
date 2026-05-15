@@ -35,7 +35,7 @@
                         <div class="ph-proj-grid">
                             @foreach (var entry in group.Entries.OrderByDescending(e => e.Week))
                             {
-                                <div class="ph-resp-card">
+                                <div class="ph-resp-card" style="cursor:pointer" @onclick="() => OnCardClick.InvokeAsync(entry)">
                                     <div style="display:flex;justify-content:space-between;margin-bottom:10px">
                                         <div>
                                             <div class="ph-resp-sem">Semana @FormatWeek(entry.Week)</div>

@@ -23,6 +23,7 @@ public partial class ProjectHealthFormPage : ComponentBase
     private bool? formExpansion;
     private string formExpansionComment = "";
     private bool? formActionPlan;
+    private string formActionPlanComment = "";
     private string formHighlights = "";
 
     private List<ProjectResponse> allProjects = [];
@@ -52,6 +53,7 @@ public partial class ProjectHealthFormPage : ComponentBase
             formExpansion = entry.ExpansionOpportunity;
             formExpansionComment = entry.ExpansionComment ?? "";
             formActionPlan = entry.ActionPlanNeeded;
+            formActionPlanComment = entry.ActionPlanComment ?? "";
             formHighlights = entry.Highlights;
             OnDcChanged();
         }
@@ -145,6 +147,7 @@ public partial class ProjectHealthFormPage : ComponentBase
                     ExpansionOpportunity = formExpansion.Value,
                     ExpansionComment = formExpansion.Value ? formExpansionComment : null,
                     ActionPlanNeeded = formActionPlan.Value,
+                    ActionPlanComment = formActionPlan.Value ? formActionPlanComment : null,
                     Highlights = formHighlights
                 }, default);
             }
@@ -164,6 +167,7 @@ public partial class ProjectHealthFormPage : ComponentBase
                     ExpansionOpportunity = formExpansion.Value,
                     ExpansionComment = formExpansion.Value ? formExpansionComment : null,
                     ActionPlanNeeded = formActionPlan.Value,
+                    ActionPlanComment = formActionPlan.Value ? formActionPlanComment : null,
                     Highlights = formHighlights
                 }, default);
             }
@@ -194,6 +198,7 @@ public partial class ProjectHealthFormPage : ComponentBase
         formExpansion = null;
         formExpansionComment = "";
         formActionPlan = null;
+        formActionPlanComment = "";
         formHighlights = "";
         filteredProjects = [];
         error = null;

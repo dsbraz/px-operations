@@ -28,22 +28,30 @@
                         <svg viewBox="0 0 560 130" preserveAspectRatio="none" style="width:100%;height:100%">
                             @{ var pts = Summary.WeeklyEvolution.ToList();
                                var xStep = 520.0 / (pts.Count - 1);
-                               var points = string.Join(" ", pts.Select((p, i) => $"{20 + i * xStep},{118 - p.AverageScore / 10 * 106}"));
-                               var areaPoints = points + $" {20 + (pts.Count - 1) * xStep},118 20,118"; }
+                               var rawMin = pts.Min(p => p.AverageScore);
+                               var rawMax = pts.Max(p => p.AverageScore);
+                               var yMin = Math.Max(0, Math.Floor(rawMin) - 1);
+                               var yMax = Math.Min(10, Math.Ceiling(rawMax) + 1);
+                               var yRange = yMax - yMin;
+                               double ScoreToY(double s) => 108 - (s - yMin) / yRange * 96;
+                               static string Pt(double x, double y) => FormattableString.Invariant($"{x},{y}");
+                               var points = string.Join(" ", pts.Select((p, i) => Pt(20 + i * xStep, ScoreToY(p.AverageScore))));
+                               var areaPoints = points + FormattableString.Invariant($" {20 + (pts.Count - 1) * xStep},108 20,108");
+                               var gridVals = new[] { yMin, Math.Round((yMin + yMax) / 2), yMax }; }
                             <polygon points="@areaPoints" fill="rgba(75,20,140,0.07)" />
                             <polyline points="@points" fill="none" stroke="#4B148C" stroke-width="2.5" stroke-linejoin="round" />
                             @for (var i = 0; i < pts.Count; i++)
                             {
-                                var x = 20 + i * xStep;
-                                var y = 118 - pts[i].AverageScore / 10 * 106;
+                                var x = (20 + i * xStep).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                                var y = ScoreToY(pts[i].AverageScore).ToString(System.Globalization.CultureInfo.InvariantCulture);
                                 <circle cx="@x" cy="@y" r="4" fill="#4B148C" />
-                                @((MarkupString)$"<text x=\"{x}\" y=\"128\" text-anchor=\"middle\" font-size=\"9\" fill=\"#4A4A4A\" font-family=\"Inter,sans-serif\">{FormatWeek(pts[i].Week)}</text>")
+                                @((MarkupString)FormattableString.Invariant($"<text x=\"{20 + i * xStep}\" y=\"128\" text-anchor=\"middle\" font-size=\"9\" fill=\"#4A4A4A\" font-family=\"Inter,sans-serif\">{FormatWeek(pts[i].Week)}</text>"))
                             }
-                            @foreach (var v in new[] { 0, 5, 10 })
+                            @foreach (var v in gridVals)
                             {
-                                var yy = 118 - v / 10.0 * 106;
+                                var yy = ScoreToY(v).ToString(System.Globalization.CultureInfo.InvariantCulture);
                                 <line x1="20" y1="@yy" x2="540" y2="@yy" stroke="#D9D9D9" stroke-width="1" />
-                                @((MarkupString)$"<text x=\"4\" y=\"{yy + 4}\" font-size=\"9\" fill=\"#B1B1B1\" font-family=\"Space Mono,monospace\">{v}</text>")
+                                @((MarkupString)FormattableString.Invariant($"<text x=\"4\" y=\"{ScoreToY(v) - 3}\" font-size=\"9\" fill=\"#B1B1B1\" font-family=\"Space Mono,monospace\">{v}</text>"))
                             }
                         </svg>
                     }
@@ -82,7 +90,7 @@
                         {
                             var first = g.First();
                             var obs = g.Where(e => !string.IsNullOrEmpty(e.ExpansionComment)).Select(e => e.ExpansionComment).LastOrDefault();
-                            <div class="ph-ecard exp-bdr">
+                            <div class="ph-ecard exp-bdr" style="cursor:pointer" @onclick="() => OnCardClick.InvokeAsync(first)">
                                 <div class="ph-ecard-name">@first.ProjectName</div>
                                 <div class="ph-ecard-meta">@first.ProjectClient · @first.ProjectDc</div>
                                 @if (!string.IsNullOrEmpty(obs)) { <div class="ph-ecard-obs">"@obs"</div> }
@@ -103,7 +111,7 @@
                         {
                             var first = g.First();
                             var dest = g.Where(e => !string.IsNullOrEmpty(e.Highlights)).Select(e => e.Highlights).LastOrDefault();
-                            <div class="ph-ecard pla-bdr">
+                            <div class="ph-ecard pla-bdr" style="cursor:pointer" @onclick="() => OnCardClick.InvokeAsync(first)">
                                 <div class="ph-ecard-name">@first.ProjectName</div>
                                 <div class="ph-ecard-meta">@first.ProjectClient · @first.ProjectDc</div>
                                 @if (!string.IsNullOrEmpty(dest)) { <div class="ph-ecard-obs">"@dest"</div> }
@@ -130,7 +138,7 @@
             {
                 @foreach (var e in highlights)
                 {
-                    <div class="ph-com-card">
+                    <div class="ph-com-card" style="cursor:pointer" @onclick="() => OnCardClick.InvokeAsync(e)">
                         <div class="ph-com-top">
                             <div>
                                 <div class="ph-com-proj">@e.ProjectName @(e.SubProject is not null ? $"· {e.SubProject}" : "")</div>

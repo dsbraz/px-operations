@@ -58,6 +58,9 @@ public sealed class CreateProjectHealthRequestValidator : AbstractValidator<Crea
 
         RuleFor(x => x.ExpansionComment)
             .MaximumLength(500);
+
+        RuleFor(x => x.ActionPlanComment)
+            .MaximumLength(500);
     }
 
     private static bool BeValidDate(string? value) =>
