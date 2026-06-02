@@ -18,6 +18,7 @@ Opcoes:
   --service-account <nome>      SERVICE_ACCOUNT
   --secret-db-connection <n>    SECRET_DB_CONNECTION
   --migration-job-name <nome>   MIGRATION_JOB_NAME
+  --otel-config-secret <n>      OTEL_CONFIG_SECRET
   --image-tag <tag>             IMAGE_TAG
   --skip-migration              Pular etapa de migracao
 USAGE
@@ -60,6 +61,12 @@ secret_has_versions() {
 
 require_cmd gcloud
 require_cmd curl
+require_cmd envsubst
+
+secret_exists() {
+  local name="$1"
+  gcloud secrets describe "$name" --project "$PROJECT_ID" >/dev/null 2>&1
+}
 
 authenticated_curl() {
   local url="$1"
@@ -95,6 +102,7 @@ while [[ $# -gt 0 ]]; do
     --service-account) SERVICE_ACCOUNT="$2"; shift 2 ;;
     --secret-db-connection) SECRET_DB_CONNECTION="$2"; shift 2 ;;
     --migration-job-name) MIGRATION_JOB_NAME="$2"; shift 2 ;;
+    --otel-config-secret) OTEL_CONFIG_SECRET="$2"; shift 2 ;;
     --image-tag) IMAGE_TAG="$2"; shift 2 ;;
     --skip-migration) SKIP_MIGRATION="true"; shift ;;
     -h|--help) usage; exit 0 ;;
@@ -111,6 +119,8 @@ WEB_SERVICE_NAME="${WEB_SERVICE_NAME:-px-operations-web}"
 SQL_INSTANCE="${SQL_INSTANCE:-px-operations-pg-us}"
 SERVICE_ACCOUNT="${SERVICE_ACCOUNT:-px-operations-runner}"
 SECRET_DB_CONNECTION="${SECRET_DB_CONNECTION:-px-operations-db-connection}"
+OTEL_CONFIG_SECRET="${OTEL_CONFIG_SECRET:-px-operations-otel-config}"
+COLLECTOR_IMAGE="${COLLECTOR_IMAGE:-us-docker.pkg.dev/cloud-ops-agents-artifacts/google-cloud-opentelemetry-collector/otelcol-google:0.151.0}"
 MIGRATION_JOB_NAME="${MIGRATION_JOB_NAME:-${API_SERVICE_NAME}-migrate}"
 SKIP_MIGRATION="${SKIP_MIGRATION:-false}"
 IMAGE_TAG="${IMAGE_TAG:-r$(date +%y%m%d%H%M%S)}"
@@ -198,18 +208,38 @@ else
     --wait
 fi
 
-echo "==> Deployando API no Cloud Run"
-gcloud run deploy "$API_SERVICE_NAME" \
+echo "==> Atualizando secret de configuracao do OpenTelemetry Collector (${OTEL_CONFIG_SECRET})"
+if ! secret_exists "$OTEL_CONFIG_SECRET"; then
+  gcloud secrets create "$OTEL_CONFIG_SECRET" \
+    --replication-policy="automatic" \
+    --project "$PROJECT_ID" >/dev/null
+fi
+gcloud secrets versions add "$OTEL_CONFIG_SECRET" \
+  --data-file="scripts/otel-collector-config.yaml" \
+  --project "$PROJECT_ID" >/dev/null
+
+echo "==> Deployando API no Cloud Run (app + OpenTelemetry Collector sidecar)"
+RENDERED_API_YAML="$(mktemp)"
+trap 'rm -f "$RENDERED_API_YAML"' EXIT
+export API_SERVICE_NAME INSTANCE_CONNECTION_NAME SERVICE_ACCOUNT_EMAIL API_IMAGE_URI \
+  SECRET_DB_CONNECTION OTEL_CONFIG_SECRET COLLECTOR_IMAGE
+envsubst '$API_SERVICE_NAME $INSTANCE_CONNECTION_NAME $SERVICE_ACCOUNT_EMAIL $API_IMAGE_URI $SECRET_DB_CONNECTION $OTEL_CONFIG_SECRET $COLLECTOR_IMAGE' \
+  < scripts/cloudrun-api.yaml.template > "$RENDERED_API_YAML"
+
+gcloud run services replace "$RENDERED_API_YAML" \
+  --project "$PROJECT_ID" \
+  --region "$REGION" \
+  --platform managed
+
+echo "==> Garantindo acesso publico da API"
+if ! gcloud run services add-iam-policy-binding "$API_SERVICE_NAME" \
   --project "$PROJECT_ID" \
   --region "$REGION" \
   --platform managed \
-  --image "$API_IMAGE_URI" \
-  --service-account "$SERVICE_ACCOUNT_EMAIL" \
-  --port 8080 \
-  --allow-unauthenticated \
-  --set-cloudsql-instances "$INSTANCE_CONNECTION_NAME" \
-  --set-secrets "ConnectionStrings__Default=${SECRET_DB_CONNECTION}:latest" \
-  --set-env-vars "^|^ASPNETCORE_ENVIRONMENT=Production|DOTNET_ENVIRONMENT=Production|ASPNETCORE_URLS=http://0.0.0.0:8080|ASPNETCORE_FORWARDEDHEADERS_ENABLED=true|OpenTelemetry__ServiceName=PxOperations.Api|OpenTelemetry__Otlp__Endpoint=https://telemetry.googleapis.com"
+  --member="allUsers" \
+  --role="roles/run.invoker" >/dev/null 2>&1; then
+  echo "AVISO: nao foi possivel conceder acesso publico (allUsers) -- provavelmente bloqueado por org policy (Domain Restricted Sharing). O servico segue como autenticado."
+fi
 
 echo "==> Validando health checks da API"
 API_URL="$(gcloud run services describe "$API_SERVICE_NAME" --region "$REGION" --project "$PROJECT_ID" --format='value(status.url)')"
@@ -231,7 +261,8 @@ echo "==> Validando frontend"
 FRONTEND_URL="$(gcloud run services describe "$WEB_SERVICE_NAME" --region "$REGION" --project "$PROJECT_ID" --format='value(status.url)')"
 
 authenticated_curl "${FRONTEND_URL}/"
-authenticated_curl "${FRONTEND_URL}/_framework/blazor.webassembly.js"
+# Blazor boot scripts are fingerprinted in .NET 10; dotnet.js is the stable, copied loader.
+authenticated_curl "${FRONTEND_URL}/_framework/dotnet.js"
 
 echo "==> Deploy concluido com sucesso"
 echo "API_URL=${API_URL}"

@@ -269,7 +269,8 @@ gcloud services enable \
   secretmanager.googleapis.com \
   iam.googleapis.com \
   cloudtrace.googleapis.com \
-  monitoring.googleapis.com
+  monitoring.googleapis.com \
+  logging.googleapis.com
 
 echo "==> Garantindo Artifact Registry"
 if gcloud artifacts repositories describe "$REPO_NAME" --location "$REGION" >/dev/null 2>&1; then
@@ -304,6 +305,9 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
   --role="roles/monitoring.metricWriter" >/dev/null
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+  --role="roles/logging.logWriter" >/dev/null
 
 echo "==> Aplicando papeis na service account padrao do Cloud Build"
 PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"

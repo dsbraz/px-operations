@@ -1,0 +1,46 @@
+# Google-built OpenTelemetry Collector config for the Cloud Run sidecar.
+# The API exports OTLP/gRPC to localhost:4317; the collector authenticates with the
+# Cloud Run service account (ADC) and ships each signal to its Google Cloud backend.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: localhost:4317
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 65
+    spike_limit_percentage: 20
+  resourcedetection:
+    detectors: [gcp]
+    timeout: 10s
+  batch:
+    timeout: 5s
+    send_batch_size: 200
+    send_batch_max_size: 200
+
+exporters:
+  googlecloud:
+    log:
+      default_log_name: opentelemetry-collector
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection, batch]
+      exporters: [googlecloud]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection, batch]
+      exporters: [googlecloud]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection, batch]
+      exporters: [googlecloud]
