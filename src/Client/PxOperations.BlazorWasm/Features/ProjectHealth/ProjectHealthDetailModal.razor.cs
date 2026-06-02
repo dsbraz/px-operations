@@ -8,7 +8,7 @@ public partial class ProjectHealthDetailModal : ComponentBase
     [Parameter, EditorRequired] public ProjectHealthResponse Entry { get; set; } = default!;
     [Parameter, EditorRequired] public EventCallback OnClose { get; set; }
 
-    private string ScoreClass => Entry.Score >= 7 ? "score-hi" : Entry.Score >= 4 ? "score-md" : "score-lo";
+    private string ScoreClass => ProjectHealthFormat.ScoreClass(Entry.Score);
 
     private IEnumerable<(string Label, string Value)> RagFields =>
     [
@@ -28,9 +28,4 @@ public partial class ProjectHealthDetailModal : ComponentBase
 
     private static string Capitalize(string value) => value.Length == 0 ? value
         : char.ToUpperInvariant(value[0]) + value[1..].ToLowerInvariant();
-
-    private static string FormatWeek(string week) =>
-        DateOnly.TryParse(week, out var d)
-            ? d.ToString("dd MMM", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))
-            : week;
 }

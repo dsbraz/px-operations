@@ -26,6 +26,7 @@ internal static class ProjectHealthTestHelpers
         bool expansionOpportunity = false,
         string? expansionComment = null,
         bool actionPlanNeeded = false,
+        string? actionPlanComment = null,
         string highlights = "Tudo certo.") => new ProjectHealthResponse
         {
             Id = id,
@@ -46,6 +47,7 @@ internal static class ProjectHealthTestHelpers
             ExpansionOpportunity = expansionOpportunity,
             ExpansionComment = expansionComment,
             ActionPlanNeeded = actionPlanNeeded,
+            ActionPlanComment = actionPlanComment,
             Highlights = highlights
         };
 
@@ -53,7 +55,7 @@ internal static class ProjectHealthTestHelpers
     {
         static string Str(string? v) => v is null ? "null" : $"\"{v}\"";
         static string Bool(bool v) => v ? "true" : "false";
-        return $"{{\"id\":{h.Id},\"projectId\":{h.ProjectId},\"projectName\":{Str(h.ProjectName)},\"projectClient\":{Str(h.ProjectClient)},\"projectDc\":{Str(h.ProjectDc)},\"projectDeliveryManager\":{Str(h.ProjectDeliveryManager)},\"subProject\":{Str(h.SubProject)},\"week\":{Str(h.Week)},\"reporterEmail\":{Str(h.ReporterEmail)},\"practicesCount\":{h.PracticesCount},\"scope\":{Str(h.Scope)},\"schedule\":{Str(h.Schedule)},\"quality\":{Str(h.Quality)},\"satisfaction\":{Str(h.Satisfaction)},\"score\":{h.Score},\"expansionOpportunity\":{Bool(h.ExpansionOpportunity)},\"expansionComment\":{Str(h.ExpansionComment)},\"actionPlanNeeded\":{Bool(h.ActionPlanNeeded)},\"highlights\":{Str(h.Highlights)}}}";
+        return $"{{\"id\":{h.Id},\"projectId\":{h.ProjectId},\"projectName\":{Str(h.ProjectName)},\"projectClient\":{Str(h.ProjectClient)},\"projectDc\":{Str(h.ProjectDc)},\"projectDeliveryManager\":{Str(h.ProjectDeliveryManager)},\"subProject\":{Str(h.SubProject)},\"week\":{Str(h.Week)},\"reporterEmail\":{Str(h.ReporterEmail)},\"practicesCount\":{h.PracticesCount},\"scope\":{Str(h.Scope)},\"schedule\":{Str(h.Schedule)},\"quality\":{Str(h.Quality)},\"satisfaction\":{Str(h.Satisfaction)},\"score\":{h.Score},\"expansionOpportunity\":{Bool(h.ExpansionOpportunity)},\"expansionComment\":{Str(h.ExpansionComment)},\"actionPlanNeeded\":{Bool(h.ActionPlanNeeded)},\"actionPlanComment\":{Str(h.ActionPlanComment)},\"highlights\":{Str(h.Highlights)}}}";
     }
 
     internal static string ProjectHealthListJson(params ProjectHealthResponse[] items)
@@ -64,8 +66,12 @@ internal static class ProjectHealthTestHelpers
         int totalProjects = 0,
         double avgScore = 0,
         int criticalCount = 0,
-        int noResponseCount = 0)
+        int noResponseCount = 0,
+        string[]? weeks = null)
     {
-        return $"{{\"totalEntries\":{totalEntries},\"totalProjects\":{totalProjects},\"averageScore\":{avgScore},\"averageScope\":0,\"averageSchedule\":0,\"averageQuality\":0,\"averageSatisfaction\":0,\"criticalCount\":{criticalCount},\"attentionCount\":0,\"healthyCount\":0,\"noResponseCount\":{noResponseCount},\"withExpansionCount\":0,\"withActionPlanCount\":0,\"weeklyEvolution\":[]}}";
+        var weekly = weeks is null
+            ? ""
+            : string.Join(",", weeks.Select(w => $"{{\"week\":\"{w}\",\"averageScore\":0,\"entryCount\":1}}"));
+        return $"{{\"totalEntries\":{totalEntries},\"totalProjects\":{totalProjects},\"averageScore\":{avgScore},\"averageScope\":0,\"averageSchedule\":0,\"averageQuality\":0,\"averageSatisfaction\":0,\"criticalCount\":{criticalCount},\"attentionCount\":0,\"healthyCount\":0,\"noResponseCount\":{noResponseCount},\"withExpansionCount\":0,\"withActionPlanCount\":0,\"weeklyEvolution\":[{weekly}]}}";
     }
 }

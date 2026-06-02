@@ -1,4 +1,5 @@
 @using PxOperations.BlazorWasm.Api
+@using static PxOperations.BlazorWasm.Features.ProjectHealth.ProjectHealthFormat
 
 <div class="ph-dash">
 
@@ -110,7 +111,7 @@
                         @foreach (var g in actionEntries)
                         {
                             var first = g.First();
-                            var dest = g.Where(e => !string.IsNullOrEmpty(e.Highlights)).Select(e => e.Highlights).LastOrDefault();
+                            var dest = g.Where(e => !string.IsNullOrEmpty(e.ActionPlanComment)).Select(e => e.ActionPlanComment).LastOrDefault();
                             <div class="ph-ecard pla-bdr" style="cursor:pointer" @onclick="() => OnCardClick.InvokeAsync(first)">
                                 <div class="ph-ecard-name">@first.ProjectName</div>
                                 <div class="ph-ecard-meta">@first.ProjectClient · @first.ProjectDc</div>

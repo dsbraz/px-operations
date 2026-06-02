@@ -24,8 +24,6 @@ public partial class ProjectHealthProjectsView : ComponentBase
             expandedProjects.Add(projectId);
     }
 
-    private static string ScoreClass(int score) => score >= 7 ? "score-hi" : score >= 4 ? "score-md" : "score-lo";
-
     private static string RagDotClass(string rag) => rag.ToLowerInvariant() switch
     {
         "verde" or "green" => "rag-dot-green",
@@ -33,11 +31,4 @@ public partial class ProjectHealthProjectsView : ComponentBase
         "vermelho" or "red" => "rag-dot-red",
         _ => "rag-dot-green"
     };
-
-    private static string FormatWeek(string week)
-    {
-        if (DateOnly.TryParse(week, out var d))
-            return d.ToString("dd MMM", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
-        return week;
-    }
 }
