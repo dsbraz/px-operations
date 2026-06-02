@@ -10,6 +10,9 @@ public partial class ProjectHealthToolbar : ComponentBase
     [Parameter] public EventCallback<string> OnFilterDcChanged { get; set; }
     [Parameter] public string FilterScore { get; set; } = "";
     [Parameter] public EventCallback<string> OnFilterScoreChanged { get; set; }
+    [Parameter] public string FilterWeek { get; set; } = "";
+    [Parameter] public EventCallback<string> OnFilterWeekChanged { get; set; }
+    [Parameter] public IReadOnlyList<string> AvailableWeeks { get; set; } = [];
     [Parameter] public string ActiveTab { get; set; } = "dash";
     [Parameter] public EventCallback<string> OnTabChanged { get; set; }
 }

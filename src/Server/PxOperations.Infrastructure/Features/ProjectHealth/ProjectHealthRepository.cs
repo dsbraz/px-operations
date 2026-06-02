@@ -38,47 +38,57 @@ public sealed class ProjectHealthRepository(AppDbContext dbContext) : IProjectHe
 
     public async Task<ProjectHealthSummary> GetSummaryAsync(ProjectHealthFilter filter, CancellationToken ct)
     {
-        IQueryable<Domain.ProjectHealth.ProjectHealth> query = dbContext.ProjectHealth.Include(h => h.Project);
-        query = ApplyFilters(query, filter);
+        // The carteira = active projects (InProgress, optionally scoped by DC).
+        var activeProjectIds = (await GetActiveProjectIds(filter, ct)).ToHashSet();
+        var totalProjects = activeProjectIds.Count;
 
-        var entries = await query.ToListAsync(ct);
+        // Weekly evolution = trend over the 12 most recent weeks, aggregated in the database
+        // (no row hydration). Independent of the selected period.
+        var weekly = await dbContext.ProjectHealth
+            .Where(h => activeProjectIds.Contains(h.ProjectId))
+            .GroupBy(h => h.Week)
+            .Select(g => new { Week = g.Key, AverageScore = g.Average(x => x.Score), EntryCount = g.Count() })
+            .OrderByDescending(w => w.Week)
+            .Take(12)
+            .ToListAsync(ct);
 
-        var totalEntries = entries.Count;
-        var projectIds = entries.Select(e => e.ProjectId).Distinct().ToList();
-        var totalProjects = projectIds.Count;
-
-        var avgScore = totalEntries > 0 ? entries.Average(e => e.Score) : 0;
-        var avgScope = totalEntries > 0 ? entries.Average(e => RagScore(e.Scope)) : 0;
-        var avgSchedule = totalEntries > 0 ? entries.Average(e => RagScore(e.Schedule)) : 0;
-        var avgQuality = totalEntries > 0 ? entries.Average(e => RagScore(e.Quality)) : 0;
-        var avgSatisfaction = totalEntries > 0 ? entries.Average(e => RagScore(e.Satisfaction)) : 0;
-
-        var criticalCount = entries.Count(e => e.Score <= 3);
-        var attentionCount = entries.Count(e => e.Score >= 4 && e.Score <= 6);
-        var healthyCount = entries.Count(e => e.Score >= 7);
-
-        // No-response: active projects without entry for the latest week
-        var latestWeek = filter.Week ?? entries.Select(e => e.Week).DefaultIfEmpty().Max();
-        var allProjectIds = await GetActiveProjectIds(filter, ct);
-        var respondedProjectIds = latestWeek != default
-            ? entries.Where(e => e.Week == latestWeek).Select(e => e.ProjectId).Distinct().ToHashSet()
-            : new HashSet<int>();
-        var noResponseCount = allProjectIds.Count(id => !respondedProjectIds.Contains(id));
-
-        var withExpansionCount = entries.Select(e => e.ProjectId).Distinct()
-            .Count(pid => entries.Any(e => e.ProjectId == pid && e.ExpansionOpportunity));
-        var withActionPlanCount = entries.Select(e => e.ProjectId).Distinct()
-            .Count(pid => entries.Any(e => e.ProjectId == pid && e.ActionPlanNeeded));
-
-        var weeklyEvolution = entries
-            .GroupBy(e => e.Week)
-            .OrderBy(g => g.Key)
-            .TakeLast(12)
-            .Select(g => new WeeklyScorePoint(
-                g.Key.ToString("yyyy-MM-dd"),
-                Math.Round(g.Average(e => e.Score), 1),
-                g.Count()))
+        var weeklyEvolution = weekly
+            .OrderBy(w => w.Week)
+            .Select(w => new WeeklyScorePoint(
+                w.Week.ToString("yyyy-MM-dd"),
+                Math.Round(w.AverageScore, 1),
+                w.EntryCount))
             .ToList();
+
+        // Latest period = explicit filter week, or the most recent week across active history.
+        var latestWeek = filter.Week ?? weekly.Select(w => w.Week).DefaultIfEmpty().Max();
+
+        // Snapshot = the latest period's responses from active projects. Every score-based
+        // metric on this screen derives from this snapshot, not from the full history.
+        var snapshot = latestWeek != default
+            ? await dbContext.ProjectHealth
+                .Where(h => activeProjectIds.Contains(h.ProjectId) && h.Week == latestWeek)
+                .ToListAsync(ct)
+            : new List<Domain.ProjectHealth.ProjectHealth>();
+
+        var totalEntries = snapshot.Count;
+
+        var avgScore = totalEntries > 0 ? snapshot.Average(e => e.Score) : 0;
+        var avgScope = totalEntries > 0 ? snapshot.Average(e => RagScore(e.Scope)) : 0;
+        var avgSchedule = totalEntries > 0 ? snapshot.Average(e => RagScore(e.Schedule)) : 0;
+        var avgQuality = totalEntries > 0 ? snapshot.Average(e => RagScore(e.Quality)) : 0;
+        var avgSatisfaction = totalEntries > 0 ? snapshot.Average(e => RagScore(e.Satisfaction)) : 0;
+
+        var criticalCount = snapshot.Count(e => e.Score <= 3);
+        var attentionCount = snapshot.Count(e => e.Score >= 4 && e.Score <= 6);
+        var healthyCount = snapshot.Count(e => e.Score >= 7);
+
+        // No-response: active projects without an entry in the latest period.
+        var respondedProjectIds = snapshot.Select(e => e.ProjectId).Distinct().ToHashSet();
+        var noResponseCount = totalProjects - respondedProjectIds.Count;
+
+        var withExpansionCount = snapshot.Where(e => e.ExpansionOpportunity).Select(e => e.ProjectId).Distinct().Count();
+        var withActionPlanCount = snapshot.Where(e => e.ActionPlanNeeded).Select(e => e.ProjectId).Distinct().Count();
 
         return new ProjectHealthSummary(
             totalEntries,
@@ -111,10 +121,12 @@ public sealed class ProjectHealthRepository(AppDbContext dbContext) : IProjectHe
     {
         if (!string.IsNullOrWhiteSpace(filter.Search))
         {
+            // Escape LIKE wildcards so a literal %/_ in the search term is matched literally, not as a pattern.
+            var term = EscapeLikePattern(filter.Search);
             query = query.Where(h =>
-                EF.Functions.ILike(h.Project.Name, $"%{filter.Search}%") ||
-                (h.Project.Client != null && EF.Functions.ILike(h.Project.Client, $"%{filter.Search}%")) ||
-                (h.SubProject != null && EF.Functions.ILike(h.SubProject, $"%{filter.Search}%")));
+                EF.Functions.ILike(h.Project.Name, $"%{term}%", "\\") ||
+                (h.Project.Client != null && EF.Functions.ILike(h.Project.Client, $"%{term}%", "\\")) ||
+                (h.SubProject != null && EF.Functions.ILike(h.SubProject, $"%{term}%", "\\")));
         }
 
         if (filter.Dc.HasValue)
@@ -134,6 +146,11 @@ public sealed class ProjectHealthRepository(AppDbContext dbContext) : IProjectHe
 
         return query;
     }
+
+    private static string EscapeLikePattern(string value) => value
+        .Replace("\\", "\\\\")
+        .Replace("%", "\\%")
+        .Replace("_", "\\_");
 
     private async Task<List<int>> GetActiveProjectIds(ProjectHealthFilter filter, CancellationToken ct)
     {

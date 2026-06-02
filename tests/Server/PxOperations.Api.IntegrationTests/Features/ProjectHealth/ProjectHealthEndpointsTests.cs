@@ -221,6 +221,50 @@ public sealed class ProjectHealthEndpointsTests(PostgreSqlFixture fixture)
     }
 
     [Fact]
+    public async Task List_search_should_treat_percent_as_literal_not_wildcard()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        await CleanAsync(factory);
+        using var client = factory.CreateClient();
+
+        var withPercent = await CreateProjectAsync(client, "Projeto 50% Cloud");
+        var plain = await CreateProjectAsync(client, "Projeto Alfa");
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(withPercent));
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(plain));
+
+        // "%" must match the literal character, not act as a LIKE wildcard (which would match everything).
+        var response = await client.GetAsync("/api/project-health?search=%25");
+        var entries = await response.Content.ReadFromJsonAsync<List<ProjectHealthResponse>>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(entries);
+        Assert.Single(entries);
+        Assert.Equal("Projeto 50% Cloud", entries[0].ProjectName);
+    }
+
+    [Fact]
+    public async Task List_search_should_treat_underscore_as_literal_not_wildcard()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        await CleanAsync(factory);
+        using var client = factory.CreateClient();
+
+        var withUnderscore = await CreateProjectAsync(client, "Projeto Squad_Backend");
+        var without = await CreateProjectAsync(client, "Projeto SquadXBackend");
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(withUnderscore));
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(without));
+
+        // "_" must match the literal character, not act as a single-char LIKE wildcard.
+        var response = await client.GetAsync("/api/project-health?search=Squad_Backend");
+        var entries = await response.Content.ReadFromJsonAsync<List<ProjectHealthResponse>>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(entries);
+        Assert.Single(entries);
+        Assert.Equal("Projeto Squad_Backend", entries[0].ProjectName);
+    }
+
+    [Fact]
     public async Task Summary_should_return_aggregated_data()
     {
         await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
@@ -239,6 +283,187 @@ public sealed class ProjectHealthEndpointsTests(PostgreSqlFixture fixture)
         Assert.Equal(2, summary.TotalEntries);
         Assert.Equal(1, summary.TotalProjects);
         Assert.Equal(5, summary.AverageScore);
+        Assert.Equal(0, summary.NoResponseCount); // single project responded in the latest week
+    }
+
+    [Fact]
+    public async Task Summary_should_count_active_project_without_health_in_total_and_no_response()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        await CleanAsync(factory);
+        using var client = factory.CreateClient();
+
+        var withHealth = await CreateProjectAsync(client, "Com Registro");
+        await CreateProjectAsync(client, "Sem Registro"); // active, no health entry
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(withHealth));
+
+        var summary = await (await client.GetAsync("/api/project-health/summary"))
+            .Content.ReadFromJsonAsync<ProjectHealthSummaryResponse>();
+
+        Assert.NotNull(summary);
+        Assert.Equal(2, summary.TotalProjects);
+        Assert.Equal(1, summary.NoResponseCount);
+    }
+
+    [Fact]
+    public async Task Summary_should_exclude_non_active_projects()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        await CleanAsync(factory);
+        using var client = factory.CreateClient();
+
+        var active = await CreateProjectAsync(client, "Ativo");
+        var closed = await CreateProjectAsync(client, "Encerrado", status: "Encerrado");
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(active));
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(closed));
+
+        var summary = await (await client.GetAsync("/api/project-health/summary"))
+            .Content.ReadFromJsonAsync<ProjectHealthSummaryResponse>();
+
+        Assert.NotNull(summary);
+        Assert.Equal(1, summary.TotalProjects);
+        Assert.Equal(1, summary.TotalEntries); // closed project's entry excluded
+        Assert.Equal(0, summary.NoResponseCount);
+    }
+
+    [Fact]
+    public async Task Summary_metrics_should_reflect_only_latest_week()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        await CleanAsync(factory);
+        using var client = factory.CreateClient();
+
+        var projectId = await CreateProjectAsync(client, "Projeto Evolui");
+        // Older week: critical (all red, no practices -> score 0)
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(projectId,
+            scope: "vermelho", schedule: "vermelho", quality: "vermelho", satisfaction: "vermelho",
+            practicesCount: 0, week: "2026-03-23"));
+        // Latest week: healthy (all green, practices -> score 10)
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(projectId,
+            scope: "verde", schedule: "verde", quality: "verde", satisfaction: "verde",
+            practicesCount: 5, week: "2026-03-30"));
+
+        var summary = await (await client.GetAsync("/api/project-health/summary"))
+            .Content.ReadFromJsonAsync<ProjectHealthSummaryResponse>();
+
+        Assert.NotNull(summary);
+        Assert.Equal(1, summary.TotalProjects);
+        Assert.Equal(1, summary.TotalEntries);   // only latest week
+        Assert.Equal(0, summary.CriticalCount);  // old critical entry not counted
+        Assert.Equal(1, summary.HealthyCount);
+        Assert.Equal(10.0, summary.AverageScore);
+    }
+
+    [Fact]
+    public async Task Summary_should_be_invariant_to_score_filter()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        await CleanAsync(factory);
+        using var client = factory.CreateClient();
+
+        var projectId = await CreateProjectAsync(client, "Projeto Critico");
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(projectId,
+            scope: "vermelho", schedule: "vermelho", quality: "vermelho", satisfaction: "vermelho",
+            practicesCount: 0));
+
+        var noFilter = await (await client.GetAsync("/api/project-health/summary"))
+            .Content.ReadFromJsonAsync<ProjectHealthSummaryResponse>();
+        var healthyBand = await (await client.GetAsync("/api/project-health/summary?minScore=7&maxScore=10"))
+            .Content.ReadFromJsonAsync<ProjectHealthSummaryResponse>();
+
+        Assert.NotNull(noFilter);
+        Assert.NotNull(healthyBand);
+        Assert.Equal(1, noFilter.TotalProjects);
+        Assert.Equal(0, noFilter.NoResponseCount);
+        Assert.Equal(1, noFilter.CriticalCount);
+        // Score filter must not shrink the carteira nor change the snapshot aggregates
+        Assert.Equal(noFilter.TotalProjects, healthyBand.TotalProjects);
+        Assert.Equal(noFilter.NoResponseCount, healthyBand.NoResponseCount);
+        Assert.Equal(noFilter.CriticalCount, healthyBand.CriticalCount);
+        Assert.Equal(noFilter.AverageScore, healthyBand.AverageScore);
+    }
+
+    [Fact]
+    public async Task Summary_should_honor_explicit_week()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        await CleanAsync(factory);
+        using var client = factory.CreateClient();
+
+        var projectId = await CreateProjectAsync(client, "Projeto Periodo");
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(projectId,
+            scope: "vermelho", schedule: "vermelho", quality: "vermelho", satisfaction: "vermelho",
+            practicesCount: 0, week: "2026-03-23"));
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(projectId,
+            scope: "verde", schedule: "verde", quality: "verde", satisfaction: "verde",
+            practicesCount: 5, week: "2026-03-30"));
+
+        var oldWeek = await (await client.GetAsync("/api/project-health/summary?week=2026-03-23"))
+            .Content.ReadFromJsonAsync<ProjectHealthSummaryResponse>();
+        var latest = await (await client.GetAsync("/api/project-health/summary"))
+            .Content.ReadFromJsonAsync<ProjectHealthSummaryResponse>();
+
+        Assert.NotNull(oldWeek);
+        Assert.NotNull(latest);
+        Assert.Equal(1, oldWeek.CriticalCount);
+        Assert.Equal(0, oldWeek.HealthyCount);
+        Assert.Equal(0.0, oldWeek.AverageScore);
+        Assert.Equal(0, latest.CriticalCount);
+        Assert.Equal(1, latest.HealthyCount);
+        Assert.Equal(10.0, latest.AverageScore);
+    }
+
+    [Fact]
+    public async Task Summary_should_scope_total_projects_by_dc()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        await CleanAsync(factory);
+        using var client = factory.CreateClient();
+
+        var dc1 = await CreateProjectAsync(client, "Projeto DC1", dc: "DC1");
+        var dc2 = await CreateProjectAsync(client, "Projeto DC2", dc: "DC2");
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(dc1));
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(dc2));
+
+        var all = await (await client.GetAsync("/api/project-health/summary"))
+            .Content.ReadFromJsonAsync<ProjectHealthSummaryResponse>();
+        var onlyDc1 = await (await client.GetAsync("/api/project-health/summary?dc=DC1"))
+            .Content.ReadFromJsonAsync<ProjectHealthSummaryResponse>();
+
+        Assert.NotNull(all);
+        Assert.NotNull(onlyDc1);
+        Assert.Equal(2, all.TotalProjects);
+        Assert.Equal(1, onlyDc1.TotalProjects);
+        Assert.Equal(1, onlyDc1.TotalEntries);    // only DC1's entry in scope
+        Assert.Equal(0, onlyDc1.NoResponseCount);
+    }
+
+    [Fact]
+    public async Task Summary_expansion_count_should_reflect_only_latest_week()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        await CleanAsync(factory);
+        using var client = factory.CreateClient();
+
+        // Project with an expansion opportunity in the latest week -> counts.
+        var current = await CreateProjectAsync(client, "Expansao Atual");
+        await client.PostAsJsonAsync("/api/project-health", new CreateProjectHealthRequest(
+            current, null, "2026-03-30", "joao@brq.com", 3, "verde", "verde", "verde", "verde",
+            true, "Oportunidade atual", false, null, "Crescendo."));
+
+        // Project whose expansion was only in an older week; latest week has none -> does not count.
+        var stale = await CreateProjectAsync(client, "Expansao Antiga");
+        await client.PostAsJsonAsync("/api/project-health", new CreateProjectHealthRequest(
+            stale, null, "2026-03-23", "joao@brq.com", 3, "verde", "verde", "verde", "verde",
+            true, "Oportunidade antiga", false, null, "Tinha chance."));
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(stale, week: "2026-03-30"));
+
+        var summary = await (await client.GetAsync("/api/project-health/summary"))
+            .Content.ReadFromJsonAsync<ProjectHealthSummaryResponse>();
+
+        Assert.NotNull(summary);
+        Assert.Equal(2, summary.TotalProjects);
+        Assert.Equal(1, summary.WithExpansionCount); // only the latest-week opportunity
     }
 
     private static CreateProjectHealthRequest MakeRequest(
@@ -249,19 +474,20 @@ public sealed class ProjectHealthEndpointsTests(PostgreSqlFixture fixture)
         string quality = "verde",
         string satisfaction = "verde",
         int practicesCount = 3,
-        string highlights = "Tudo certo nesta semana.")
+        string highlights = "Tudo certo nesta semana.",
+        string week = "2026-03-30")
     {
         return new CreateProjectHealthRequest(
-            projectId, subProject, "2026-03-30", "joao@brq.com", practicesCount,
+            projectId, subProject, week, "joao@brq.com", practicesCount,
             scope, schedule, quality, satisfaction,
             false, null, false, null, highlights);
     }
 
-    private static async Task<int> CreateProjectAsync(HttpClient client, string name, string dc = "DC1")
+    private static async Task<int> CreateProjectAsync(HttpClient client, string name, string dc = "DC1", string status = "Em andamento")
     {
         var response = await client.PostAsJsonAsync("/api/projects", new CreateProjectRequest(
             Dc: dc,
-            Status: "Em andamento",
+            Status: status,
             Name: name,
             Client: "Cliente X",
             Type: "Squad",
