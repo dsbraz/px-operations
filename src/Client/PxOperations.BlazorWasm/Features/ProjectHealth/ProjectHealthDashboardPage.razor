@@ -7,9 +7,9 @@
 </div>
 
 <ProjectHealthStatsBar TotalProjects="@summary?.TotalProjects"
-                AverageScore="@summary?.AverageScore"
-                CriticalCount="@summary?.CriticalCount"
-                NoResponseCount="@summary?.NoResponseCount" />
+                AverageScore="@summary?.OverallAverageScore"
+                CriticalCount="@summary?.OverallCriticalCount"
+                NoResponseCount="@summary?.OverallNoResponseCount" />
 
 <ProjectHealthToolbar SearchTerm="@searchTerm" OnSearchChanged="OnSearchChanged"
                FilterDc="@filterDc" OnFilterDcChanged="OnFilterDcChanged"

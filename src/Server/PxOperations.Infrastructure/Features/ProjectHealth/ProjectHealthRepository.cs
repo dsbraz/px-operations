@@ -60,11 +60,14 @@ public sealed class ProjectHealthRepository(AppDbContext dbContext) : IProjectHe
                 w.EntryCount))
             .ToList();
 
-        // Latest period = explicit filter week, or the most recent week across active history.
-        var latestWeek = filter.Week ?? weekly.Select(w => w.Week).DefaultIfEmpty().Max();
+        // Most recent week with data, ignoring the period filter — anchors the fixed top counters.
+        var globalLatestWeek = weekly.Select(w => w.Week).DefaultIfEmpty().Max();
 
-        // Snapshot = the latest period's responses from active projects. Every score-based
-        // metric on this screen derives from this snapshot, not from the full history.
+        // Selected period = explicit filter week, or the most recent week.
+        var latestWeek = filter.Week ?? globalLatestWeek;
+
+        // Week snapshot = the period's responses (selected week, or the most recent). Drives the
+        // operational counters (critical/attention/healthy, no-response, expansion/action plan).
         var snapshot = latestWeek != default
             ? await dbContext.ProjectHealth
                 .Where(h => activeProjectIds.Contains(h.ProjectId) && h.Week == latestWeek)
@@ -73,35 +76,72 @@ public sealed class ProjectHealthRepository(AppDbContext dbContext) : IProjectHe
 
         var totalEntries = snapshot.Count;
 
-        var avgScore = totalEntries > 0 ? snapshot.Average(e => e.Score) : 0;
-        var avgScope = totalEntries > 0 ? snapshot.Average(e => RagScore(e.Scope)) : 0;
-        var avgSchedule = totalEntries > 0 ? snapshot.Average(e => RagScore(e.Schedule)) : 0;
-        var avgQuality = totalEntries > 0 ? snapshot.Average(e => RagScore(e.Quality)) : 0;
-        var avgSatisfaction = totalEntries > 0 ? snapshot.Average(e => RagScore(e.Satisfaction)) : 0;
+        // Overall = every response of every active project, across all weeks (DB-side aggregate,
+        // no row hydration). Independent of the period/score filters. Feeds the fixed top "Média"
+        // and the default of "Saúde Geral" when no specific week is selected.
+        var overall = await dbContext.ProjectHealth
+            .Where(h => activeProjectIds.Contains(h.ProjectId))
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Score = g.Average(x => (double)x.Score),
+                Scope = g.Average(x => x.Scope == RagStatus.Green ? 2.0 : x.Scope == RagStatus.Yellow ? 1.0 : 0.0),
+                Schedule = g.Average(x => x.Schedule == RagStatus.Green ? 2.0 : x.Schedule == RagStatus.Yellow ? 1.0 : 0.0),
+                Quality = g.Average(x => x.Quality == RagStatus.Green ? 2.0 : x.Quality == RagStatus.Yellow ? 1.0 : 0.0),
+                Satisfaction = g.Average(x => x.Satisfaction == RagStatus.Green ? 2.0 : x.Satisfaction == RagStatus.Yellow ? 1.0 : 0.0),
+            })
+            .FirstOrDefaultAsync(ct);
+
+        var overallScore = overall?.Score ?? 0;
+
+        // "Saúde Geral" (score + dimensions): the selected week when filtering by period,
+        // otherwise the overall average of all active projects.
+        var hasWeekFilter = filter.Week is not null;
+        var avgScore = hasWeekFilter ? (totalEntries > 0 ? snapshot.Average(e => e.Score) : 0) : overallScore;
+        var avgScope = hasWeekFilter ? (totalEntries > 0 ? snapshot.Average(e => RagScore(e.Scope)) : 0) : (overall?.Scope ?? 0);
+        var avgSchedule = hasWeekFilter ? (totalEntries > 0 ? snapshot.Average(e => RagScore(e.Schedule)) : 0) : (overall?.Schedule ?? 0);
+        var avgQuality = hasWeekFilter ? (totalEntries > 0 ? snapshot.Average(e => RagScore(e.Quality)) : 0) : (overall?.Quality ?? 0);
+        var avgSatisfaction = hasWeekFilter ? (totalEntries > 0 ? snapshot.Average(e => RagScore(e.Satisfaction)) : 0) : (overall?.Satisfaction ?? 0);
 
         var criticalCount = snapshot.Count(e => e.Score <= 3);
         var attentionCount = snapshot.Count(e => e.Score >= 4 && e.Score <= 6);
         var healthyCount = snapshot.Count(e => e.Score >= 7);
 
-        // No-response: active projects without an entry in the latest period.
+        // No-response: active projects without an entry in the selected period.
         var respondedProjectIds = snapshot.Select(e => e.ProjectId).Distinct().ToHashSet();
         var noResponseCount = totalProjects - respondedProjectIds.Count;
 
         var withExpansionCount = snapshot.Where(e => e.ExpansionOpportunity).Select(e => e.ProjectId).Distinct().Count();
         var withActionPlanCount = snapshot.Where(e => e.ActionPlanNeeded).Select(e => e.ProjectId).Distinct().Count();
 
+        // Fixed top counters = current state at the most recent week, regardless of the period
+        // filter. When no week is selected the global snapshot equals the selected one.
+        var globalSnapshot = filter.Week is null
+            ? snapshot
+            : (globalLatestWeek != default
+                ? await dbContext.ProjectHealth
+                    .Where(h => activeProjectIds.Contains(h.ProjectId) && h.Week == globalLatestWeek)
+                    .ToListAsync(ct)
+                : new List<Domain.ProjectHealth.ProjectHealth>());
+
+        var overallCriticalCount = globalSnapshot.Count(e => e.Score <= 3);
+        var overallNoResponseCount = totalProjects - globalSnapshot.Select(e => e.ProjectId).Distinct().Count();
+
         return new ProjectHealthSummary(
             totalEntries,
             totalProjects,
             Math.Round(avgScore, 1),
+            Math.Round(overallScore, 1),
             Math.Round(avgScope, 1),
             Math.Round(avgSchedule, 1),
             Math.Round(avgQuality, 1),
             Math.Round(avgSatisfaction, 1),
             criticalCount,
+            overallCriticalCount,
             attentionCount,
             healthyCount,
             noResponseCount,
+            overallNoResponseCount,
             withExpansionCount,
             withActionPlanCount,
             weeklyEvolution);
@@ -159,6 +199,9 @@ public sealed class ProjectHealthRepository(AppDbContext dbContext) : IProjectHe
 
         if (filter.Dc.HasValue)
             projectQuery = projectQuery.Where(p => p.Dc == filter.Dc.Value);
+
+        if (filter.ProjectId.HasValue)
+            projectQuery = projectQuery.Where(p => p.Id == filter.ProjectId.Value);
 
         return await projectQuery.Select(p => p.Id).ToListAsync(ct);
     }

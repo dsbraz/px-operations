@@ -283,7 +283,10 @@ public sealed class ProjectHealthEndpointsTests(PostgreSqlFixture fixture)
         Assert.Equal(2, summary.TotalEntries);
         Assert.Equal(1, summary.TotalProjects);
         Assert.Equal(5, summary.AverageScore);
+        Assert.Equal(5, summary.OverallAverageScore); // (10 + 0) / 2 over all active entries
         Assert.Equal(0, summary.NoResponseCount); // single project responded in the latest week
+        Assert.Equal(1, summary.OverallCriticalCount); // the score-0 entry in the latest week
+        Assert.Equal(0, summary.OverallNoResponseCount);
     }
 
     [Fact]
@@ -348,10 +351,12 @@ public sealed class ProjectHealthEndpointsTests(PostgreSqlFixture fixture)
 
         Assert.NotNull(summary);
         Assert.Equal(1, summary.TotalProjects);
-        Assert.Equal(1, summary.TotalEntries);   // only latest week
+        Assert.Equal(1, summary.TotalEntries);   // counters use the latest week only
         Assert.Equal(0, summary.CriticalCount);  // old critical entry not counted
         Assert.Equal(1, summary.HealthyCount);
-        Assert.Equal(10.0, summary.AverageScore);
+        // No period selected: "Saúde Geral" defaults to the overall average of all active entries...
+        Assert.Equal(5.0, summary.AverageScore);          // (0 + 10) / 2
+        Assert.Equal(5.0, summary.OverallAverageScore);   // ...and the top "Média" is always the overall
     }
 
     [Fact]
@@ -381,6 +386,7 @@ public sealed class ProjectHealthEndpointsTests(PostgreSqlFixture fixture)
         Assert.Equal(noFilter.NoResponseCount, healthyBand.NoResponseCount);
         Assert.Equal(noFilter.CriticalCount, healthyBand.CriticalCount);
         Assert.Equal(noFilter.AverageScore, healthyBand.AverageScore);
+        Assert.Equal(noFilter.OverallAverageScore, healthyBand.OverallAverageScore);
     }
 
     [Fact]
@@ -405,12 +411,16 @@ public sealed class ProjectHealthEndpointsTests(PostgreSqlFixture fixture)
 
         Assert.NotNull(oldWeek);
         Assert.NotNull(latest);
-        Assert.Equal(1, oldWeek.CriticalCount);
+        Assert.Equal(1, oldWeek.CriticalCount);          // KPI counter follows the selected week
+        Assert.Equal(0, oldWeek.OverallCriticalCount);   // top "Críticos" stays fixed on the latest week (healthy)
+        Assert.Equal(0, oldWeek.OverallNoResponseCount); // top "Sem resp" stays fixed on the latest week
         Assert.Equal(0, oldWeek.HealthyCount);
-        Assert.Equal(0.0, oldWeek.AverageScore);
+        Assert.Equal(0.0, oldWeek.AverageScore);         // week filter -> that week's snapshot (critical)
+        Assert.Equal(5.0, oldWeek.OverallAverageScore);  // top "Média" is always the overall (0+10)/2
         Assert.Equal(0, latest.CriticalCount);
         Assert.Equal(1, latest.HealthyCount);
-        Assert.Equal(10.0, latest.AverageScore);
+        Assert.Equal(5.0, latest.AverageScore);          // no period -> "Saúde Geral" defaults to overall
+        Assert.Equal(5.0, latest.OverallAverageScore);
     }
 
     [Fact]
@@ -436,6 +446,35 @@ public sealed class ProjectHealthEndpointsTests(PostgreSqlFixture fixture)
         Assert.Equal(1, onlyDc1.TotalProjects);
         Assert.Equal(1, onlyDc1.TotalEntries);    // only DC1's entry in scope
         Assert.Equal(0, onlyDc1.NoResponseCount);
+    }
+
+    [Fact]
+    public async Task Summary_should_scope_aggregates_by_project()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        await CleanAsync(factory);
+        using var client = factory.CreateClient();
+
+        var target = await CreateProjectAsync(client, "Projeto Alvo");
+        var other = await CreateProjectAsync(client, "Projeto Outro");
+        // Target scores 10 (all green); the other scores 0 (all red). A per-project summary must ignore the other.
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(target));
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(other,
+            scope: "vermelho", schedule: "vermelho", quality: "vermelho", satisfaction: "vermelho", practicesCount: 0));
+
+        var all = await (await client.GetAsync("/api/project-health/summary"))
+            .Content.ReadFromJsonAsync<ProjectHealthSummaryResponse>();
+        var onlyTarget = await (await client.GetAsync($"/api/project-health/summary?projectId={target}"))
+            .Content.ReadFromJsonAsync<ProjectHealthSummaryResponse>();
+
+        Assert.NotNull(all);
+        Assert.NotNull(onlyTarget);
+        Assert.Equal(2, all.TotalProjects);
+        Assert.Equal(5, all.OverallAverageScore);     // (10 + 0) / 2 across both active projects
+        Assert.Equal(1, onlyTarget.TotalProjects);    // scoped to the requested project only
+        Assert.Equal(1, onlyTarget.TotalEntries);     // only the target's entry in scope
+        Assert.Equal(10, onlyTarget.OverallAverageScore);
+        Assert.Equal(0, onlyTarget.NoResponseCount);
     }
 
     [Fact]

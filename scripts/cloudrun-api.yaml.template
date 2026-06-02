@@ -1,0 +1,62 @@
+# Cloud Run service for the API with a Google-built OpenTelemetry Collector sidecar.
+# Rendered by scripts/gcp-deploy.sh via envsubst and applied with `gcloud run services replace`.
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: ${API_SERVICE_NAME}
+  annotations:
+    # Public access without an allUsers IAM binding (works under Domain Restricted Sharing).
+    run.googleapis.com/invoker-iam-disabled: "true"
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/cloudsql-instances: ${INSTANCE_CONNECTION_NAME}
+        run.googleapis.com/container-dependencies: "{app:[collector]}"
+    spec:
+      serviceAccountName: ${SERVICE_ACCOUNT_EMAIL}
+      containers:
+        - name: app
+          image: ${API_IMAGE_URI}
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Production"
+            - name: DOTNET_ENVIRONMENT
+              value: "Production"
+            - name: ASPNETCORE_URLS
+              value: "http://0.0.0.0:8080"
+            - name: ASPNETCORE_FORWARDEDHEADERS_ENABLED
+              value: "true"
+            - name: OpenTelemetry__ServiceName
+              value: "PxOperations.Api"
+            # Export to the collector sidecar over the shared loopback network.
+            - name: OpenTelemetry__Otlp__Endpoint
+              value: "http://localhost:4317"
+            - name: ConnectionStrings__Default
+              valueFrom:
+                secretKeyRef:
+                  name: ${SECRET_DB_CONNECTION}
+                  key: latest
+        - name: collector
+          image: ${COLLECTOR_IMAGE}
+          args:
+            - --config=/etc/otelcol-google/config.yaml
+          startupProbe:
+            httpGet:
+              path: /
+              port: 13133
+            timeoutSeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          volumeMounts:
+            - name: otel-config
+              mountPath: /etc/otelcol-google/
+      volumes:
+        - name: otel-config
+          secret:
+            secretName: ${OTEL_CONFIG_SECRET}
+            items:
+              - key: latest
+                path: config.yaml
