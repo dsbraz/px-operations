@@ -1684,14 +1684,17 @@
           "totalEntries",
           "totalProjects",
           "averageScore",
+          "overallAverageScore",
           "averageScope",
           "averageSchedule",
           "averageQuality",
           "averageSatisfaction",
           "criticalCount",
+          "overallCriticalCount",
           "attentionCount",
           "healthyCount",
           "noResponseCount",
+          "overallNoResponseCount",
           "withExpansionCount",
           "withActionPlanCount",
           "weeklyEvolution"
@@ -1715,6 +1718,14 @@
             "format": "int32"
           },
           "averageScore": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "overallAverageScore": {
             "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
             "type": [
               "number",
@@ -1762,6 +1773,14 @@
             ],
             "format": "int32"
           },
+          "overallCriticalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
           "attentionCount": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
@@ -1779,6 +1798,14 @@
             "format": "int32"
           },
           "noResponseCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "overallNoResponseCount": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",

@@ -65,13 +65,16 @@ internal static class ProjectHealthTestHelpers
         int totalEntries = 0,
         int totalProjects = 0,
         double avgScore = 0,
+        double overallAverageScore = 0,
         int criticalCount = 0,
+        int overallCriticalCount = 0,
         int noResponseCount = 0,
+        int overallNoResponseCount = 0,
         string[]? weeks = null)
     {
         var weekly = weeks is null
             ? ""
             : string.Join(",", weeks.Select(w => $"{{\"week\":\"{w}\",\"averageScore\":0,\"entryCount\":1}}"));
-        return $"{{\"totalEntries\":{totalEntries},\"totalProjects\":{totalProjects},\"averageScore\":{avgScore},\"averageScope\":0,\"averageSchedule\":0,\"averageQuality\":0,\"averageSatisfaction\":0,\"criticalCount\":{criticalCount},\"attentionCount\":0,\"healthyCount\":0,\"noResponseCount\":{noResponseCount},\"withExpansionCount\":0,\"withActionPlanCount\":0,\"weeklyEvolution\":[{weekly}]}}";
+        return $"{{\"totalEntries\":{totalEntries},\"totalProjects\":{totalProjects},\"averageScore\":{avgScore},\"overallAverageScore\":{overallAverageScore},\"averageScope\":0,\"averageSchedule\":0,\"averageQuality\":0,\"averageSatisfaction\":0,\"criticalCount\":{criticalCount},\"overallCriticalCount\":{overallCriticalCount},\"attentionCount\":0,\"healthyCount\":0,\"noResponseCount\":{noResponseCount},\"overallNoResponseCount\":{overallNoResponseCount},\"withExpansionCount\":0,\"withActionPlanCount\":0,\"weeklyEvolution\":[{weekly}]}}";
     }
 }

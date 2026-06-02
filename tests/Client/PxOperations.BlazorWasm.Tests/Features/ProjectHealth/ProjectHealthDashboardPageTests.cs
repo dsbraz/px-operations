@@ -26,7 +26,8 @@ public sealed class ProjectHealthDashboardPageTests : TestContext
     {
         var handler = new ProjectsTestHelpers.MultiStubHttpMessageHandler();
         handler.AddResponse(HttpMethod.Get, ProjectHealthTestHelpers.SummaryJson(
-            totalEntries: 5, totalProjects: 3, avgScore: 7.5, criticalCount: 1, noResponseCount: 2
+            totalEntries: 5, totalProjects: 3, avgScore: 7.5, overallAverageScore: 7.5,
+            criticalCount: 1, overallCriticalCount: 1, noResponseCount: 2, overallNoResponseCount: 2
         ), HttpStatusCode.OK);
         handler.AddResponse(HttpMethod.Get, ProjectHealthTestHelpers.ProjectHealthListJson(
             ProjectHealthTestHelpers.MakeProjectHealth(1, score: 10, highlights: "Tudo ótimo")
@@ -92,7 +93,7 @@ public sealed class ProjectHealthDashboardPageTests : TestContext
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Última semana", cut.Markup);
+            Assert.Contains("Todas as semanas", cut.Markup);
             var options = cut.FindAll("option");
             Assert.Contains(options, o => o.GetAttribute("value") == "2026-03-30");
             Assert.Contains(options, o => o.GetAttribute("value") == "2026-03-23");
@@ -188,7 +189,7 @@ public sealed class ProjectHealthDashboardPageTests : TestContext
         Services.AddScoped<ProjectHealthClient>();
 
         var cut = RenderComponent<ProjectHealthDashboardPage>();
-        cut.WaitForAssertion(() => Assert.Contains("Última semana", cut.Markup));
+        cut.WaitForAssertion(() => Assert.Contains("Todas as semanas", cut.Markup));
 
         cut.FindAll("select")[1].Change("2026-03-23"); // pick an explicit period
         cut.WaitForAssertion(() => Assert.Equal("2026-03-23", cut.FindAll("select")[1].GetAttribute("value")));

@@ -103,7 +103,7 @@ public partial class ProjectHealthDashboardPage : ComponentBase
     }
 
     private void OnSearchChanged(string value) => searchTerm = value;
-    // Changing the DC re-scopes the carteira, so the available weeks change too — reset to "Última semana".
+    // Changing the DC re-scopes the carteira, so the available weeks change too — reset to "Todas as semanas".
     private async Task OnFilterDcChanged(string value) { filterDc = value; filterWeek = ""; await LoadDataAsync(); }
     private async Task OnFilterScoreChanged(string value) { filterScore = value; await ReloadEntriesAsync(); }
     private async Task OnFilterWeekChanged(string value) { filterWeek = value; await LoadDataAsync(); }
