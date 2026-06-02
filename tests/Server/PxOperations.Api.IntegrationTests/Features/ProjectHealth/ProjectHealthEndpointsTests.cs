@@ -449,6 +449,35 @@ public sealed class ProjectHealthEndpointsTests(PostgreSqlFixture fixture)
     }
 
     [Fact]
+    public async Task Summary_should_scope_aggregates_by_project()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        await CleanAsync(factory);
+        using var client = factory.CreateClient();
+
+        var target = await CreateProjectAsync(client, "Projeto Alvo");
+        var other = await CreateProjectAsync(client, "Projeto Outro");
+        // Target scores 10 (all green); the other scores 0 (all red). A per-project summary must ignore the other.
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(target));
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(other,
+            scope: "vermelho", schedule: "vermelho", quality: "vermelho", satisfaction: "vermelho", practicesCount: 0));
+
+        var all = await (await client.GetAsync("/api/project-health/summary"))
+            .Content.ReadFromJsonAsync<ProjectHealthSummaryResponse>();
+        var onlyTarget = await (await client.GetAsync($"/api/project-health/summary?projectId={target}"))
+            .Content.ReadFromJsonAsync<ProjectHealthSummaryResponse>();
+
+        Assert.NotNull(all);
+        Assert.NotNull(onlyTarget);
+        Assert.Equal(2, all.TotalProjects);
+        Assert.Equal(5, all.OverallAverageScore);     // (10 + 0) / 2 across both active projects
+        Assert.Equal(1, onlyTarget.TotalProjects);    // scoped to the requested project only
+        Assert.Equal(1, onlyTarget.TotalEntries);     // only the target's entry in scope
+        Assert.Equal(10, onlyTarget.OverallAverageScore);
+        Assert.Equal(0, onlyTarget.NoResponseCount);
+    }
+
+    [Fact]
     public async Task Summary_expansion_count_should_reflect_only_latest_week()
     {
         await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);

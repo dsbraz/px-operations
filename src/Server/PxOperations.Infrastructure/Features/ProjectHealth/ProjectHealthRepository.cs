@@ -200,6 +200,9 @@ public sealed class ProjectHealthRepository(AppDbContext dbContext) : IProjectHe
         if (filter.Dc.HasValue)
             projectQuery = projectQuery.Where(p => p.Dc == filter.Dc.Value);
 
+        if (filter.ProjectId.HasValue)
+            projectQuery = projectQuery.Where(p => p.Id == filter.ProjectId.Value);
+
         return await projectQuery.Select(p => p.Id).ToListAsync(ct);
     }
 
