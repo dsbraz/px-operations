@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http;
+using System.Globalization;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using PxOperations.BlazorWasm.Api;
@@ -10,6 +11,8 @@ namespace PxOperations.BlazorWasm.Tests.Features.ProjectHealth;
 
 public sealed class ProjectHealthDashboardPageTests : TestContext
 {
+    private static string ScoreText(double value) => value.ToString("0.0", CultureInfo.CurrentCulture);
+
     [Fact]
     public void Page_should_show_loading_while_api_is_pending()
     {
@@ -43,7 +46,7 @@ public sealed class ProjectHealthDashboardPageTests : TestContext
         {
             Assert.Contains("Saúde de Projetos", cut.Markup);
             Assert.Contains("3", cut.Markup);
-            Assert.Contains("7.5", cut.Markup);
+            Assert.Contains(ScoreText(7.5), cut.Markup);
         });
     }
 
@@ -97,6 +100,8 @@ public sealed class ProjectHealthDashboardPageTests : TestContext
             var options = cut.FindAll("option");
             Assert.Contains(options, o => o.GetAttribute("value") == "2026-03-30");
             Assert.Contains(options, o => o.GetAttribute("value") == "2026-03-23");
+            Assert.Contains(options, o => o.GetAttribute("value") == "Escopo Fechado");
+            Assert.Contains("Tipo de Projeto", cut.Markup);
         });
     }
 
@@ -124,15 +129,15 @@ public sealed class ProjectHealthDashboardPageTests : TestContext
         Services.AddScoped<ProjectHealthClient>();
 
         var cut = RenderComponent<ProjectHealthDashboardPage>();
-        cut.WaitForAssertion(() => Assert.Contains("7.5", cut.Markup));
+        cut.WaitForAssertion(() => Assert.Contains(ScoreText(7.5), cut.Markup));
 
-        // Period select is the second dropdown (DC, Período, Nota).
-        cut.FindAll("select")[1].Change("2026-03-23");
+        // Period select is the third dropdown (DC, Tipo de Projeto, Período, Nota).
+        cut.FindAll("select")[2].Change("2026-03-23");
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("2.0", cut.Markup);            // summary refetched
-            Assert.DoesNotContain("7.5", cut.Markup);
+            Assert.Contains(ScoreText(2.0), cut.Markup);   // summary refetched
+            Assert.DoesNotContain(ScoreText(7.5), cut.Markup);
         });
     }
 
@@ -158,15 +163,15 @@ public sealed class ProjectHealthDashboardPageTests : TestContext
         Services.AddScoped<ProjectHealthClient>();
 
         var cut = RenderComponent<ProjectHealthDashboardPage>();
-        cut.WaitForAssertion(() => Assert.Contains("7.5", cut.Markup));
+        cut.WaitForAssertion(() => Assert.Contains(ScoreText(7.5), cut.Markup));
 
-        // Nota is the third dropdown (DC, Período, Nota).
-        cut.FindAll("select")[2].Change("lo");
+        // Nota is the fourth dropdown (DC, Tipo de Projeto, Período, Nota).
+        cut.FindAll("select")[3].Change("lo");
 
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("Depois", cut.Markup);   // list reloaded
-            Assert.Contains("7.5", cut.Markup);       // summary preserved (not refetched/cleared)
+            Assert.Contains(ScoreText(7.5), cut.Markup); // summary preserved (not refetched/cleared)
             Assert.DoesNotContain("Não foi possível carregar", cut.Markup);
         });
     }
@@ -191,11 +196,48 @@ public sealed class ProjectHealthDashboardPageTests : TestContext
         var cut = RenderComponent<ProjectHealthDashboardPage>();
         cut.WaitForAssertion(() => Assert.Contains("Todas as semanas", cut.Markup));
 
-        cut.FindAll("select")[1].Change("2026-03-23"); // pick an explicit period
-        cut.WaitForAssertion(() => Assert.Equal("2026-03-23", cut.FindAll("select")[1].GetAttribute("value")));
+        cut.FindAll("select")[2].Change("2026-03-23"); // pick an explicit period
+        cut.WaitForAssertion(() => Assert.Equal("2026-03-23", cut.FindAll("select")[2].GetAttribute("value")));
 
         cut.FindAll("select")[0].Change("DC2");        // change DC
-        cut.WaitForAssertion(() => Assert.Equal("", cut.FindAll("select")[1].GetAttribute("value"))); // week reset
+        cut.WaitForAssertion(() => Assert.Equal("", cut.FindAll("select")[2].GetAttribute("value"))); // week reset
+    }
+
+    [Fact]
+    public void Changing_project_type_resets_period_and_reloads_summary_and_list()
+    {
+        var handler = new ProjectsTestHelpers.MultiStubHttpMessageHandler();
+        // Three full reloads (initial, after week select, after project type change), each summary + list.
+        for (var i = 0; i < 3; i++)
+        {
+            handler.AddResponse(HttpMethod.Get, ProjectHealthTestHelpers.SummaryJson(
+                totalProjects: 2, weeks: ["2026-03-23", "2026-03-30"]
+            ), HttpStatusCode.OK);
+            handler.AddResponse(HttpMethod.Get, "[]", HttpStatusCode.OK);
+        }
+
+        var client = new HttpClient(handler) { BaseAddress = new Uri("http://localhost") };
+        Services.AddScoped(_ => client);
+        Services.AddScoped<ProjectHealthClient>();
+
+        var cut = RenderComponent<ProjectHealthDashboardPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Todas as semanas", cut.Markup));
+
+        cut.FindAll("select")[2].Change("2026-03-23");
+        cut.WaitForAssertion(() => Assert.Equal("2026-03-23", cut.FindAll("select")[2].GetAttribute("value")));
+
+        cut.FindAll("select")[1].Change("Escopo Fechado");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("", cut.FindAll("select")[2].GetAttribute("value"));
+            Assert.Contains(handler.RequestUris, uri => uri is not null
+                && uri.PathAndQuery.Contains("/api/project-health/summary", StringComparison.Ordinal)
+                && uri.Query.Contains("projectType=Escopo%20Fechado", StringComparison.Ordinal));
+            Assert.Contains(handler.RequestUris, uri => uri is not null
+                && uri.PathAndQuery.Contains("/api/project-health?", StringComparison.Ordinal)
+                && uri.Query.Contains("projectType=Escopo%20Fechado", StringComparison.Ordinal));
+        });
     }
 
     [Fact]

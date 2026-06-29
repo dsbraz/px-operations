@@ -19,6 +19,7 @@ public sealed class MilestonesController(
     public async Task<ActionResult<IEnumerable<MilestoneResponse>>> List(
         [FromQuery] string? search,
         [FromQuery] string? dc,
+        [FromQuery] string? projectType,
         [FromQuery] string? type,
         [FromQuery] int? projectId,
         [FromQuery] string? from,
@@ -28,6 +29,7 @@ public sealed class MilestonesController(
         var filter = new MilestoneFilter(
             search,
             MilestoneMappings.ParseDeliveryCenterOrNull(dc),
+            MilestoneMappings.ParseProjectTypeOrNull(projectType),
             type is not null ? MilestoneMappings.ParseMilestoneType(type) : null,
             projectId,
             from is not null ? DateOnly.Parse(from) : null,

@@ -42,6 +42,7 @@ internal static class ProjectsTestHelpers
     internal sealed class MultiStubHttpMessageHandler : HttpMessageHandler
     {
         private readonly Queue<(HttpMethod Method, string Content, HttpStatusCode Status)> _responses = new();
+        public List<Uri?> RequestUris { get; } = [];
 
         public void AddResponse(HttpMethod method, string content, HttpStatusCode status)
             => _responses.Enqueue((method, content, status));
@@ -50,6 +51,8 @@ internal static class ProjectsTestHelpers
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
+            RequestUris.Add(request.RequestUri);
+
             if (_responses.TryDequeue(out var r))
             {
                 var response = new HttpResponseMessage(r.Status)

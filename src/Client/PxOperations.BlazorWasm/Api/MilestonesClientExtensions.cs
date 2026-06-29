@@ -7,12 +7,13 @@ public partial class MilestonesClient
     public Task<ICollection<MilestoneResponse>> ListAsync(
         string? search,
         string? dc,
+        string? projectType,
         string? type,
         int? projectId,
         string? from,
         string? to,
         CancellationToken cancellationToken = default)
-        => List3Async(search, dc, type, projectId, from, to, cancellationToken);
+        => List3Async(search, dc, projectType, type, projectId, from, to, cancellationToken);
 
     public Task<MilestoneResponse> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         => GetById3Async(id, cancellationToken);

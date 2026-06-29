@@ -36,6 +36,9 @@ public sealed class MilestoneRepository(AppDbContext dbContext) : IMilestoneRepo
         if (filter.Dc.HasValue)
             query = query.Where(m => m.Project.Dc == filter.Dc.Value);
 
+        if (filter.ProjectType.HasValue)
+            query = query.Where(m => m.Project.Type == filter.ProjectType.Value);
+
         if (filter.Type.HasValue)
             query = query.Where(m => m.Type == filter.Type.Value);
 

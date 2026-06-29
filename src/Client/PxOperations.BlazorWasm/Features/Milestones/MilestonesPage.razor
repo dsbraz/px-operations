@@ -14,16 +14,19 @@
 
 <MilestonesToolbar
     DeliveryCenters="@deliveryCenters"
+    ProjectTypes="@projectTypes"
     MilestoneTypes="@milestoneTypes"
     Projects="@projects"
     SearchTerm="@searchTerm"
     FilterDc="@filterDc"
+    FilterProjectType="@filterProjectType"
     FilterType="@filterType"
     FilterProjectId="@filterProjectId"
     ActiveView="@activeView"
     TypeCss="@TypeCss"
     OnSearchTermChanged="@(value => searchTerm = value)"
     OnFilterDcChanged="@(value => filterDc = value)"
+    OnFilterProjectTypeChanged="@(value => filterProjectType = value)"
     OnFilterTypeChanged="@(value => filterType = value)"
     OnFilterProjectIdChanged="@(value => filterProjectId = value)"
     OnViewChanged="@(value => activeView = value)" />

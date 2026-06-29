@@ -172,6 +172,9 @@ public sealed class ProjectHealthRepository(AppDbContext dbContext) : IProjectHe
         if (filter.Dc.HasValue)
             query = query.Where(h => h.Project.Dc == filter.Dc.Value);
 
+        if (filter.ProjectType.HasValue)
+            query = query.Where(h => h.Project.Type == filter.ProjectType.Value);
+
         if (filter.ProjectId.HasValue)
             query = query.Where(h => h.ProjectId == filter.ProjectId.Value);
 
@@ -199,6 +202,9 @@ public sealed class ProjectHealthRepository(AppDbContext dbContext) : IProjectHe
 
         if (filter.Dc.HasValue)
             projectQuery = projectQuery.Where(p => p.Dc == filter.Dc.Value);
+
+        if (filter.ProjectType.HasValue)
+            projectQuery = projectQuery.Where(p => p.Type == filter.ProjectType.Value);
 
         if (filter.ProjectId.HasValue)
             projectQuery = projectQuery.Where(p => p.Id == filter.ProjectId.Value);

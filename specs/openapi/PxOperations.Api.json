@@ -376,6 +376,13 @@
             }
           },
           {
+            "name": "projectType",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "projectId",
             "in": "query",
             "schema": {
@@ -536,6 +543,13 @@
           },
           {
             "name": "dc",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "projectType",
             "in": "query",
             "schema": {
               "type": "string"
@@ -830,6 +844,13 @@
           },
           {
             "name": "dc",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "projectType",
             "in": "query",
             "schema": {
               "type": "string"

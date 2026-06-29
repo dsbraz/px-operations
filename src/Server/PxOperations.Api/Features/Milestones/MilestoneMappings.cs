@@ -47,4 +47,7 @@ public static class MilestoneMappings
 
     public static DeliveryCenter? ParseDeliveryCenterOrNull(string? value)
         => value is null ? null : ProjectMappings.ParseDeliveryCenter(value);
+
+    public static ProjectType? ParseProjectTypeOrNull(string? value)
+        => value is null ? null : ProjectMappings.ParseProjectType(value);
 }

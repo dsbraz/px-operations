@@ -5,6 +5,7 @@ namespace PxOperations.Application.Features.ProjectHealth;
 public sealed record ProjectHealthFilter(
     string? Search = null,
     DeliveryCenter? Dc = null,
+    ProjectType? ProjectType = null,
     int? ProjectId = null,
     DateOnly? Week = null,
     int? MinScore = null,

@@ -19,15 +19,9 @@ services:
     image: mcr.microsoft.com/dotnet/sdk:10.0
     working_dir: /src
     command:
-      - dotnet
-      - watch
-      - run
-      - --project
-      - src/Server/PxOperations.Api
-      - --no-launch-profile
-      - --urls
-      - http://0.0.0.0:8081
-      - --non-interactive
+      - sh
+      - -lc
+      - (dotnet build src/Server/PxOperations.Api/PxOperations.Api.csproj >/tmp/px-server-build.log 2>&1 || dotnet build src/Server/PxOperations.Api/PxOperations.Api.csproj) && exec dotnet watch run --project src/Server/PxOperations.Api --no-launch-profile --urls http://0.0.0.0:8081 --non-interactive
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://0.0.0.0:8081
@@ -38,10 +32,22 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/health/live >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
     ports:
       - "8081:8081"
     volumes:
       - .:/src
+      - server-domain-bin:/src/src/Server/PxOperations.Domain/bin
+      - server-domain-obj:/src/src/Server/PxOperations.Domain/obj
+      - server-application-bin:/src/src/Server/PxOperations.Application/bin
+      - server-application-obj:/src/src/Server/PxOperations.Application/obj
+      - server-infrastructure-bin:/src/src/Server/PxOperations.Infrastructure/bin
+      - server-infrastructure-obj:/src/src/Server/PxOperations.Infrastructure/obj
       - server-bin:/src/src/Server/PxOperations.Api/bin
       - server-obj:/src/src/Server/PxOperations.Api/obj
       - nuget-cache:/root/.nuget/packages
@@ -50,16 +56,9 @@ services:
     image: mcr.microsoft.com/dotnet/sdk:10.0
     working_dir: /src
     command:
-      - dotnet
-      - watch
-      - --no-hot-reload
-      - run
-      - --project
-      - src/Client/PxOperations.BlazorWasm
-      - --no-launch-profile
-      - --urls
-      - http://0.0.0.0:8080
-      - --non-interactive
+      - sh
+      - -lc
+      - (dotnet build src/Client/PxOperations.BlazorWasm/PxOperations.BlazorWasm.csproj >/tmp/px-client-build.log 2>&1 || dotnet build src/Client/PxOperations.BlazorWasm/PxOperations.BlazorWasm.csproj) && exec dotnet watch --no-hot-reload run --project src/Client/PxOperations.BlazorWasm --no-launch-profile --urls http://0.0.0.0:8080 --non-interactive
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://0.0.0.0:8080
@@ -67,15 +66,25 @@ services:
       DOTNET_WATCH_SUPPRESS_EMOJIS: "1"
     depends_on:
       server:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "8080:8080"
     volumes:
       - .:/src
+      - client-bin:/src/src/Client/PxOperations.BlazorWasm/bin
+      - client-obj:/src/src/Client/PxOperations.BlazorWasm/obj
       - nuget-cache:/root/.nuget/packages
 
 volumes:
   postgres-data:
   nuget-cache:
+  client-bin:
+  client-obj:
+  server-domain-bin:
+  server-domain-obj:
+  server-application-bin:
+  server-application-obj:
+  server-infrastructure-bin:
+  server-infrastructure-obj:
   server-bin:
   server-obj:

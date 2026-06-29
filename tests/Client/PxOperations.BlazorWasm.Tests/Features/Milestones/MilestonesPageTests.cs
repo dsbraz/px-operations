@@ -64,6 +64,41 @@ public sealed class MilestonesPageTests : TestContext
     }
 
     [Fact]
+    public void Page_should_render_project_type_filter_and_filter_by_linked_project_type()
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd");
+        var handler = new MilestonesTestHelpers.MultiStubHttpMessageHandler();
+        handler.AddResponse(MilestonesTestHelpers.MilestonesJson(
+            MilestonesTestHelpers.MakeMilestone(id: 1, projectId: 10, title: "Marco Squad", projectName: "Projeto A", date: today),
+            MilestonesTestHelpers.MakeMilestone(id: 2, projectId: 11, title: "Marco Escopo", projectName: "Projeto B", date: today)));
+        handler.AddResponse(ProjectsTestHelpers.ProjectsJson(
+            ProjectsTestHelpers.MakeProject(id: 10, name: "Projeto A", type: "Squad"),
+            ProjectsTestHelpers.MakeProject(id: 11, name: "Projeto B", type: "Escopo Fechado")));
+
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost") };
+        Services.AddScoped(_ => httpClient);
+        Services.AddScoped<MilestonesClient>();
+        Services.AddScoped<ProjectsClient>();
+
+        var cut = RenderComponent<MilestonesPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Tipo de Projeto", cut.Markup);
+            Assert.Contains("Marco Squad", cut.Markup);
+            Assert.Contains("Marco Escopo", cut.Markup);
+        });
+
+        cut.FindAll("select")[1].Change("Escopo Fechado");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.DoesNotContain("Marco Squad", cut.Markup);
+            Assert.Contains("Marco Escopo", cut.Markup);
+        });
+    }
+
+    [Fact]
     public void Page_should_switch_to_calendar_view()
     {
         var today = DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd");

@@ -60,6 +60,28 @@ public sealed class MilestoneEndpointsTests(PostgreSqlFixture fixture)
     }
 
     [Fact]
+    public async Task List_should_filter_by_project_type()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        await CleanAsync(factory);
+        using var client = factory.CreateClient();
+
+        var squadProject = await CreateProjectAsync(client, "Projeto Squad", type: "Squad");
+        var fixedScopeProject = await CreateProjectAsync(client, "Projeto Escopo", type: "Escopo Fechado");
+
+        await client.PostAsJsonAsync("/api/milestones", new CreateMilestoneRequest(squadProject, "Kickoff", "Marco Squad", "2026-03-20", null, null));
+        await client.PostAsJsonAsync("/api/milestones", new CreateMilestoneRequest(fixedScopeProject, "Outros", "Marco Escopo", "2026-03-21", null, null));
+
+        var response = await client.GetAsync("/api/milestones?projectType=Escopo%20Fechado");
+        var milestones = await response.Content.ReadFromJsonAsync<List<MilestoneResponse>>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(milestones);
+        Assert.Single(milestones);
+        Assert.Equal("Projeto Escopo", milestones[0].ProjectName);
+    }
+
+    [Fact]
     public async Task Patch_should_update_existing_milestone()
     {
         await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
@@ -117,14 +139,14 @@ public sealed class MilestoneEndpointsTests(PostgreSqlFixture fixture)
         Assert.Empty(dbContext.Milestones);
     }
 
-    private static async Task<int> CreateProjectAsync(HttpClient client, string name, string dc = "DC1")
+    private static async Task<int> CreateProjectAsync(HttpClient client, string name, string dc = "DC1", string type = "Squad")
     {
         var response = await client.PostAsJsonAsync("/api/projects", new CreateProjectRequest(
             Dc: dc,
             Status: "Em andamento",
             Name: name,
             Client: "Cliente X",
-            Type: "Squad",
+            Type: type,
             StartDate: "2026-01-01",
             EndDate: "2026-12-31",
             DeliveryManager: "DM X",

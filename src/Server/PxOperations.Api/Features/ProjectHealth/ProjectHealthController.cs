@@ -20,6 +20,7 @@ public sealed class ProjectHealthController(
     public async Task<ActionResult<IEnumerable<ProjectHealthResponse>>> List(
         [FromQuery] string? search,
         [FromQuery] string? dc,
+        [FromQuery] string? projectType,
         [FromQuery] int? projectId,
         [FromQuery] string? week,
         [FromQuery] int? minScore,
@@ -29,6 +30,7 @@ public sealed class ProjectHealthController(
         var filter = new ProjectHealthFilter(
             search,
             ProjectHealthMappings.ParseDeliveryCenterOrNull(dc),
+            ProjectHealthMappings.ParseProjectTypeOrNull(projectType),
             projectId,
             week is not null ? DateOnly.Parse(week) : null,
             minScore,
@@ -42,6 +44,7 @@ public sealed class ProjectHealthController(
     public async Task<ActionResult<ProjectHealthSummaryResponse>> GetSummary(
         [FromQuery] string? search,
         [FromQuery] string? dc,
+        [FromQuery] string? projectType,
         [FromQuery] int? projectId,
         [FromQuery] string? week,
         [FromQuery] int? minScore,
@@ -51,6 +54,7 @@ public sealed class ProjectHealthController(
         var filter = new ProjectHealthFilter(
             search,
             ProjectHealthMappings.ParseDeliveryCenterOrNull(dc),
+            ProjectHealthMappings.ParseProjectTypeOrNull(projectType),
             projectId,
             week is not null ? DateOnly.Parse(week) : null,
             minScore,

@@ -1,1 +1,5 @@
-<Project />
+<Project>
+  <PropertyGroup>
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin/**;obj/**;**/bin/**;**/obj/**</DefaultItemExcludes>
+  </PropertyGroup>
+</Project>

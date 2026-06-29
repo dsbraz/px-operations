@@ -7,6 +7,7 @@ namespace PxOperations.BlazorWasm.Features.Milestones;
 public partial class MilestonesPage : ComponentBase
 {
     private static readonly string[] deliveryCenters = ["DC1", "DC2", "DC3", "DC4", "DC5", "DC6"];
+    private static readonly string[] projectTypes = ["Squad", "Escopo Fechado", "Alocação"];
     private static readonly string[] milestoneTypes =
     [
         "Apresentação Sponsor",
@@ -28,6 +29,7 @@ public partial class MilestonesPage : ComponentBase
 
     private string searchTerm = string.Empty;
     private string filterDc = string.Empty;
+    private string filterProjectType = string.Empty;
     private string filterType = string.Empty;
     private string filterProjectId = string.Empty;
     private string activeView = "semana";
@@ -49,7 +51,7 @@ public partial class MilestonesPage : ComponentBase
     {
         try
         {
-            var milestonesResult = await MilestonesClient.ListAsync(null, null, null, null, null, null, default);
+            var milestonesResult = await MilestonesClient.ListAsync(null, null, null, null, null, null, null, default);
             var projectsResult = await ProjectsClient.ListAsync(null, null, null, null, null, default);
 
             milestones = milestonesResult.ToList();
@@ -70,12 +72,15 @@ public partial class MilestonesPage : ComponentBase
             || m.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
             || m.ProjectName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
         .Where(m => string.IsNullOrEmpty(filterDc) || m.ProjectDc == filterDc)
+        .Where(m => string.IsNullOrEmpty(filterProjectType) || ProjectTypeFor(m.ProjectId) == filterProjectType)
         .Where(m => string.IsNullOrEmpty(filterType) || m.Type == filterType)
         .Where(m => string.IsNullOrEmpty(filterProjectId) || m.ProjectId.ToString() == filterProjectId)
         .OrderBy(m => m.Date)
         .ThenBy(m => m.Time)
         .ThenBy(m => m.Title)
         .ToList();
+
+    private string? ProjectTypeFor(int projectId) => projects.FirstOrDefault(p => p.Id == projectId)?.Type;
 
     private int ThisWeekCount => FilteredMilestones.Count(m => ParseDate(m.Date) >= currentWeekStart && ParseDate(m.Date) <= currentWeekStart.AddDays(6));
     private int ThisMonthCount => FilteredMilestones.Count(m => ParseDate(m.Date).Month == currentMonth.Month && ParseDate(m.Date).Year == currentMonth.Year);

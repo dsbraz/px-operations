@@ -8,6 +8,9 @@ public partial class ProjectHealthToolbar : ComponentBase
     [Parameter] public EventCallback<string> OnSearchChanged { get; set; }
     [Parameter] public string FilterDc { get; set; } = "";
     [Parameter] public EventCallback<string> OnFilterDcChanged { get; set; }
+    [Parameter] public IReadOnlyList<string> ProjectTypes { get; set; } = [];
+    [Parameter] public string FilterProjectType { get; set; } = "";
+    [Parameter] public EventCallback<string> OnFilterProjectTypeChanged { get; set; }
     [Parameter] public string FilterScore { get; set; } = "";
     [Parameter] public EventCallback<string> OnFilterScoreChanged { get; set; }
     [Parameter] public string FilterWeek { get; set; } = "";

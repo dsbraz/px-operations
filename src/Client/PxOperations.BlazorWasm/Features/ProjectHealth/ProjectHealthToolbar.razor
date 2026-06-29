@@ -16,6 +16,13 @@
         <option value="DC5">DC5</option>
         <option value="DC6">DC6</option>
     </select>
+    <select value="@FilterProjectType" @onchange="e => OnFilterProjectTypeChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)">
+        <option value="">Tipo de Projeto</option>
+        @foreach (var type in ProjectTypes)
+        {
+            <option value="@type">@type</option>
+        }
+    </select>
     <select value="@FilterWeek" @onchange="e => OnFilterWeekChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)">
         <option value="">Todas as semanas</option>
         @foreach (var week in AvailableWeeks)

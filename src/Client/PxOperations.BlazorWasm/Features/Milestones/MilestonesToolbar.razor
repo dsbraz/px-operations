@@ -15,6 +15,13 @@
             <option value="@dc">@dc</option>
         }
     </select>
+    <select value="@FilterProjectType" @onchange="OnProjectTypeChanged">
+        <option value="">Tipo de Projeto</option>
+        @foreach (var type in ProjectTypes)
+        {
+            <option value="@type">@type</option>
+        }
+    </select>
     <select value="@FilterType" @onchange="OnTypeChanged">
         <option value="">Todos os Tipos</option>
         @foreach (var type in MilestoneTypes)

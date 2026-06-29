@@ -221,6 +221,28 @@ public sealed class ProjectHealthEndpointsTests(PostgreSqlFixture fixture)
     }
 
     [Fact]
+    public async Task List_should_filter_by_project_type()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        await CleanAsync(factory);
+        using var client = factory.CreateClient();
+
+        var squad = await CreateProjectAsync(client, "Projeto Squad", type: "Squad");
+        var staffing = await CreateProjectAsync(client, "Projeto Alocacao", type: "Alocação");
+
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(squad));
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(staffing));
+
+        var response = await client.GetAsync("/api/project-health?projectType=staffing");
+        var entries = await response.Content.ReadFromJsonAsync<List<ProjectHealthResponse>>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(entries);
+        Assert.Single(entries);
+        Assert.Equal("Projeto Alocacao", entries[0].ProjectName);
+    }
+
+    [Fact]
     public async Task List_search_should_treat_percent_as_literal_not_wildcard()
     {
         await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
@@ -449,6 +471,37 @@ public sealed class ProjectHealthEndpointsTests(PostgreSqlFixture fixture)
     }
 
     [Fact]
+    public async Task Summary_should_scope_totals_and_evolution_by_project_type()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        await CleanAsync(factory);
+        using var client = factory.CreateClient();
+
+        var squad = await CreateProjectAsync(client, "Projeto Squad", type: "Squad");
+        var fixedScopeWithHealth = await CreateProjectAsync(client, "Projeto Escopo", type: "Escopo Fechado");
+        await CreateProjectAsync(client, "Projeto Escopo Sem Resposta", type: "Escopo Fechado");
+
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(squad,
+            scope: "vermelho", schedule: "vermelho", quality: "vermelho", satisfaction: "vermelho", practicesCount: 0));
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(fixedScopeWithHealth,
+            scope: "verde", schedule: "verde", quality: "verde", satisfaction: "verde", practicesCount: 5));
+        await client.PostAsJsonAsync("/api/project-health", MakeRequest(fixedScopeWithHealth,
+            scope: "amarelo", schedule: "amarelo", quality: "amarelo", satisfaction: "amarelo", practicesCount: 3, week: "2026-03-23"));
+
+        var summary = await (await client.GetAsync("/api/project-health/summary?projectType=Escopo%20Fechado"))
+            .Content.ReadFromJsonAsync<ProjectHealthSummaryResponse>();
+
+        Assert.NotNull(summary);
+        Assert.Equal(2, summary.TotalProjects);
+        Assert.Equal(1, summary.TotalEntries);
+        Assert.Equal(8, summary.AverageScore);
+        Assert.Equal(8, summary.OverallAverageScore);
+        Assert.Equal(1, summary.NoResponseCount);
+        Assert.Equal(2, summary.WeeklyEvolution.Count);
+        Assert.All(summary.WeeklyEvolution, point => Assert.Equal(1, point.EntryCount));
+    }
+
+    [Fact]
     public async Task Summary_should_scope_aggregates_by_project()
     {
         await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
@@ -522,14 +575,14 @@ public sealed class ProjectHealthEndpointsTests(PostgreSqlFixture fixture)
             false, null, false, null, highlights);
     }
 
-    private static async Task<int> CreateProjectAsync(HttpClient client, string name, string dc = "DC1", string status = "Em andamento")
+    private static async Task<int> CreateProjectAsync(HttpClient client, string name, string dc = "DC1", string status = "Em andamento", string type = "Squad")
     {
         var response = await client.PostAsJsonAsync("/api/projects", new CreateProjectRequest(
             Dc: dc,
             Status: status,
             Name: name,
             Client: "Cliente X",
-            Type: "Squad",
+            Type: type,
             StartDate: "2026-01-01",
             EndDate: "2026-12-31",
             DeliveryManager: "DM X",

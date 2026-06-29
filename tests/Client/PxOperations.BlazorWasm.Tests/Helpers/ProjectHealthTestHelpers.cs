@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http;
+using System.Globalization;
 using System.Text;
 using PxOperations.BlazorWasm.Api;
 
@@ -72,9 +73,10 @@ internal static class ProjectHealthTestHelpers
         int overallNoResponseCount = 0,
         string[]? weeks = null)
     {
+        static string Num(double value) => value.ToString(CultureInfo.InvariantCulture);
         var weekly = weeks is null
             ? ""
             : string.Join(",", weeks.Select(w => $"{{\"week\":\"{w}\",\"averageScore\":0,\"entryCount\":1}}"));
-        return $"{{\"totalEntries\":{totalEntries},\"totalProjects\":{totalProjects},\"averageScore\":{avgScore},\"overallAverageScore\":{overallAverageScore},\"averageScope\":0,\"averageSchedule\":0,\"averageQuality\":0,\"averageSatisfaction\":0,\"criticalCount\":{criticalCount},\"overallCriticalCount\":{overallCriticalCount},\"attentionCount\":0,\"healthyCount\":0,\"noResponseCount\":{noResponseCount},\"overallNoResponseCount\":{overallNoResponseCount},\"withExpansionCount\":0,\"withActionPlanCount\":0,\"weeklyEvolution\":[{weekly}]}}";
+        return $"{{\"totalEntries\":{totalEntries},\"totalProjects\":{totalProjects},\"averageScore\":{Num(avgScore)},\"overallAverageScore\":{Num(overallAverageScore)},\"averageScope\":0,\"averageSchedule\":0,\"averageQuality\":0,\"averageSatisfaction\":0,\"criticalCount\":{criticalCount},\"overallCriticalCount\":{overallCriticalCount},\"attentionCount\":0,\"healthyCount\":0,\"noResponseCount\":{noResponseCount},\"overallNoResponseCount\":{overallNoResponseCount},\"withExpansionCount\":0,\"withActionPlanCount\":0,\"weeklyEvolution\":[{weekly}]}}";
     }
 }
