@@ -19,5 +19,6 @@ builder.Services.AddScoped(_ => new HttpClient
 builder.Services.AddScoped<ProjectHealthClient>();
 builder.Services.AddScoped<ProjectsClient>();
 builder.Services.AddScoped<MilestonesClient>();
+builder.Services.AddScoped<NpsClient>();
 
 await builder.Build().RunAsync();

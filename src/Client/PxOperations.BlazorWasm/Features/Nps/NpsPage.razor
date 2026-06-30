@@ -1,0 +1,263 @@
+@page "/nps"
+@using PxOperations.BlazorWasm.Api
+
+<PageTitle>NPS · Operations PX</PageTitle>
+
+<div class="page-actions-bar">
+    <a class="btn btn-ghost" href="@ExportHref">&#8595; Exportar CSV</a>
+    <button class="btn btn-purple" @onclick="OpenCreateLinkModal">Gerar link</button>
+</div>
+
+<div class="stats-bar">
+    <div class="stat p"><div class="sico p">N</div><div><div class="sval">@dashboard?.OfficialNps.ToString("0.0")</div><div class="slbl">NPS oficial</div></div></div>
+    <div class="stat b"><div class="sico b">#</div><div><div class="sval">@dashboard?.TotalResponses</div><div class="slbl">Respostas</div></div></div>
+    <div class="stat o"><div class="sico o">!</div><div><div class="sval">@dashboard?.OverdueProjects</div><div class="slbl">Projetos vencidos</div></div></div>
+    <div class="stat g"><div class="sico g">+</div><div><div class="sval">@dashboard?.Promoters</div><div class="slbl">Promotores</div></div></div>
+</div>
+
+<div class="toolbar">
+    <select value="@filterDc" @onchange="OnFilterDcChanged">
+        <option value="">Todos os DCs</option>
+        <option>DC1</option>
+        <option>DC2</option>
+        <option>DC3</option>
+        <option>DC4</option>
+        <option>DC5</option>
+        <option>DC6</option>
+    </select>
+    <select value="@filterProjectType" @onchange="OnFilterProjectTypeChanged">
+        <option value="">Todos os tipos</option>
+        <option>Squad</option>
+        <option>Escopo Fechado</option>
+        <option>Alocação</option>
+    </select>
+</div>
+
+@if (isLoading)
+{
+    <div style="text-align:center;padding:60px;color:var(--muted)">Carregando...</div>
+}
+else if (loadError is not null)
+{
+    <div class="status-card error nps-error">
+        <p>@loadError</p>
+        <button class="btn btn-purple" @onclick="RefreshAsync">Tentar novamente</button>
+    </div>
+}
+else
+{
+    <main class="nps-layout nps-layout-wide">
+        <section class="nps-panel">
+            <div class="nps-panel-head">
+                <h1>Projetos NPS</h1>
+                <span>@projects.Count projetos</span>
+            </div>
+            <div class="nps-table-wrap">
+                <table class="nps-table nps-ops-table">
+                    <thead>
+                        <tr>
+                            <th>Projeto</th>
+                            <th>DC</th>
+                            <th>Status NPS</th>
+                            <th>Link NPS</th>
+                            <th>Última resposta</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var project in projects)
+                        {
+                            <tr class="@(selectedProjectId == project.Id ? "selected" : "")">
+                                <td><strong>@project.Name</strong><span>@project.Client</span></td>
+                                <td>@project.Dc</td>
+                                <td><span class="nps-status @ProjectStatusClass(project)">@ProjectStatusLabel(project)</span></td>
+                                <td><span class="nps-status @LinkStatusClass(project)">@LinkStatusLabel(project)</span></td>
+                                <td>
+                                    <strong>@(project.LastNps?.ToString("0.0") ?? "-")</strong>
+                                    <span>@LastResponseLabel(project)</span>
+                                </td>
+                                <td>
+                                    <div class="nps-row-actions">
+                                        <button class="btn-link" @onclick="() => OpenCreateLinkModal(project.Id)">Gerar link</button>
+                                        <button class="btn-link" @onclick="() => OpenProjectDetailAsync(project.Id)">Ver histórico</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+}
+
+@if (operationError is not null)
+{
+    <div class="toast show"><span style="color:var(--red);font-size:14px">!</span><span>@operationError</span></div>
+}
+
+@if (showCreateLinkModal)
+{
+    <div class="overlay open" @onclick="CloseCreateLinkModal">
+        <div class="modal" @onclick:stopPropagation="true">
+            <div class="modal-top">
+                <div>
+                    <div class="modal-ttl">Novo link NPS</div>
+                    <div class="modal-sub">@(selectedDetail is null ? "Selecione o projeto que receberá o link" : $"{selectedDetail.Project.Name} · {selectedDetail.Project.Dc}")</div>
+                </div>
+                <button class="mcls" @onclick="CloseCreateLinkModal" aria-label="Fechar">×</button>
+            </div>
+
+            <div class="nps-inline-form">
+                <select value="@(selectedProjectId?.ToString() ?? string.Empty)" @onchange="OnCreateLinkProjectChanged">
+                    <option value="">Selecione o projeto</option>
+                    @foreach (var project in projects)
+                    {
+                        <option value="@project.Id">@project.Name · @project.Client</option>
+                    }
+                </select>
+                <select @bind="dispatchFormat"><option>Simplificado</option><option>Completo</option></select>
+                <select @bind="dispatchLanguage"><option>Português</option><option>Inglês</option><option>Espanhol</option></select>
+                <button class="btn btn-purple" disabled="@(!CanCreateLink)" @onclick="CreateDispatchAsync">Gerar link</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showDetailModal && selectedDetail is not null)
+{
+    <div class="overlay open" @onclick="CloseDetailModal">
+        <div class="modal nps-detail-modal" @onclick:stopPropagation="true">
+            <div class="modal-top">
+                <div>
+                    <div class="modal-ttl">@selectedDetail.Project.Name</div>
+                    <div class="modal-sub">@selectedDetail.Project.Client · @selectedDetail.Project.Dc · @selectedDetail.Project.DeliveryManager</div>
+                </div>
+                <button class="mcls" @onclick="CloseDetailModal" aria-label="Fechar">×</button>
+            </div>
+
+            <div class="nps-detail-flow">
+                <section class="nps-detail-section">
+                    <div class="nps-section-title">
+                        <h3>Histórico de links</h3>
+                        <span>@selectedDetail.Dispatches.Count links</span>
+                    </div>
+                    <div class="nps-history-grid">
+                        @foreach (var dispatch in selectedDetail.Dispatches)
+                        {
+                            <button class="nps-history-card @(selectedDispatchDetail?.Dispatch.Id == dispatch.Id ? "selected" : "")" @onclick="() => SelectDispatchAsync(dispatch.Id)">
+                                <span>
+                                    <strong>@FormatTimestamp(dispatch.CreatedAt)</strong>
+                                    <small>@dispatch.Format · @dispatch.Language</small>
+                                </span>
+                                <span class="nps-status @LinkStatusClass(dispatch)">@LinkStatusLabel(dispatch)</span>
+                            </button>
+                        }
+                    </div>
+                </section>
+
+                @if (selectedDispatchDetail is not null)
+                {
+                    <section class="nps-share-panel">
+                        <div class="nps-share-head">
+                            <div>
+                                <strong>Link selecionado</strong>
+                                <span>@selectedDispatchDetail.Dispatch.Format · @selectedDispatchDetail.Dispatch.Language · @selectedDispatchDetail.Dispatch.Status</span>
+                            </div>
+                        </div>
+                        @foreach (var target in selectedDispatchDetail.Targets)
+                        {
+                            var publicFormUrl = BuildPublicFormUrl(target.Token);
+                            <div class="nps-share-row">
+                                <label>@TargetLabel(target)</label>
+                                @if (target.ResponsesCount > 0)
+                                {
+                                    <span class="nps-link-used">Respondido</span>
+                                }
+                                else
+                                {
+                                    <input class="nps-url-input" readonly value="@publicFormUrl" />
+                                    <button class="btn btn-ghost btn-sm" @onclick="() => CopyPublicFormUrlAsync(target.Token)">Copiar</button>
+                                }
+                            </div>
+                        }
+                    </section>
+                }
+
+                <section class="nps-detail-section">
+                    <div class="nps-section-title">
+                        <h3>@(selectedDispatchDetail is null ? "Respostas recentes" : "Respostas deste link")</h3>
+                        <span>@responses.Count respostas</span>
+                    </div>
+                    @if (responses.Count == 0)
+                    {
+                        <div class="nps-empty small">Nenhuma resposta carregada.</div>
+                    }
+                    else
+                    {
+                        <div class="nps-list">
+                            @foreach (var response in responses)
+                            {
+                                <article class="nps-result-card">
+                                    <div class="nps-result-main">
+                                        <div class="nps-score-badge @ClassificationClass(response)">
+                                            <span>NPS</span>
+                                            <strong>@response.Score</strong>
+                                            <em>@response.Classification</em>
+                                        </div>
+                                        <div class="nps-result-body">
+                                            <div class="nps-result-head">
+                                                <strong>@ResponseIdentityOrFallback(response)</strong>
+                                                <span>@FormatTimestamp(response.SubmittedAt)</span>
+                                            </div>
+                                            @if (!string.IsNullOrWhiteSpace(response.Comment))
+                                            {
+                                                <div class="nps-comment">
+                                                    <span>Comentário</span>
+                                                    <p>@response.Comment</p>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                    @if (HasDimensionAnswers(response))
+                                    {
+                                        <div class="nps-metrics-grid">
+                                            @if (response.Scope is not null)
+                                            {
+                                                <div class="nps-metric">
+                                                    <div><span>Escopo</span><strong>@response.Scope/10</strong></div>
+                                                    <div class="nps-metric-bar"><span style="@($"width: {ScorePercent(response.Scope)}")"></span></div>
+                                                </div>
+                                            }
+                                            @if (response.Schedule is not null)
+                                            {
+                                                <div class="nps-metric">
+                                                    <div><span>Prazo</span><strong>@response.Schedule/10</strong></div>
+                                                    <div class="nps-metric-bar"><span style="@($"width: {ScorePercent(response.Schedule)}")"></span></div>
+                                                </div>
+                                            }
+                                            @if (response.Quality is not null)
+                                            {
+                                                <div class="nps-metric">
+                                                    <div><span>Qualidade</span><strong>@response.Quality/10</strong></div>
+                                                    <div class="nps-metric-bar"><span style="@($"width: {ScorePercent(response.Quality)}")"></span></div>
+                                                </div>
+                                            }
+                                            @if (response.Communication is not null)
+                                            {
+                                                <div class="nps-metric">
+                                                    <div><span>Comunicação</span><strong>@response.Communication/10</strong></div>
+                                                    <div class="nps-metric-bar"><span style="@($"width: {ScorePercent(response.Communication)}")"></span></div>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </article>
+                            }
+                        </div>
+                    }
+                </section>
+            </div>
+        </div>
+    </div>
+}

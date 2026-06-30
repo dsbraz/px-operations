@@ -1,0 +1,104 @@
+@page "/nps/{Token:guid}"
+@using PxOperations.BlazorWasm.Api
+
+<PageTitle>NPS · Operations PX</PageTitle>
+
+<main class="nps-public">
+    @if (isLoading)
+    {
+        <div class="nps-public-box">@Texts.Loading</div>
+    }
+    else if (loadError is not null)
+    {
+        <div class="nps-public-box">@loadError</div>
+    }
+    else if (survey is not null && submitted)
+    {
+        <div class="nps-public-box">
+            <h1>@Texts.ThankYouTitle</h1>
+            <p>@Texts.ThankYouMessage</p>
+        </div>
+    }
+    else if (survey is not null)
+    {
+        <div class="nps-public-box">
+            <div class="nps-survey-context">@Texts.ProjectContext</div>
+            <h1>@survey.ProjectName</h1>
+
+            @if (survey.AlreadyAnswered)
+            {
+                <div class="nps-empty">@Texts.AlreadyAnswered</div>
+            }
+            else
+            {
+                <div class="nps-scale-field">
+                    <div class="nps-question">@Texts.NpsQuestion</div>
+                    <div class="nps-scale" role="radiogroup" aria-label="@Texts.NpsQuestion">
+                        @for (var i = 0; i <= 10; i++)
+                        {
+                            var value = i;
+                            <button type="button" class="nps-score @(score == value ? "selected" : "")" aria-pressed="@(score == value)" @onclick="() => score = value">@value</button>
+                        }
+                    </div>
+                    <div class="nps-scale-help"><span>@Texts.ScaleLow</span><span>@Texts.ScaleHigh</span></div>
+                </div>
+
+                @if (survey.Format == "Completo")
+                {
+                    <div class="nps-public-grid">
+                        <div class="nps-scale-field compact">
+                            <div class="nps-scale-label">@Texts.Scope</div>
+                            <div class="nps-scale" role="radiogroup" aria-label="@Texts.Scope">
+                                @for (var i = 0; i <= 10; i++)
+                                {
+                                    var value = i;
+                                    <button type="button" class="nps-score @(scope == value ? "selected" : "")" aria-pressed="@(scope == value)" @onclick="() => scope = value">@value</button>
+                                }
+                            </div>
+                        </div>
+                        <div class="nps-scale-field compact">
+                            <div class="nps-scale-label">@Texts.Schedule</div>
+                            <div class="nps-scale" role="radiogroup" aria-label="@Texts.Schedule">
+                                @for (var i = 0; i <= 10; i++)
+                                {
+                                    var value = i;
+                                    <button type="button" class="nps-score @(schedule == value ? "selected" : "")" aria-pressed="@(schedule == value)" @onclick="() => schedule = value">@value</button>
+                                }
+                            </div>
+                        </div>
+                        <div class="nps-scale-field compact">
+                            <div class="nps-scale-label">@Texts.Quality</div>
+                            <div class="nps-scale" role="radiogroup" aria-label="@Texts.Quality">
+                                @for (var i = 0; i <= 10; i++)
+                                {
+                                    var value = i;
+                                    <button type="button" class="nps-score @(quality == value ? "selected" : "")" aria-pressed="@(quality == value)" @onclick="() => quality = value">@value</button>
+                                }
+                            </div>
+                        </div>
+                        <div class="nps-scale-field compact">
+                            <div class="nps-scale-label">@Texts.Communication</div>
+                            <div class="nps-scale" role="radiogroup" aria-label="@Texts.Communication">
+                                @for (var i = 0; i <= 10; i++)
+                                {
+                                    var value = i;
+                                    <button type="button" class="nps-score @(communication == value ? "selected" : "")" aria-pressed="@(communication == value)" @onclick="() => communication = value">@value</button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <textarea placeholder="@Texts.CommentPlaceholder" @bind="comment"></textarea>
+
+                <div class="nps-identity">
+                    <div class="nps-scale-label">@Texts.OptionalIdentity</div>
+                    <input placeholder="@Texts.NamePlaceholder" @bind="respondentName" />
+                    <input placeholder="@Texts.EmailPlaceholder" @bind="respondentEmail" />
+                </div>
+
+                <button class="btn btn-purple" @onclick="SubmitAsync">@Texts.Submit</button>
+            }
+        </div>
+    }
+</main>
