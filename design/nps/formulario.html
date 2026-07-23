@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Avaliação NPS · BRQ</title>
+  <meta name="description" content="Formulário público de avaliação (NPS) da BRQ: uma nota de 0 a 10, aspectos da entrega e um comentário. Anônimo, leva menos de um minuto." />
+  <link rel="icon" type="image/svg+xml" href="assets/logo-brq.svg" />
+  <!-- Fontes de texto (Aspekta é local, via @font-face no brq-core.css) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Geist+Mono:wght@600&display=swap" rel="stylesheet" />
+  <!-- BRQ design system (nesta ordem). Sem brq-dashboard.css: esta é uma página
+       pública standalone, não o shell do app. -->
+  <link rel="stylesheet" href="assets/brq-tokens.css" />
+  <link rel="stylesheet" href="assets/brq-core.css" />
+
+  <!-- Composições só desta página (tokenizadas): cabeçalho leve, cartão do
+       questionário, escala de 0 a 10 e estados de conclusão. -->
+  <style>
+    /* ---------------------------------------------------------------
+       Esqueleto da página: cabeçalho, conteúdo centrado, rodapé colado
+       na base mesmo com pouco conteúdo (estados curtos como "obrigado").
+       --------------------------------------------------------------- */
+    body {
+      background-color: var(--color-surface);
+      min-block-size: 100dvh;
+      display: flex; flex-direction: column;
+      /* espaço p/ a barra de demonstração fixa (só no mockup) */
+      padding-block-end: 4.5rem;
+    }
+
+    .top {
+      background-color: var(--color-bg);
+      border-block-end: 1px solid var(--color-border);
+    }
+    .top__inner {
+      display: flex; align-items: center; gap: var(--space-md);
+      min-block-size: 4rem;
+      max-inline-size: 48rem; margin-inline: auto;
+      padding-inline: var(--container-padding);
+    }
+    .top__logo { display: inline-flex; align-items: center; color: var(--color-text); }
+    .top__toggle { margin-inline-start: auto; }
+
+    /* Ícone do tema: mostra a lua no claro, o sol no escuro. */
+    .top__icon--sun { display: none; }
+    :root[data-theme="dark"] .top__icon--moon { display: none; }
+    :root[data-theme="dark"] .top__icon--sun  { display: block; }
+
+    .shell {
+      flex: 1 1 auto;
+      inline-size: 100%; max-inline-size: 48rem; margin-inline: auto;
+      padding: var(--space-xl) var(--container-padding) var(--space-2xl);
+    }
+    @media (min-width: 48em) { .shell { padding-block: var(--space-2xl) var(--space-3xl); } }
+
+    /* ---------------------------------------------------------------
+       Cartão do questionário
+       --------------------------------------------------------------- */
+    .card-survey {
+      background-color: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    /* Ritmo vertical da página. Uma régua só, aplicada em todo lugar:
+         par rótulo ↔ controle ............ --space-xs   (pertencem juntos)
+         enunciado ↔ controle ............. --space-lg
+         item ↔ item dentro de um bloco ... --space-lg
+         bloco ↔ bloco .................... padding do bloco + fio
+       Nada usa gap uniforme: gap igual entre tudo é o que apaga a hierarquia. */
+    .intro {
+      display: flex; flex-direction: column; align-items: flex-start;
+      padding: var(--space-xl) var(--space-lg);
+      border-block-end: 1px solid var(--color-border);
+    }
+    @media (min-width: 48em) { .intro { padding: var(--space-2xl); } }
+    .intro__title { margin-block-start: var(--space-md); max-inline-size: 24ch; }
+    /* Nome do projeto em linha própria: não quebra no meio, e o título
+       fica estável para nomes curtos ou longos. */
+    .intro__project { display: block; color: var(--color-accent); font-style: normal; }
+    .intro__meta {
+      display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-lg);
+      margin-block-start: var(--space-md); padding: 0; list-style: none;
+    }
+    .intro__meta li { display: flex; align-items: center; gap: var(--space-xs); font-size: var(--fs-body-sm); color: var(--color-text-muted); }
+    .intro__meta svg { inline-size: var(--icon-sm); block-size: var(--icon-sm); color: var(--color-accent); flex: none; }
+
+    /* O roxo #7f2ec9 rende 2.4:1 sobre a superfície escura, abaixo dos 3:1 que
+       a WCAG pede para texto grande e para contorno de componente. No tema
+       escuro o acento vira o roxo elevado que os tokens já trazem validado. */
+    :root[data-theme="dark"] .intro__project,
+    :root[data-theme="dark"] .intro__meta svg,
+    :root[data-theme="dark"] .next svg { color: var(--color-accent-on-dark); }
+
+    /* ---------------------------------------------------------------
+       Pergunta: numeral decorativo (Geist) + enunciado (Aspekta) +
+       apoio funcional (Inter). Separadas por fio, não por caixa.
+       --------------------------------------------------------------- */
+    .q {
+      display: flex; flex-direction: column; align-items: stretch;
+      padding: var(--space-xl) var(--space-lg);
+      border: 0; margin: 0;                    /* <fieldset> */
+      border-block-end: 1px solid var(--color-border);
+    }
+    @media (min-width: 48em) { .q { padding: var(--space-xl) var(--space-2xl); } }
+    /* enunciado → controle: um degrau maior que qualquer espaço interno */
+    .q > * + * { margin-block-start: var(--space-lg); }
+    .q__head { display: flex; flex-direction: column; align-items: flex-start; padding: 0; }
+    .q__num {
+      font-family: var(--font-mono); font-weight: var(--fw-semibold);
+      font-size: var(--fs-decoration-xs); letter-spacing: var(--ls-label);
+      text-transform: uppercase; color: var(--color-text-muted);
+    }
+    .q__title {
+      margin-block-start: var(--space-2xs);
+      font-family: var(--font-display); font-weight: var(--fw-medium);
+      font-size: var(--fs-heading-md); line-height: var(--lh-base);
+      color: var(--color-text); max-inline-size: 40ch;
+    }
+    /* Depois de uma tag sólida o título precisa de mais respiro que depois
+       do numeral fino das perguntas. */
+    .q__title--tagged { margin-block-start: var(--space-sm); }
+    .q__hint { margin-block-start: var(--space-xs); font-size: var(--fs-body-sm); color: var(--color-text-muted); max-inline-size: 62ch; }
+    /* Sem <legend>: em fieldset com display:flex o legend fica fora do fluxo
+       flex e o Chrome reserva um vão morto depois dele. O nome acessível do
+       grupo vem de aria-labelledby/aria-describedby. */
+
+    /* ---------------------------------------------------------------
+       Escalas de nota. Rádios nativos (grupo, setas, leitor de tela) com a
+       caixa desenhada por cima. Selecionado = tinta preta (o roxo fica
+       para foco/acento; botão/seleção cheia é preto na BRQ).
+       --------------------------------------------------------------- */
+    .scale-field { display: flex; flex-direction: column; }
+    /* NPS: 10 caixas. No estreito quebra em 5 + 5 e mantém o alvo de 44px. */
+    .scale {
+      display: grid; gap: var(--space-2xs);
+      grid-template-columns: repeat(5, 1fr);
+    }
+    @media (min-width: 30em) { .scale { grid-template-columns: repeat(10, 1fr); } }
+    @media (min-width: 48em) { .scale { gap: var(--space-xs); } }
+    /* O input cobre a caixa inteira (invisível): o alvo de ponteiro É o
+       controle, não um rádio de 1px escondido com o rótulo por cima. */
+    .scale__opt { position: relative; display: block; cursor: pointer; }
+    .scale__input {
+      position: absolute; inset: 0; inline-size: 100%; block-size: 100%;
+      margin: 0; opacity: 0; cursor: pointer;
+    }
+    .scale__box {
+      display: grid; place-items: center;
+      min-block-size: 2.75rem; padding-inline: var(--space-2xs);
+      background-color: var(--color-surface-2);
+      border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      font-size: var(--fs-body-md); font-weight: var(--fw-medium);
+      font-variant-numeric: tabular-nums; color: var(--color-text);
+      transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+    }
+    .scale__opt:hover .scale__box { background-color: var(--color-hover); border-color: var(--color-gray-500); }
+    .scale__input:checked + .scale__box {
+      background-color: var(--color-text); border-color: var(--color-text);
+      color: var(--color-bg); font-weight: var(--fw-semibold);
+    }
+    .scale__input:focus-visible + .scale__box { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+    .scale__ends {
+      display: flex; justify-content: space-between; gap: var(--space-md);
+      margin-block-start: var(--space-xs);      /* legenda da escala: colada nela */
+      font-size: var(--fs-body-xs); color: var(--color-text-muted);
+    }
+    @media (min-width: 30em) { .scale__ends { font-size: var(--fs-body-sm); } }
+    .scale__ends span { display: flex; align-items: baseline; gap: var(--space-2xs); }
+    .scale__ends b { font-weight: var(--fw-medium); color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+
+    /* Aspectos: escala de 1 a 5. Cinco caixas esticadas na largura do cartão
+       ficariam enormes e pareceriam outra coisa, então a escala tem largura
+       própria e alinha à esquerda, embaixo do rótulo. */
+    .scale--sm { grid-template-columns: repeat(5, 1fr); max-inline-size: 20rem; }
+    @media (min-width: 30em) { .scale--sm { grid-template-columns: repeat(5, 1fr); } }
+    .scale--sm .scale__box { min-block-size: 2.5rem; }
+
+    /* Erro do grupo (nota obrigatória): mora dentro do .scale-field, colado
+       na escala que ele critica. */
+    .q.is-invalid .scale__box { border-color: var(--color-danger); }
+    .q__error {
+      display: flex; align-items: center; gap: var(--space-xs);
+      margin-block-start: var(--space-xs);
+      font-size: var(--fs-body-sm); color: var(--color-danger);
+    }
+    .q__error svg { inline-size: var(--icon-sm); block-size: var(--icon-sm); flex: none; }
+    .q__error:empty { display: none; }
+
+    /* ---------------------------------------------------------------
+       Dimensões (formato Completo): 4 escalas empilhadas. Sem fio entre
+       elas: o par rótulo+escala já se lê como unidade pelo espaçamento.
+       --------------------------------------------------------------- */
+    .dims__legend { font-size: var(--fs-body-sm); color: var(--color-text-muted); }
+    .dims { display: flex; flex-direction: column; gap: var(--space-lg); }
+    .dim { display: flex; flex-direction: column; border: 0; margin: 0; padding: 0; }
+    .dim__label {
+      display: block;
+      font-size: var(--fs-body-md); font-weight: var(--fw-medium); color: var(--color-text);
+    }
+    /* O rótulo diz o QUE avaliar; a linha de apoio diz COMO pensar a nota. */
+    .dim__hint {
+      display: block; margin-block-start: var(--space-2xs); margin-block-end: var(--space-xs);
+      font-size: var(--fs-body-sm); color: var(--color-text-muted);
+    }
+
+    /* ---------------------------------------------------------------
+       Comentário e identificação opcional
+       --------------------------------------------------------------- */
+    .comment__control { min-block-size: 6.5rem; resize: vertical; overflow: auto; }
+
+    .ident__fields { display: grid; grid-template-columns: 1fr; gap: var(--space-md); }
+    @media (min-width: 40em) { .ident__fields { grid-template-columns: 1fr 1fr; gap: var(--space-lg); } }
+
+    /* ---------------------------------------------------------------
+       Rodapé do formulário: envio + nota de privacidade
+       --------------------------------------------------------------- */
+    /* Bloco opcional: tinta cinza clara para a pessoa reconhecer de relance que
+       ali não há nada obrigatório, sem precisar ler. A barra de envio volta ao
+       branco do cartão para as duas faixas não se fundirem numa só. */
+    .q--optional { background-color: var(--color-surface); }
+
+    /* No estreito o botão vem primeiro (ação antes da nota de rodapé);
+       no largo vira uma linha só: nota à esquerda, ação à direita. */
+    .submit {
+      display: flex; flex-direction: column-reverse; gap: var(--space-md);
+      padding: var(--space-lg);
+      background-color: var(--color-surface-2);
+    }
+    @media (min-width: 48em) {
+      .submit { flex-direction: row; align-items: center; justify-content: space-between; gap: var(--space-lg); padding: var(--space-lg) var(--space-2xl); }
+    }
+    .submit__note { display: flex; align-items: flex-start; gap: var(--space-xs); font-size: var(--fs-body-sm); color: var(--color-text-muted); max-inline-size: 44ch; }
+    .submit__note svg { inline-size: var(--icon-sm); block-size: var(--icon-sm); margin-block-start: 0.15rem; flex: none; }
+    .submit .btn { inline-size: 100%; justify-content: center; }
+    @media (min-width: 48em) { .submit .btn { inline-size: auto; } }
+
+    /* ---------------------------------------------------------------
+       Estados terminais (enviado / prazo vencido / erro): mesmo cartão,
+       ícone com tinta sólida + texto (nunca só cor).
+       --------------------------------------------------------------- */
+    .state { display: flex; flex-direction: column; align-items: flex-start; padding: var(--space-2xl) var(--space-lg); }
+    @media (min-width: 48em) { .state { padding: var(--space-3xl) var(--space-2xl); } }
+    .state__icon {
+      display: grid; place-items: center; inline-size: 3rem; block-size: 3rem;
+      margin-block-end: var(--space-lg); border-radius: var(--radius-full);
+    }
+    .state__icon svg { inline-size: var(--icon-lg); block-size: var(--icon-lg); }
+    .state__icon--good { background-color: var(--color-good-bg); color: var(--color-good); }
+    .state__icon--info { background-color: var(--color-info-bg); color: var(--color-info); }
+    .state__icon--danger { background-color: var(--color-danger-bg); color: var(--color-danger); }
+    .state__text { margin-block-start: var(--space-sm); color: var(--color-text-muted); max-inline-size: 52ch; }
+
+    /* Recibo da nota enviada: confirma O QUE foi registrado, não só que
+       "deu certo". Big-number = uso legítimo da Geist. */
+    .receipt {
+      display: flex; align-items: center; gap: var(--space-md);
+      margin-block-start: var(--space-xl); padding: var(--space-md) var(--space-lg);
+      background-color: var(--color-surface); border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+    }
+    .receipt__num {
+      font-family: var(--font-mono); font-weight: var(--fw-semibold);
+      font-size: var(--fs-decoration-xl); line-height: 1;
+      font-variant-numeric: tabular-nums; color: var(--color-text);
+    }
+    .receipt__num span { font-size: var(--fs-body-md); color: var(--color-text-muted); }
+    .receipt__label { font-size: var(--fs-body-sm); color: var(--color-text-muted); max-inline-size: 34ch; }
+
+    /* O que acontece a seguir: 2 linhas curtas, ícone + texto. */
+    .next { display: flex; flex-direction: column; gap: var(--space-sm); margin-block-start: var(--space-xl); padding: 0; list-style: none; }
+    .next li { display: flex; align-items: flex-start; gap: var(--space-xs); font-size: var(--fs-body-sm); color: var(--color-text-muted); max-inline-size: 56ch; }
+    .next svg { inline-size: var(--icon-sm); block-size: var(--icon-sm); margin-block-start: 0.15rem; color: var(--color-accent); flex: none; }
+
+    .state__close { margin-block-start: var(--space-xl); font-size: var(--fs-body-sm); color: var(--color-text-muted); }
+
+    .foot {
+      max-inline-size: 48rem; margin-inline: auto;
+      padding: var(--space-lg) var(--container-padding) var(--space-2xl);
+      display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-md);
+      font-size: var(--fs-body-xs); color: var(--color-text-muted);
+    }
+
+    /* ---------------------------------------------------------------
+       BARRA DE DEMONSTRAÇÃO: só do mockup, não faz parte do produto.
+       Tracejada de propósito, para nunca ser confundida com UI real.
+       --------------------------------------------------------------- */
+    .demo {
+      position: fixed; inset-block-end: 0; inset-inline: 0; z-index: var(--z-header);
+      display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm) var(--space-md);
+      padding: var(--space-xs) var(--container-padding);
+      background-color: var(--color-bg);
+      border-block-start: 1px dashed var(--color-gray-500);
+    }
+    .demo__tag {
+      font-family: var(--font-mono); font-weight: var(--fw-semibold);
+      font-size: var(--fs-decoration-xs); letter-spacing: var(--ls-label);
+      text-transform: uppercase; color: var(--color-text-muted);
+    }
+    .demo__field { display: flex; align-items: center; gap: var(--space-xs); font-size: var(--fs-body-sm); color: var(--color-text-muted); }
+    .demo__field select {
+      min-block-size: var(--control-h); padding: 0 var(--space-xs);
+      background-color: var(--color-surface-2); color: var(--color-text);
+      border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+      font-family: var(--font-body); font-size: var(--fs-body-sm);
+    }
+    .demo__field select:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .scale__box { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+  <header class="top">
+    <div class="top__inner">
+      <span class="top__logo" aria-label="BRQ">
+        <svg class="logo-brq" viewBox="164 98 1239 702" fill="currentColor" aria-hidden="true" focusable="false">
+          <g class="logo-brq__mark">
+            <path d="M381.16 345.79C380.76 345.79 380.36 345.76 379.95 345.76H377.71L381.16 345.79Z"/>
+            <path d="M649.4 438.39H649.18V648.36C649.18 652.56 652.58 655.96 656.78 655.96H746.73C750.93 655.96 754.33 652.56 754.33 648.36V344.91H846.52C850.72 344.91 854.12 341.51 854.12 337.31V249.93C854.12 245.57 850.55 242.15 846.19 242.32C739.57 246.38 653.85 331.88 649.38 438.4L649.4 438.39Z"/>
+            <path d="M373.63 242.41H268.15V106.43C268.15 102.23 264.75 98.83 260.55 98.83H172.06C167.86 98.83 164.46 102.23 164.46 106.43V146.42C164.46 259.21 255.57 345.15 368.21 345.77L408.15 345.79H418.53C450.03 345.79 475.56 371.33 475.56 402.82V494.76C475.56 526.26 450.02 551.79 418.53 551.79H326.66C295.16 551.79 269.63 526.25 269.63 494.76V379.29C269.63 375.09 266.23 371.69 262.03 371.69H172.08C167.88 371.69 164.48 375.09 164.48 379.29V451.58C164.48 569.53 267.7 664.26 387.34 656.51C486.76 650.07 566.27 571.07 577.63 472.09C591.9 347.79 495.09 242.4 373.66 242.4L373.63 242.41Z"/>
+            <path d="M1096.41 656.02H1201.89V792C1201.89 796.2 1205.29 799.6 1209.49 799.6H1297.98C1302.18 799.6 1305.58 796.2 1305.58 792V752.01C1305.58 571.91 1214.47 553.28 1101.83 552.66L1061.89 552.64H1051.51C1020.01 552.64 994.48 527.1 994.48 495.61V403.67C994.48 372.17 1020.02 346.64 1051.51 346.64H1143.38C1174.88 346.64 1200.41 372.18 1200.41 403.67V519.73C1200.41 523.93 1203.81 527.33 1208.01 527.33H1297.96C1302.16 527.33 1305.56 523.93 1305.56 519.73V446.85C1305.56 328.9 1202.34 234.17 1082.7 241.92C983.28 248.36 903.77 327.36 892.41 426.34C878.14 550.64 974.95 656.03 1096.38 656.03L1096.41 656.02Z"/>
+          </g>
+        </svg>
+      </span>
+      <button class="icon-btn top__toggle" type="button" data-theme-toggle aria-pressed="false" aria-label="Alternar tema claro e escuro">
+        <svg class="top__icon top__icon--moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        <svg class="top__icon top__icon--sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="shell" id="conteudo">
+
+    <!-- ===================== FORMULÁRIO ===================== -->
+    <form class="card-survey" id="form" novalidate>
+      <div class="intro">
+        <span class="tag tag--sm tag--purple" data-t="eyebrow">Pesquisa de satisfação</span>
+        <h1 class="heading-xl intro__title">
+          <span data-t="title">Sua avaliação do projeto</span>
+          <em class="intro__project" data-project>Core Banking</em>
+        </h1>
+        <ul class="intro__meta" role="list">
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            <span data-t="metaTime">Menos de 1 minuto</span>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+            <span data-t="metaAnon">Resposta anônima</span>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><path d="M4 6h.01"/><path d="M4 12h.01"/><path d="M4 18h.01"/></svg>
+            <span data-questions>3 perguntas</span>
+          </li>
+          <!-- O link vale 20 dias a partir da geração: quem recebe também precisa
+               saber até quando responder. -->
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4"/><path d="M16 3v4"/><path d="M3 11h18"/></svg>
+            <span data-deadline>Aberta até 12/08</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Q1 · nota NPS (obrigatória) -->
+      <fieldset class="q" id="q-score" aria-labelledby="q1-title" aria-describedby="q1-hint score-error">
+        <div class="q__head">
+          <span class="q__num" aria-hidden="true">01</span>
+          <span class="q__title" id="q1-title" data-t="q1">Qual a probabilidade de você recomendar a BRQ a um colega ou parceiro?</span>
+          <span class="q__hint" id="q1-hint" data-t="q1Hint">Considere sua experiência geral com o time e com a entrega.</span>
+        </div>
+
+        <div class="scale-field">
+          <div class="scale" data-scale="score" data-min="1" data-max="10"></div>
+          <p class="scale__ends">
+            <span><b>1</b> <span data-t="scaleLow">Nada provável</span></span>
+            <span><span data-t="scaleHigh">Extremamente provável</span> <b>10</b></span>
+          </p>
+          <p class="q__error" id="score-error" role="status"></p>
+        </div>
+      </fieldset>
+
+      <!-- Q2 · o porquê da nota. Vem logo depois dela: é a mesma pergunta
+           ("por quê?"), e quem quiser parar aqui já deu o essencial. -->
+      <section class="q" aria-labelledby="q2-title">
+        <div class="q__head">
+          <span class="q__num" aria-hidden="true">02</span>
+          <h2 class="q__title" id="q2-title" data-t="q3">O que motivou a sua nota?</h2>
+          <span class="q__hint" data-t="q3Hint">Opcional. É o campo que mais ajuda o time a agir, pode escrever à vontade.</span>
+        </div>
+
+        <!-- .field--boxed usa label ESTÁTICO acima do controle: por isso o
+             <label> vem antes do campo (no variante flutuante ele vem depois). -->
+        <div class="field field--boxed">
+          <label class="field__label" for="comentario" data-t="commentLabel">Seu comentário</label>
+          <textarea class="field__control comment__control" id="comentario" placeholder=" " data-t-ph="commentPlaceholder"></textarea>
+        </div>
+      </section>
+
+      <!-- Q3 · dimensões (só no formato Completo) -->
+      <fieldset class="q" id="q-dims" data-only="complete" aria-labelledby="q3-title" aria-describedby="q3-hint">
+        <div class="q__head">
+          <span class="q__num" aria-hidden="true">03</span>
+          <span class="q__title" id="q3-title" data-t="q2">Como você avalia estes aspectos da entrega?</span>
+          <span class="q__hint" id="q3-hint" data-t="q2Hint">Opcional. Pule os aspectos que não se aplicam ao seu caso.</span>
+        </div>
+
+        <p class="dims__legend" data-t="dimsLegend">Escala de 1 a 5: 1 é muito abaixo do esperado, 5 é excelente.</p>
+
+        <div class="dims">
+          <!-- ATENÇÃO na porta para o Blazor: os data-scale abaixo são os campos
+               que a API já tem (quality, schedule, communication, scope). O quarto
+               aspecto mudou de sentido: era "Escopo", agora é "Valor gerado para o
+               negócio", mas continua gravando na coluna Scope. Decidir antes de
+               implementar se renomeia o campo (migração) ou cria um novo. -->
+          <fieldset class="dim" aria-labelledby="dim-quality" aria-describedby="dim-quality-hint">
+            <span class="dim__label" id="dim-quality" data-t="dimQuality">Qualidade técnica da entrega</span>
+            <span class="dim__hint" id="dim-quality-hint" data-t="dimQualityHint">Estabilidade, poucos defeitos, soluções bem construídas.</span>
+            <div class="scale scale--sm" data-scale="quality" data-min="1" data-max="5"></div>
+          </fieldset>
+          <fieldset class="dim" aria-labelledby="dim-schedule" aria-describedby="dim-schedule-hint">
+            <span class="dim__label" id="dim-schedule" data-t="dimSchedule">Aderência aos prazos acordados</span>
+            <span class="dim__hint" id="dim-schedule-hint" data-t="dimScheduleHint">Combinados cumpridos e desvios avisados a tempo.</span>
+            <div class="scale scale--sm" data-scale="schedule" data-min="1" data-max="5"></div>
+          </fieldset>
+          <fieldset class="dim" aria-labelledby="dim-communication" aria-describedby="dim-communication-hint">
+            <span class="dim__label" id="dim-communication" data-t="dimCommunication">Comunicação, clareza e transparência</span>
+            <span class="dim__hint" id="dim-communication-hint" data-t="dimCommunicationHint">Informação clara, na hora certa, sem surpresa.</span>
+            <div class="scale scale--sm" data-scale="communication" data-min="1" data-max="5"></div>
+          </fieldset>
+          <fieldset class="dim" aria-labelledby="dim-value" aria-describedby="dim-value-hint">
+            <span class="dim__label" id="dim-value" data-t="dimValue">Valor gerado para o negócio</span>
+            <span class="dim__hint" id="dim-value-hint" data-t="dimValueHint">O quanto a entrega ajudou no seu resultado.</span>
+            <div class="scale scale--sm" data-scale="scope" data-min="1" data-max="5"></div>
+          </fieldset>
+        </div>
+      </fieldset>
+
+      <!-- Identificação: não é pergunta numerada, mas também não pode ficar
+           escondida atrás de um acordeão. É um bloco aberto, rotulado como
+           opcional, logo antes do envio. -->
+      <section class="q q--optional" aria-labelledby="ident-title">
+        <div class="q__head">
+          <span class="tag tag--sm tag--gray" data-t="optionalEyebrow">Opcional</span>
+          <h2 class="q__title q__title--tagged" id="ident-title" data-t="identTitle">Quer se identificar?</h2>
+          <span class="q__hint" data-t="identHint">Nenhum campo aqui é obrigatório. Sem preencher, sua resposta é enviada anônima; preencha só se quiser que o time possa voltar a falar com você.</span>
+        </div>
+
+        <div class="ident__fields">
+          <div class="field field--boxed">
+            <label class="field__label" for="nome" data-t="nameLabel">Seu nome (opcional)</label>
+            <input class="field__control" id="nome" type="text" autocomplete="name" placeholder=" " data-t-ph="namePlaceholder" />
+          </div>
+          <div class="field field--boxed">
+            <label class="field__label" for="email" data-t="emailLabel">Seu e-mail (opcional)</label>
+            <input class="field__control" id="email" type="email" autocomplete="email" placeholder=" " data-t-ph="emailPlaceholder" />
+          </div>
+        </div>
+      </section>
+
+      <div class="submit">
+        <p class="submit__note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6l7-3Z"/></svg>
+          <span data-t="privacy">Não registramos nada além do que você preencher aqui.</span>
+        </p>
+        <button class="btn btn--primary btn--md" type="submit" data-t="submit">Enviar avaliação</button>
+      </div>
+    </form>
+
+    <!-- ===================== ENVIADO ===================== -->
+    <template id="tpl-state-sent"><div class="card-survey">
+      <div class="state">
+        <span class="state__icon state__icon--good">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+        </span>
+        <h1 class="heading-xl" data-t="sentTitle">Pronto, avaliação registrada</h1>
+        <p class="body-md state__text" data-t="sentText">
+          Obrigado pelo tempo. O que você escreveu chega ao time que toca o projeto. É assim que a gente descobre o que corrigir.
+        </p>
+
+        <!-- Recibo: o que exatamente ficou registrado -->
+        <p class="receipt">
+          <span class="receipt__num" data-sent-score>9<span>/10</span></span>
+          <span class="receipt__label" data-sent-receipt>Nota registrada para o projeto Core Banking</span>
+        </p>
+
+        <ul class="next" role="list">
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H8l-4 4V5Z"/></svg>
+            <span data-sent-privacy>Sua resposta foi registrada sem identificação: o time vê a nota e o comentário, não quem escreveu.</span>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 17H7a5 5 0 0 1 0-10h2"/><path d="M15 7h2a5 5 0 0 1 0 10h-2"/><path d="M8 12h8"/></svg>
+            <span data-t="sentShare">O mesmo link continua valendo: as outras pessoas do seu time ainda podem responder.</span>
+          </li>
+        </ul>
+
+        <p class="state__close" data-t="sentClose">Pode fechar esta página.</p>
+      </div>
+    </div></template>
+
+    <!-- ===================== PRAZO VENCIDO ===================== -->
+    <template id="tpl-state-closed"><div class="card-survey">
+      <div class="state">
+        <span class="state__icon state__icon--info">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01"/><path d="M11 12h1v4h1"/></svg>
+        </span>
+        <h1 class="heading-xl" data-t="closedTitle">O prazo desta pesquisa terminou</h1>
+        <p class="body-md state__text" data-t="closedText">
+          O link de resposta vale 20 dias e esse prazo já passou. Se ainda quiser dar seu retorno, peça um link novo ao time da BRQ.
+        </p>
+      </div>
+    </div></template>
+
+    <!-- ===================== ERRO / LINK INVÁLIDO ===================== -->
+    <template id="tpl-state-error"><div class="card-survey">
+      <div class="state">
+        <span class="state__icon state__icon--danger">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6"/><path d="M12 16h.01"/></svg>
+        </span>
+        <h1 class="heading-xl" data-t="errorTitle">Não encontramos esta avaliação</h1>
+        <p class="body-md state__text" data-t="errorText">
+          O link pode ter expirado ou ter sido copiado pela metade. Confira o endereço ou peça um novo link ao time da BRQ.
+        </p>
+      </div>
+    </div></template>
+
+    <!-- Só o estado ativo existe no DOM (um <h1> por vez), como acontece
+         no cliente real, onde cada estado é um ramo do render. -->
+    <div id="state-host"></div>
+  </main>
+
+  <footer class="foot">
+    <span data-t="footBrand">BRQ · Pesquisa de satisfação</span>
+    <span data-t="footPrivacy">Nome e e-mail são opcionais e só são usados para dar retorno sobre esta avaliação.</span>
+  </footer>
+
+  <!-- ===================================================================
+       Barra de demonstração: EXCLUSIVA do mockup. Não existe no produto:
+       serve para o revisor ver os formatos, idiomas e estados sem
+       precisar de dados reais.
+       =================================================================== -->
+  <div class="demo" role="group" aria-label="Controles de demonstração do mockup">
+    <span class="demo__tag">Demo</span>
+    <label class="demo__field">Formato
+      <select data-demo="format">
+        <option value="complete">Completo</option>
+        <option value="simplified">Simplificado</option>
+      </select>
+    </label>
+    <label class="demo__field">Idioma
+      <select data-demo="lang">
+        <option value="pt">Português</option>
+        <option value="en">English</option>
+        <option value="es">Español</option>
+      </select>
+    </label>
+    <label class="demo__field">Estado
+      <select data-demo="state">
+        <option value="form">Formulário</option>
+        <option value="sent">Enviado</option>
+        <option value="closed">Prazo vencido</option>
+        <option value="error">Link inválido</option>
+      </select>
+    </label>
+  </div>
+
+  <script src="assets/brq-ui.js"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      /* ---------------------------------------------------------------
+         Textos. Espelham (e ampliam) o NpsPublicFormTexts do cliente
+         Blazor: pt-BR, en, es, os três idiomas que o backend suporta.
+         --------------------------------------------------------------- */
+      var TEXTS = {
+        pt: {
+          docTitle: "Avaliação NPS · BRQ",
+          eyebrow: "Pesquisa de satisfação",
+          title: "Sua avaliação do projeto",
+          metaTime: "Menos de 1 minuto",
+          metaAnon: "Resposta anônima",
+          metaQuestions: "{n} perguntas",
+          deadline: "Aberta até {date}",
+          q1: "Qual a probabilidade de você recomendar a BRQ a um colega ou parceiro?",
+          q1Hint: "Considere sua experiência geral com o time e com a entrega.",
+          scaleLow: "Nada provável",
+          scaleHigh: "Extremamente provável",
+          scoreOption: "Nota {n} de {max}",
+          q2: "Como você avalia estes aspectos da entrega?",
+          q2Hint: "Opcional. Pule os aspectos que não se aplicam ao seu caso.",
+          dimsLegend: "Escala de 1 a 5: 1 é muito abaixo do esperado, 5 é excelente.",
+          dimQuality: "Qualidade técnica da entrega",
+          dimQualityHint: "Estabilidade, poucos defeitos, soluções bem construídas.",
+          dimSchedule: "Aderência aos prazos acordados",
+          dimScheduleHint: "Combinados cumpridos e desvios avisados a tempo.",
+          dimCommunication: "Comunicação, clareza e transparência",
+          dimCommunicationHint: "Informação clara, na hora certa, sem surpresa.",
+          dimValue: "Valor gerado para o negócio",
+          dimValueHint: "O quanto a entrega ajudou no seu resultado.",
+          q3: "O que motivou a sua nota?",
+          q3Hint: "Opcional. É o campo que mais ajuda o time a agir, pode escrever à vontade.",
+          commentLabel: "Seu comentário",
+          commentPlaceholder: "O que funcionou bem e o que pode melhorar?",
+          optionalEyebrow: "Opcional",
+          identTitle: "Quer se identificar?",
+          identHint: "Nenhum campo aqui é obrigatório. Sem preencher, sua resposta é enviada anônima; preencha só se quiser que o time possa voltar a falar com você.",
+          nameLabel: "Seu nome (opcional)",
+          namePlaceholder: "Como podemos te chamar",
+          emailLabel: "Seu e-mail (opcional)",
+          emailPlaceholder: "voce@empresa.com",
+          privacy: "Não registramos nada além do que você preencher aqui.",
+          submit: "Enviar avaliação",
+          scoreRequired: "Escolha uma nota de 1 a 10 para enviar.",
+          sentTitle: "Pronto, avaliação registrada",
+          sentText: "Obrigado pelo tempo. O que você escreveu chega ao time que toca o projeto. É assim que a gente descobre o que corrigir.",
+          sentReceipt: "Nota registrada para o projeto {project}",
+          sentPrivacyAnon: "Sua resposta foi registrada sem identificação: o time vê a nota e o comentário, não quem escreveu.",
+          sentPrivacyNamed: "Você se identificou: o time pode voltar a falar com você sobre esta avaliação.",
+          sentShare: "O mesmo link continua valendo: as outras pessoas do seu time ainda podem responder.",
+          sentClose: "Pode fechar esta página.",
+          closedTitle: "O prazo desta pesquisa terminou",
+          closedText: "O link de resposta vale 20 dias e esse prazo já passou. Se ainda quiser dar seu retorno, peça um link novo ao time da BRQ.",
+          errorTitle: "Não encontramos esta avaliação",
+          errorText: "O link pode ter expirado ou ter sido copiado pela metade. Confira o endereço ou peça um novo link ao time da BRQ.",
+          footBrand: "BRQ · Pesquisa de satisfação",
+          footPrivacy: "Nome e e-mail são opcionais e só são usados para dar retorno sobre esta avaliação."
+        },
+        en: {
+          docTitle: "NPS survey · BRQ",
+          eyebrow: "Satisfaction survey",
+          title: "Your feedback on the project",
+          metaTime: "Under 1 minute",
+          metaAnon: "Anonymous answer",
+          metaQuestions: "{n} questions",
+          deadline: "Open until {date}",
+          q1: "How likely are you to recommend BRQ to a colleague or partner?",
+          q1Hint: "Think about your overall experience with the team and the delivery.",
+          scaleLow: "Not likely at all",
+          scaleHigh: "Extremely likely",
+          scoreOption: "Score {n} out of {max}",
+          q2: "How would you rate these aspects of the delivery?",
+          q2Hint: "Optional. Skip anything that doesn't apply to your case.",
+          dimsLegend: "Scale of 1 to 5: 1 is far below expectations, 5 is excellent.",
+          dimQuality: "Technical quality of the delivery",
+          dimQualityHint: "Stability, few defects, well built solutions.",
+          dimSchedule: "Meeting the agreed deadlines",
+          dimScheduleHint: "Commitments kept and delays flagged in time.",
+          dimCommunication: "Communication, clarity and transparency",
+          dimCommunicationHint: "Clear information, at the right time, no surprises.",
+          dimValue: "Value created for the business",
+          dimValueHint: "How much the delivery helped your results.",
+          q3: "What led you to that score?",
+          q3Hint: "Optional. This is the field that helps the team act, so write as much as you like.",
+          commentLabel: "Your comment",
+          commentPlaceholder: "What worked well and what could be better?",
+          optionalEyebrow: "Optional",
+          identTitle: "Want to identify yourself?",
+          identHint: "No field here is required. Left blank, your answer is sent anonymously; fill it in only if you'd like the team to be able to follow up with you.",
+          nameLabel: "Your name (optional)",
+          namePlaceholder: "What should we call you",
+          emailLabel: "Your email (optional)",
+          emailPlaceholder: "you@company.com",
+          privacy: "We record nothing beyond what you fill in here.",
+          submit: "Submit feedback",
+          scoreRequired: "Pick a score from 1 to 10 to submit.",
+          sentTitle: "Done, your feedback is in",
+          sentText: "Thanks for the time. What you wrote goes to the team running the project. That's how we find out what to fix.",
+          sentReceipt: "Score recorded for the {project} project",
+          sentPrivacyAnon: "Your answer was recorded without identification: the team sees the score and the comment, not who wrote them.",
+          sentPrivacyNamed: "You identified yourself: the team can follow up with you about this feedback.",
+          sentShare: "The same link stays valid: other people on your team can still answer.",
+          sentClose: "You can close this page.",
+          closedTitle: "This survey's deadline has passed",
+          closedText: "The response link is valid for 20 days and that window has closed. If you'd still like to share your view, ask the BRQ team for a new link.",
+          errorTitle: "We couldn't find this survey",
+          errorText: "The link may have expired or been copied only halfway. Check the address or ask the BRQ team for a new link.",
+          footBrand: "BRQ · Satisfaction survey",
+          footPrivacy: "Name and email are optional and are only used to follow up on this feedback."
+        },
+        es: {
+          docTitle: "Encuesta NPS · BRQ",
+          eyebrow: "Encuesta de satisfacción",
+          title: "Tu evaluación del proyecto",
+          metaTime: "Menos de 1 minuto",
+          metaAnon: "Respuesta anónima",
+          metaQuestions: "{n} preguntas",
+          deadline: "Abierta hasta {date}",
+          q1: "¿Qué probabilidad hay de que recomiendes BRQ a un colega o socio?",
+          q1Hint: "Ten en cuenta tu experiencia general con el equipo y con la entrega.",
+          scaleLow: "Nada probable",
+          scaleHigh: "Muy probable",
+          scoreOption: "Nota {n} de {max}",
+          q2: "¿Cómo evalúas estos aspectos de la entrega?",
+          q2Hint: "Opcional. Omite lo que no aplique a tu caso.",
+          dimsLegend: "Escala de 1 a 5: 1 es muy por debajo de lo esperado, 5 es excelente.",
+          dimQuality: "Calidad técnica de la entrega",
+          dimQualityHint: "Estabilidad, pocos defectos, soluciones bien construidas.",
+          dimSchedule: "Cumplimiento de los plazos acordados",
+          dimScheduleHint: "Compromisos cumplidos y desvíos avisados a tiempo.",
+          dimCommunication: "Comunicación, claridad y transparencia",
+          dimCommunicationHint: "Información clara, a tiempo, sin sorpresas.",
+          dimValue: "Valor generado para el negocio",
+          dimValueHint: "Cuánto ayudó la entrega a tus resultados.",
+          q3: "¿Qué motivó tu nota?",
+          q3Hint: "Opcional. Es el campo que más ayuda al equipo a actuar, escribe con libertad.",
+          commentLabel: "Tu comentario",
+          commentPlaceholder: "¿Qué funcionó bien y qué se puede mejorar?",
+          optionalEyebrow: "Opcional",
+          identTitle: "¿Quieres identificarte?",
+          identHint: "Ningún campo aquí es obligatorio. Sin completar, tu respuesta se envía anónima; complétalo solo si quieres que el equipo pueda contactarte.",
+          nameLabel: "Tu nombre (opcional)",
+          namePlaceholder: "¿Cómo podemos llamarte?",
+          emailLabel: "Tu correo (opcional)",
+          emailPlaceholder: "tu@empresa.com",
+          privacy: "No registramos nada más allá de lo que completes aquí.",
+          submit: "Enviar evaluación",
+          scoreRequired: "Elige una nota de 1 a 10 para enviar.",
+          sentTitle: "Listo, evaluación registrada",
+          sentText: "Gracias por el tiempo. Lo que escribiste llega al equipo que lleva el proyecto. Así descubrimos qué corregir.",
+          sentReceipt: "Nota registrada para el proyecto {project}",
+          sentPrivacyAnon: "Tu respuesta fue registrada sin identificación: el equipo ve la nota y el comentario, no quién los escribió.",
+          sentPrivacyNamed: "Te identificaste: el equipo puede volver a hablar contigo sobre esta evaluación.",
+          sentShare: "El mismo enlace sigue vigente: las demás personas de tu equipo aún pueden responder.",
+          sentClose: "Puedes cerrar esta página.",
+          closedTitle: "El plazo de esta encuesta terminó",
+          closedText: "El enlace de respuesta vale 20 días y ese plazo ya pasó. Si aún quieres dar tu opinión, pide un nuevo enlace al equipo de BRQ.",
+          errorTitle: "No encontramos esta evaluación",
+          errorText: "El enlace puede haber vencido o haberse copiado a medias. Revisa la dirección o pide un nuevo enlace al equipo de BRQ.",
+          footBrand: "BRQ · Encuesta de satisfacción",
+          footPrivacy: "El nombre y el correo son opcionales y solo se usan para dar seguimiento a esta evaluación."
+        }
+      };
+
+      var LANG_ATTR = { pt: "pt-BR", en: "en", es: "es" };
+      var lang = "pt";
+
+      /* ---------- Escalas de 0 a 10 (rádios nativos) ---------- */
+      function buildScales() {
+        document.querySelectorAll("[data-scale]").forEach(function (host) {
+          var name = host.getAttribute("data-scale");
+          var min = parseInt(host.getAttribute("data-min"), 10);
+          var max = parseInt(host.getAttribute("data-max"), 10);
+          var html = "";
+          for (var n = min; n <= max; n++) {
+            html +=
+              '<label class="scale__opt">' +
+              '<input class="scale__input" type="radio" name="' + name + '" value="' + n + '" data-score-input>' +
+              '<span class="scale__box" aria-hidden="true">' + n + "</span>" +
+              "</label>";
+          }
+          host.innerHTML = html;
+        });
+      }
+
+      /* Nome acessível de cada rádio: "Nota 7 de 10" (NPS) ou "Nota 4 de 5"
+         (aspectos), no idioma corrente. */
+      function labelScales() {
+        var tpl = TEXTS[lang].scoreOption;
+        document.querySelectorAll("[data-scale]").forEach(function (host) {
+          var max = host.getAttribute("data-max");
+          host.querySelectorAll("[data-score-input]").forEach(function (input) {
+            input.setAttribute("aria-label", tpl.replace("{n}", input.value).replace("{max}", max));
+          });
+        });
+      }
+
+      /* ---------- Idioma ---------- */
+      function applyTexts() {
+        var t = TEXTS[lang];
+        document.querySelectorAll("[data-t]").forEach(function (el) {
+          var key = el.getAttribute("data-t");
+          if (t[key]) el.textContent = t[key];
+        });
+        document.querySelectorAll("[data-t-ph]").forEach(function (el) {
+          var key = el.getAttribute("data-t-ph");
+          /* placeholder " " mantém o label flutuante do .field funcionando;
+             o texto real só aparece com o campo em foco. */
+          if (t[key]) el.setAttribute("placeholder", t[key]);
+        });
+      }
+
+      function applyLang() {
+        document.documentElement.lang = LANG_ATTR[lang];
+        document.title = TEXTS[lang].docTitle;
+        applyTexts();
+        labelScales();
+        renderSent();
+        clearScoreError();
+      }
+
+      /* ---------------------------------------------------------------
+         Estado de sucesso: além de "deu certo", ele mostra O QUE ficou
+         registrado (a nota), se a resposta saiu anônima ou identificada,
+         e que o link segue valendo para o resto do time (link
+         compartilhado, D1).
+         --------------------------------------------------------------- */
+      var sent = { score: 9, identified: false };   /* 9 = valor de vitrine do mockup */
+
+      var PROJECT = document.querySelector("[data-project]").textContent;
+
+      function renderSent() {
+        var t = TEXTS[lang];
+        var project = PROJECT;
+        var num = document.querySelector("[data-sent-score]");
+        if (num) num.innerHTML = sent.score + "<span>/10</span>";
+        var receipt = document.querySelector("[data-sent-receipt]");
+        if (receipt) receipt.textContent = t.sentReceipt.replace("{project}", project);
+        var privacy = document.querySelector("[data-sent-privacy]");
+        if (privacy) privacy.textContent = sent.identified ? t.sentPrivacyNamed : t.sentPrivacyAnon;
+      }
+
+      /* ---------- Formato (Completo × Simplificado) ---------- */
+      function applyFormat(format) {
+        var complete = format === "complete";
+        document.querySelectorAll("[data-only='complete']").forEach(function (el) {
+          el.hidden = !complete;
+        });
+        var deadline = document.querySelector("[data-deadline]");
+        if (deadline) {
+          /* Mockup: o link deste exemplo foi gerado há 6 dias, então restam 14 dos 20.
+             No produto a data vem do disparo. */
+          var d = new Date(); d.setDate(d.getDate() + 14);
+          var pad = function (n) { return String(n).padStart(2, "0"); };
+          deadline.textContent = TEXTS[lang].deadline.replace("{date}", pad(d.getDate()) + "/" + pad(d.getMonth() + 1));
+        }
+        var count = document.querySelector("[data-questions]");
+        if (count) count.textContent = TEXTS[lang].metaQuestions.replace("{n}", complete ? "3" : "2");
+      }
+
+      /* ---------- Estado da página ----------
+         Só um estado existe no DOM por vez: o formulário ou o clone do
+         template do estado terminal. Assim a página tem sempre um <h1> só. */
+      var host = document.getElementById("state-host");
+      var formEl = document.getElementById("form");
+      function applyState(state) {
+        host.replaceChildren();
+        if (state === "form") {
+          if (!formEl.isConnected) host.before(formEl);   /* volta com o que já estava preenchido */
+        } else {
+          if (formEl.isConnected) formEl.remove();
+          var tpl = document.getElementById("tpl-state-" + state);
+          if (tpl) host.appendChild(tpl.content.cloneNode(true));
+          applyTexts();
+          renderSent();
+        }
+        window.scrollTo({ top: 0, behavior: "auto" });
+      }
+
+      /* ---------- Validação da nota ---------- */
+      var group = document.getElementById("q-score");
+      var errorBox = document.getElementById("score-error");
+
+      function clearScoreError() {
+        group.classList.remove("is-invalid");
+        group.removeAttribute("aria-invalid");
+        errorBox.textContent = "";
+      }
+
+      function showScoreError() {
+        group.classList.add("is-invalid");
+        group.setAttribute("aria-invalid", "true");
+        errorBox.innerHTML =
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          '<circle cx="12" cy="12" r="9"/><path d="M12 7v6"/><path d="M12 16h.01"/></svg>' +
+          "<span>" + TEXTS[lang].scoreRequired + "</span>";
+        var first = document.querySelector("input[name='score']");
+        if (first) first.focus();
+      }
+
+      formEl.addEventListener("change", function (event) {
+        if (event.target.name === "score") clearScoreError();
+      });
+
+      formEl.addEventListener("submit", function (event) {
+        event.preventDefault();
+        var chosen = document.querySelector("input[name='score']:checked");
+        if (!chosen) { showScoreError(); return; }
+        sent.score = chosen.value;
+        sent.identified = !!(document.getElementById("nome").value.trim() || document.getElementById("email").value.trim());
+        renderSent();
+        /* Mockup: não há POST, só mostramos o estado de conclusão. */
+        applyState("sent");
+        var demoState = document.querySelector("[data-demo='state']");
+        if (demoState) demoState.value = "sent";
+      });
+
+      /* ---------- Barra de demonstração ---------- */
+      document.querySelectorAll("[data-demo]").forEach(function (select) {
+        select.addEventListener("change", function () {
+          var kind = select.getAttribute("data-demo");
+          if (kind === "lang") { lang = select.value; applyLang(); applyFormat(currentFormat()); }
+          if (kind === "format") applyFormat(select.value);
+          if (kind === "state") applyState(select.value);
+        });
+      });
+
+      /* A demo aceita ?estado=sent&formato=simplified&idioma=en. Ajuda a
+         revisar/compartilhar um estado específico sem cliques. */
+      function applyQuery() {
+        var qs = new URLSearchParams(location.search);
+        var theme = qs.get("tema");
+        if (theme === "dark" || theme === "light") document.documentElement.setAttribute("data-theme", theme);
+        var map = { formato: "format", idioma: "lang", estado: "state" };
+        Object.keys(map).forEach(function (param) {
+          var value = qs.get(param);
+          if (!value) return;
+          var select = document.querySelector("[data-demo='" + map[param] + "']");
+          if (!select) return;
+          var ok = Array.prototype.some.call(select.options, function (o) { return o.value === value; });
+          if (ok) select.value = value;
+        });
+        lang = document.querySelector("[data-demo='lang']").value;
+      }
+
+      function currentFormat() {
+        var el = document.querySelector("[data-demo='format']");
+        return el ? el.value : "complete";
+      }
+
+      buildScales();
+      applyQuery();
+      applyLang();
+      applyFormat(currentFormat());
+      applyState(document.querySelector("[data-demo='state']").value);
+    })();
+  </script>
+</body>
+</html>

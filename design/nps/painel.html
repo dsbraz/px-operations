@@ -1,0 +1,2515 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NPS · Operations PX</title>
+  <meta name="description" content="Painel de NPS do Operations PX (BRQ): score oficial, distribuição promotor/neutro/detrator, médias por dimensão e NPS por projeto." />
+  <link rel="icon" type="image/svg+xml" href="assets/logo-brq.svg" />
+  <!-- Fontes de texto (Aspekta é local, via @font-face no brq-core.css) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Geist+Mono:wght@600&display=swap" rel="stylesheet" />
+  <!-- BRQ design system (nesta ordem) -->
+  <link rel="stylesheet" href="assets/brq-tokens.css" />
+  <link rel="stylesheet" href="assets/brq-core.css" />
+  <link rel="stylesheet" href="assets/brq-dashboard.css" />
+
+  <!-- Composições só desta página (tokenizadas): barra de distribuição e lista de
+       respostas. Texto funcional em Inter; a Geist fica só no big-number. -->
+  <style>
+    /* ---- Distribuição promotor / neutro / detrator ---- */
+    .dist { display: flex; flex-direction: column; gap: var(--space-md); }
+    .dist__bar {
+      display: flex; block-size: 0.75rem; border-radius: var(--radius-full);
+      overflow: hidden; background-color: var(--color-surface);
+    }
+    .dist__seg { block-size: 100%; }
+    .dist__seg + .dist__seg { border-inline-start: 2px solid var(--color-surface-2); }
+    .dist__seg--good   { background-color: var(--color-good); }
+    .dist__seg--warn   { background-color: var(--color-warn); }
+    .dist__seg--danger { background-color: var(--color-danger); }
+
+    .dist__legend { display: flex; flex-direction: column; gap: var(--space-xs); margin: 0; }
+    .dist__item { display: flex; align-items: center; gap: var(--space-sm); font-size: var(--fs-body-sm); }
+    .dist__dot { inline-size: 0.6rem; block-size: 0.6rem; border-radius: var(--radius-full); flex: none; }
+    .dist__dot--good   { background-color: var(--color-good); }
+    .dist__dot--warn   { background-color: var(--color-warn); }
+    .dist__dot--danger { background-color: var(--color-danger); }
+    .dist__name  { color: var(--color-text); }
+    .dist__count { margin-inline-start: auto; font-weight: var(--fw-semibold); color: var(--color-text); font-variant-numeric: tabular-nums; }
+    .dist__pct   { min-inline-size: 4ch; text-align: end; color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+
+    .dist__formula {
+      margin: 0; padding-top: var(--space-md); border-top: 1px solid var(--color-border);
+      font-size: var(--fs-body-sm); color: var(--color-text-muted); font-variant-numeric: tabular-nums;
+    }
+    .dist__formula strong { color: var(--color-text); font-weight: var(--fw-semibold); }
+
+    /* Geist Mono é monoespaçada: a vírgula ocupa uma célula inteira, e "62,2" acaba
+       lendo como "62 , 2". Rebaixar o grupo decimal recompõe o número e ainda vira
+       hierarquia proposital (inteiro manda, decimal apoia). */
+    .kpi__value-dec { font-size: 0.5em; color: var(--color-text-muted); }
+
+    /* Linha de 2 painéis: MESMA altura, bases alinhadas. O painel mais curto
+       (distribuição) preenche a altura e a fórmula ancora na base, como um rodapé,
+       em vez de deixar um buraco vazio na célula da grade. */
+    /* Linha de 2 painéis com a MESMA altura fixa: topos E bases alinhados, sem
+       depender de peculiaridades de stretch da grade. O painel de distribuição
+       preenche a altura e ancora a fórmula na base, como rodapé. */
+    .panel-grid--2 > .panel { block-size: 19rem; }
+    [aria-labelledby="p-dist"] { display: flex; flex-direction: column; }
+    [aria-labelledby="p-dist"] > .panel__body { flex: 1 1 auto; display: flex; flex-direction: column; }
+    .dist { flex: 1 1 auto; }
+    .dist__formula { margin-block-start: auto; }
+
+    /* ---- Lista de respostas recentes ---- */
+    .resp-list { display: flex; flex-direction: column; margin: 0; }
+    .resp {
+      display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-md);
+      padding: var(--space-md) var(--space-lg); border-block-end: 1px solid var(--color-border);
+    }
+    .resp:last-child { border-block-end: 0; }
+    /* Big-number = uso correto da Geist. A cor da tinta é reforçada pela pill de texto ao lado. */
+    .resp__score {
+      display: grid; place-items: center; inline-size: 2.75rem; block-size: 2.75rem; flex: none;
+      border-radius: var(--radius-md); font-family: var(--font-mono);
+      font-weight: var(--fw-semibold); font-size: var(--fs-body-lg); line-height: 1;
+    }
+    .resp__score--good   { background-color: var(--color-good-bg);   color: var(--color-good); }
+    .resp__score--warn   { background-color: var(--color-warn-bg);   color: var(--color-warn); }
+    .resp__score--danger { background-color: var(--color-danger-bg); color: var(--color-danger); }
+
+    .resp__body { display: flex; flex-direction: column; gap: var(--space-2xs); min-inline-size: 0; }
+    .resp__head { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
+    .resp__project { font-weight: var(--fw-medium); color: var(--color-text); }
+    .resp__comment { font-size: var(--fs-body-sm); color: var(--color-text); }
+    .resp__meta { font-size: var(--fs-body-xs); color: var(--color-text-muted); }
+
+    /* ===== Aba Respostas: TABELA escaneável + modal de detalhe ===== */
+    /* A linha inteira abre a resposta; o nome do projeto é o botão que carrega o
+       nome acessível da ação, e a linha herda o clique. */
+    .rtable tbody tr { cursor: pointer; }
+    .rtable tbody tr:hover { background-color: var(--color-hover); }
+    .rtable__open {
+      display: inline-flex; align-items: center; gap: var(--space-2xs); min-block-size: 1.5rem;
+      padding: 0; border: 0; background: none; cursor: pointer; font: inherit;
+      font-weight: var(--fw-medium); color: var(--color-text); text-align: start; border-radius: var(--radius-sm);
+    }
+    .rtable__open:hover { color: var(--color-accent); }
+    .rtable__open:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+    /* Nota como número tabular; classificação = pill (ponto + texto, nunca só cor) */
+    .rtable__score { font-variant-numeric: tabular-nums; font-weight: var(--fw-semibold); }
+    /* Comentário: prévia de UMA linha, o resto fica no detalhe. */
+    .rtable__comment { max-inline-size: 24rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text-muted); }
+    .rtable__comment--empty { color: var(--color-text-muted); font-style: italic; }
+    .rtable__date { color: var(--color-text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .rtable__author { color: var(--color-text); }
+    .rtable__author--anon { color: var(--color-text-muted); font-style: italic; }
+
+    /* ----- Modal de detalhe da resposta ----- */
+    .rd-top { display: flex; align-items: center; gap: var(--space-md); }
+    .rd-top__meta { display: flex; flex-direction: column; gap: var(--space-2xs); min-inline-size: 0; }
+    .rd-top__scale { font-size: var(--fs-body-xs); color: var(--color-text-muted); }
+    .rd-section { font-size: var(--fs-body-xs); font-weight: var(--fw-semibold); text-transform: uppercase; letter-spacing: var(--ls-label); color: var(--color-text-muted); margin-block-end: var(--space-xs); }
+    .rd-section__hint { margin-inline-start: var(--space-xs); font-weight: var(--fw-regular); text-transform: none; letter-spacing: 0; color: var(--color-text-muted); }
+    .rd-aspects__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-sm); }
+    .rd-aspects__avg { flex: none; font-size: var(--fs-body-sm); color: var(--color-text); font-variant-numeric: tabular-nums; }
+    .rd-aspects__avg strong { font-weight: var(--fw-semibold); }
+    .rd-aspects__avg span { color: var(--color-text-muted); }
+
+    .rasp { display: flex; flex-direction: column; gap: var(--space-sm); margin: 0; padding: 0; list-style: none; }
+    .rasp__item { display: grid; grid-template-columns: 12rem 1fr auto; align-items: center; gap: var(--space-md); }
+    @media (max-width: 34em) { .rasp__item { grid-template-columns: 1fr auto; } .rasp__bar { grid-column: 1 / -1; } }
+    .rasp__label { font-size: var(--fs-body-sm); color: var(--color-text); }
+    .rasp__bar { block-size: 0.5rem; border-radius: var(--radius-full); background-color: var(--color-surface); overflow: hidden; }
+    .rasp__fill { display: block; block-size: 100%; border-radius: var(--radius-full); background-color: var(--color-accent); }
+    .rasp__val { font-variant-numeric: tabular-nums; font-weight: var(--fw-semibold); color: var(--color-text); }
+    .rasp__val span { color: var(--color-text-muted); font-weight: var(--fw-regular); }
+
+    .rd-comment__text {
+      margin: 0; padding: var(--space-md); max-block-size: 12rem; overflow-y: auto;
+      background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      font-size: var(--fs-body-sm); line-height: var(--lh-loose); color: var(--color-text); white-space: pre-wrap;
+    }
+    .rd-comment__text--empty { color: var(--color-text-muted); font-style: italic; }
+    .rd-attr__text { font-size: var(--fs-body-sm); color: var(--color-text); }
+    .rd-attr__text--anon { color: var(--color-text-muted); }
+
+    /* ===== Abas Coleta | Resultados | Respostas ===== */
+    /* barra das abas: tablist à esquerda + contagem à direita, na MESMA linha (borda full-width embaixo) */
+    .tabs__bar { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-md);
+      border-block-end: 1px solid var(--color-border); margin-bottom: var(--space-md); }
+    .tabs__list { display: flex; gap: var(--space-md); }
+    /* mesmo box-model do .tab (padding + borda 2px + margem -1px) para o texto alinhar com os rótulos */
+    .tabs__count { align-self: flex-end; padding-block: var(--space-xs); border-block-end: 2px solid transparent; margin-block-end: -1px;
+      font-size: var(--fs-body-xs); color: var(--color-text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .tabs__count strong { color: var(--color-text); font-weight: var(--fw-semibold); }
+    .tab {
+      appearance: none; border: 0; background: none; cursor: pointer; font: inherit; text-decoration: none;
+      padding: var(--space-xs) 0; margin-block-end: -1px;
+      font-size: var(--fs-body-sm); font-weight: var(--fw-medium); color: var(--color-text-muted);
+      border-block-end: 2px solid transparent;
+      transition: color var(--transition-fast), border-color var(--transition-fast);
+    }
+    .tab:hover { color: var(--color-text); }
+    .tab[aria-selected="true"] { color: var(--color-text); border-block-end-color: var(--color-accent); }
+    .tab:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+
+    /* ===== Barra de filtros (padrão Linear/Vercel): busca + UM botão "Filtro"
+       que abre um menu; nada de dropdown por faceta sempre à mostra. O que está
+       ligado aparece como chip removível abaixo. ===== */
+    .filterbar { display: flex; flex-direction: column; gap: var(--space-sm); margin-bottom: var(--panel-gap); }
+    .filterbar__row { display: flex; align-items: center; gap: var(--space-sm); }
+    .filterbar .search { flex: 1 1 auto; min-inline-size: 0; max-inline-size: 24rem; }
+    .filterbar__count { margin-inline-start: auto; flex: none; font-size: var(--fs-body-xs); color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+    .filterbar__count strong { color: var(--color-text); font-weight: var(--fw-semibold); }
+
+    /* Botão "Filtro" com contador de filtros ativos, como o "+ Filter" do Linear. */
+    .fmenu { position: relative; flex: none; }
+    .fmenu__btn { gap: var(--space-2xs); }
+    .fmenu__btn svg { inline-size: 1rem; block-size: 1rem; }
+    .fmenu__badge {
+      display: inline-grid; place-items: center; min-inline-size: 1.1rem; block-size: 1.1rem;
+      padding-inline: 0.3rem; border-radius: var(--radius-full);
+      background-color: var(--color-accent); color: var(--color-white);
+      font-size: var(--fs-body-xs); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums;
+    }
+
+    /* Popover do menu de filtros: uma coluna, dois níveis (facetas → valores). */
+    .fmenu__pop {
+      position: absolute; inset-block-start: calc(100% + var(--space-2xs)); inset-inline-start: 0; z-index: var(--z-overlay);
+      inline-size: 17rem; max-inline-size: calc(100vw - 2rem);
+      padding: var(--space-2xs); border-radius: var(--radius-md);
+      background-color: var(--color-surface-2); border: 1px solid var(--color-border); box-shadow: var(--shadow-md);
+    }
+    .fmenu__pop[hidden] { display: none; }
+    .fmenu__head {
+      display: flex; align-items: center; gap: var(--space-2xs);
+      padding: var(--space-2xs) var(--space-xs) var(--space-xs); margin-block-end: var(--space-2xs);
+      border-block-end: 1px solid var(--color-border);
+    }
+    .fmenu__back {
+      display: inline-flex; align-items: center; justify-content: center; inline-size: 1.5rem; block-size: 1.5rem;
+      padding: 0; border: 0; background: none; cursor: pointer; color: var(--color-text-muted); border-radius: var(--radius-sm);
+    }
+    .fmenu__back:hover { background-color: var(--color-tertiary-hover); color: var(--color-text); }
+    .fmenu__back svg { inline-size: 1rem; block-size: 1rem; }
+    .fmenu__title { font-size: var(--fs-body-sm); font-weight: var(--fw-medium); color: var(--color-text); }
+    .fmenu__clear-sel {
+      margin-inline-start: auto; padding: 0 var(--space-2xs); min-block-size: 1.5rem;
+      border: 0; background: none; cursor: pointer; font: inherit; font-size: var(--fs-body-xs);
+      font-weight: var(--fw-medium); color: var(--color-accent); border-radius: var(--radius-sm);
+    }
+    .fmenu__clear-sel:hover { text-decoration: underline; }
+    .fmenu__clear-sel:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+    .fmenu__list { display: flex; flex-direction: column; gap: 1px; max-block-size: 20rem; overflow-y: auto; }
+    .fmenu__item {
+      display: flex; align-items: center; gap: var(--space-xs); inline-size: 100%;
+      min-block-size: 2rem; padding: var(--space-2xs) var(--space-xs); text-align: start;
+      border: 0; background: none; cursor: pointer; font: inherit; font-size: var(--fs-body-sm);
+      color: var(--color-text); border-radius: var(--radius-sm);
+    }
+    .fmenu__item:hover { background-color: var(--color-tertiary-hover); }
+    .fmenu__item:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+    .fmenu__item-ico { flex: none; inline-size: 1rem; block-size: 1rem; color: var(--color-text-muted); }
+    .fmenu__item-ico svg { inline-size: 100%; block-size: 100%; }
+    .fmenu__item-label { flex: 1 1 auto; min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* faceta no nível 1: valor escolhido em resumo, seta indicando submenu */
+    .fmenu__item-val { flex: none; max-inline-size: 8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text-muted); font-size: var(--fs-body-xs); }
+    .fmenu__item-chevron { flex: none; color: var(--color-text-muted); }
+    .fmenu__item-chevron svg { inline-size: 0.85rem; block-size: 0.85rem; }
+    /* valor no nível 2: marca de selecionado */
+    .fmenu__check { flex: none; inline-size: 1rem; block-size: 1rem; color: var(--color-accent); visibility: hidden; }
+    .fmenu__check svg { inline-size: 100%; block-size: 100%; }
+    .fmenu__item[aria-checked="true"] .fmenu__check { visibility: visible; }
+    .fmenu__item[aria-checked="true"] .fmenu__item-label { font-weight: var(--fw-medium); }
+
+    /* Intervalo personalizado dentro do painel de Data de coleta */
+    .fmenu__range { display: flex; flex-direction: column; gap: var(--space-xs); padding: var(--space-xs); }
+    .fmenu__range label { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); font-size: var(--fs-body-xs); color: var(--color-text-muted); }
+    .fmenu__range input { block-size: var(--control-h); inline-size: 9.5rem; }
+
+    /* Linha de chips aplicados: só o que está ligado ocupa espaço. */
+    .filterbar__applied { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs); min-block-size: 1.5rem; }
+    .filterbar__tokens { display: inline-flex; flex-wrap: wrap; gap: var(--space-xs); }
+    .filterbar__clear {
+      appearance: none; border: 0; background: none; cursor: pointer; font: inherit;
+      display: inline-flex; align-items: center; min-block-size: 1.5rem; padding: 0 var(--space-2xs);
+      font-size: var(--fs-body-xs); font-weight: var(--fw-medium); color: var(--color-accent); border-radius: var(--radius-sm);
+    }
+    .filterbar__clear:hover { text-decoration: underline; }
+    .filterbar__clear:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+    /* Chip de filtro aplicado: rótulo da faceta + valor + ✕ para remover. */
+    .ftoken {
+      display: inline-flex; align-items: center; gap: var(--space-2xs);
+      min-block-size: 1.5rem; padding: 0 var(--space-xs); font: inherit; font-size: var(--fs-body-xs);
+      color: var(--color-text); cursor: pointer; background-color: var(--color-surface-2);
+      border: 1px solid var(--color-border); border-radius: var(--radius-full);
+      transition: border-color var(--transition-fast);
+    }
+    .ftoken:hover { border-color: var(--color-gray-300); }
+    .ftoken:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+    .ftoken__key { color: var(--color-text-muted); }
+    .ftoken__x { color: var(--color-text-muted); font-size: 0.9em; }
+    .ftoken:hover .ftoken__x { color: var(--color-text); }
+
+    .collect-toolbar__hint { margin: 0; font-size: var(--fs-body-xs); color: var(--color-text-muted); }
+
+    /* ===== Faixa fina de resultado (conta a carteira inteira) ===== */
+    .result-strip {
+      display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-md) var(--space-lg);
+      padding: var(--space-sm) var(--space-lg); margin-bottom: var(--panel-gap);
+      background-color: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    }
+    .result-strip__item { display: flex; align-items: baseline; gap: var(--space-xs); }
+    .result-strip__label { font-size: var(--fs-body-xs); color: var(--color-text-muted); }
+    .result-strip__value { font-family: var(--font-mono); font-weight: var(--fw-semibold); font-size: var(--fs-body-lg); letter-spacing: var(--ls-tight); color: var(--color-text); }
+    .result-strip__sep { inline-size: 1px; align-self: stretch; background-color: var(--color-border); }
+    .result-strip__note { margin-inline-start: auto; font-size: var(--fs-body-xs); color: var(--color-text-muted); }
+
+    /* ===== Toolbar de coleta + switch ===== */
+    .collect-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-sm); margin-bottom: var(--space-lg); }
+    .switch { position: relative; display: inline-flex; align-items: center; gap: var(--space-xs); min-block-size: 1.5rem; font-size: var(--fs-body-sm); color: var(--color-text); cursor: pointer; }
+    /* input cobre todo o switch (alvo ≥24px) em vez de 1px escondido */
+    .switch input { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; margin: 0; opacity: 0; cursor: pointer; }
+    .switch__track { position: relative; inline-size: 2.25rem; block-size: 1.25rem; flex: none; border-radius: var(--radius-full); background-color: var(--color-gray-300); transition: background-color var(--transition-fast); }
+    .switch__thumb { position: absolute; inset-block-start: 2px; inset-inline-start: 2px; inline-size: 1rem; block-size: 1rem; border-radius: var(--radius-full); background-color: var(--color-white); box-shadow: var(--shadow-sm); transition: transform var(--transition-fast); }
+    .switch input:checked + .switch__track { background-color: var(--color-accent); }
+    .switch input:checked + .switch__track .switch__thumb { transform: translateX(1rem); }
+    .switch input:focus-visible + .switch__track { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+    /* ===== Kanban de coleta ===== */
+    .kanban { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-md); align-items: start; }
+    @media (max-width: 75em) {
+      .kanban { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(15.5rem, 1fr); overflow-x: auto; padding-block-end: var(--space-sm); }
+    }
+    .kanban__col { display: flex; flex-direction: column; gap: var(--space-sm); min-inline-size: 0; padding: var(--space-sm); background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+    .kanban__col-head { display: flex; align-items: center; gap: var(--space-xs); padding-inline: var(--space-2xs); min-block-size: 1.5rem; }
+    .kanban__dot { inline-size: 0.5rem; block-size: 0.5rem; flex: none; border-radius: var(--radius-full); }
+    .kanban__dot--neutral { background-color: var(--color-gray-500); }
+    .kanban__dot--info { background-color: var(--color-info); }
+    .kanban__dot--danger { background-color: var(--color-danger); }
+    .kanban__dot--good { background-color: var(--color-good); }
+    .kanban__col-title { font-size: var(--fs-body-sm); font-weight: var(--fw-semibold); color: var(--color-text); }
+    .kanban__count { margin-inline-start: auto; font-size: var(--fs-body-xs); font-weight: var(--fw-semibold); color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+    .kanban__cards { display: flex; flex-direction: column; gap: var(--space-sm); }
+
+    .kcard {
+      position: relative;
+      display: flex; flex-direction: column; gap: var(--space-2xs);
+      padding: var(--space-sm); background-color: var(--color-surface-2);
+      border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    .kcard:hover { border-color: var(--color-gray-300); box-shadow: var(--shadow-sm); }
+    /* Menu "⋯" do card: dispensar / reativar coleta */
+    .kcard__kebab {
+      position: absolute; inset-block-start: var(--space-2xs); inset-inline-end: var(--space-2xs); z-index: 2;
+      display: inline-flex; align-items: center; justify-content: center; inline-size: 1.5rem; block-size: 1.5rem; padding: 0;
+      border: 0; background: none; cursor: pointer; color: var(--color-text-muted); border-radius: var(--radius-sm);
+      transition: background-color var(--transition-fast), color var(--transition-fast);
+    }
+    .kcard__kebab:hover { background-color: var(--color-tertiary-hover); color: var(--color-text); }
+    .kcard__kebab:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+    .kcard__kebab svg { inline-size: 1rem; block-size: 1rem; }
+    .kcard__title { padding-inline-end: 1.25rem; }   /* espaço p/ o kebab não cobrir o título */
+    .kcard__menu {
+      position: absolute; inset-block-start: 1.75rem; inset-inline-end: var(--space-2xs); z-index: 3; min-inline-size: 10.5rem;
+      padding: var(--space-2xs); border-radius: var(--radius-md); background-color: var(--color-surface-2);
+      border: 1px solid var(--color-border); box-shadow: var(--shadow-md);
+    }
+    .kcard__menu-item {
+      display: block; inline-size: 100%; text-align: start; padding: var(--space-xs) var(--space-sm); border: 0; background: none;
+      cursor: pointer; font: inherit; font-size: var(--fs-body-sm); color: var(--color-text); border-radius: var(--radius-sm);
+    }
+    .kcard__menu-item:hover { background-color: var(--color-tertiary-hover); }
+    .kcard__menu-item:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+    /* Estado dispensado (só visível com "Mostrar dispensados"): esmaecido + marca no cliente.
+       A volta atrás não fica escondida no menu "⋯": o card dispensado mostra o botão. */
+    .kcard[data-dispensed="true"] { opacity: 0.72; }
+    .kcard[data-dispensed="true"] .kcard__client::after { content: " · dispensada"; color: var(--color-warn); font-weight: var(--fw-semibold); }
+    .kcard__undo { margin-inline-start: auto; flex: none; }
+    .kcard__undo svg { inline-size: 0.85rem; block-size: 0.85rem; }
+    .kcard:not([data-dispensed="true"]) .kcard__undo { display: none; }
+    .kcard:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+    .kcard__title { font-size: var(--fs-body-sm); font-weight: var(--fw-medium); color: var(--color-text); }
+    .kcard__client { font-size: var(--fs-body-xs); color: var(--color-text-muted); }
+    .kcard__meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2xs) var(--space-xs); margin-block-start: var(--space-2xs); }
+    .kcard__resp { display: inline-flex; align-items: center; gap: var(--space-2xs); font-size: var(--fs-body-xs); color: var(--color-text); font-variant-numeric: tabular-nums; }
+    .kcard__resp svg { inline-size: 0.9rem; block-size: 0.9rem; color: var(--color-text-muted); flex: none; }
+    /* Elemento temporal do card: DOIS tipos distintos, propositalmente diferentes.
+       (a) PRAZO do link = alerta acionável, olhando para frente (ampulheta). É o
+           único que ganha cor/badge de alarme quando aperta.
+       (b) RECÊNCIA da última coleta = contexto, olhando para trás (histórico).
+           Fica sempre neutro: a coluna (Recoleta/Em dia) já carrega a urgência. */
+    .kcard__timing { display: inline-flex; align-items: center; gap: var(--space-2xs); font-size: var(--fs-body-xs); white-space: nowrap; }
+    .kcard__timing svg { inline-size: 0.85rem; block-size: 0.85rem; flex: none; }
+    /* Recência e idade: contexto neutro, peso normal. */
+    .kcard__timing--recency, .kcard__timing--age { color: var(--color-text-muted); font-weight: var(--fw-regular); }
+    /* Prazo: longe do fim, neutro; perto (≤5d), âmbar em badge; vencido, vermelho em badge. */
+    .kcard__timing--deadline { color: var(--color-text-muted); font-weight: var(--fw-medium); }
+    .kcard__timing--deadline.is-warn, .kcard__timing--deadline.is-danger { padding: 1px var(--space-2xs); border-radius: var(--radius-sm); font-weight: var(--fw-semibold); }
+    .kcard__timing--deadline.is-warn   { color: var(--color-warn);   background-color: var(--color-warn-bg); }
+    .kcard__timing--deadline.is-danger { color: var(--color-danger); background-color: var(--color-danger-bg); }
+    .kcard__foot { display: flex; align-items: center; gap: var(--space-xs); margin-block-start: var(--space-2xs); padding-block-start: var(--space-xs); border-block-start: 1px solid var(--color-border); }
+    .kcard__owner { display: inline-flex; align-items: baseline; gap: var(--space-2xs); min-inline-size: 0; font-size: var(--fs-body-xs); }
+    /* Papel explícito, mas discreto: "DM · Nome" (DM muted, nome em destaque): sem caixa/tag pesada. */
+    .kcard__role { flex: none; font-weight: var(--fw-semibold); color: var(--color-text-muted); }
+    .kcard__role::after { content: "·"; margin-inline-start: var(--space-2xs); font-weight: var(--fw-regular); color: var(--color-text-muted); }
+    .kcard__owner-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text); }
+
+    /* ===== Rodapé da sidebar: alternador de tema (mesmo desenho dos itens de nav) ===== */
+    /* Mesmo inset lateral da .side-nav, para o toggle alinhar com os itens do menu
+       (o divisor de topo segue largura cheia; só o conteúdo insere). */
+    .app__sidebar-foot { padding-inline: var(--space-sm); }
+    .side-foot__btn {
+      display: flex; align-items: center; gap: var(--space-sm); inline-size: 100%;
+      appearance: none; border: 0; background: transparent; cursor: pointer; font: inherit; text-align: start;
+      padding-block: var(--space-xs); padding-inline: var(--space-sm); border-radius: var(--radius-md);
+      color: var(--color-sidebar-ink-muted); font-size: 0.8125rem; line-height: var(--lh-base);
+      transition: background-color var(--transition-fast), color var(--transition-fast);
+    }
+    .side-foot__btn:hover { background-color: var(--color-sidebar-hover); color: var(--color-sidebar-ink); }
+    .side-foot__btn:focus-visible { outline: 2px solid var(--color-sidebar-accent); outline-offset: 2px; }
+    .side-foot__icon { inline-size: 1.125rem; block-size: 1.125rem; flex: none; }
+    /* troca lua↔sol e rótulo conforme o tema; o clique é tratado por data-theme-toggle (brq-ui.js) */
+    .side-foot__icon--sun, .side-foot__txt--light { display: none; }
+    :root[data-theme="dark"] .side-foot__icon--moon,
+    :root[data-theme="dark"] .side-foot__txt--dark { display: none; }
+    :root[data-theme="dark"] .side-foot__icon--sun { display: inline-block; }
+    :root[data-theme="dark"] .side-foot__txt--light { display: inline; }
+
+    /* No desktop a sidebar já indica a seção e o page-head traz o título (h1 + subtítulo);
+       o topbar só existe para o hambúrguer do mobile, então some no desktop. Assim o "NPS"
+       não aparece duplicado (topbar + page-head). No mobile ele volta, com menu + título. */
+    @media (min-width: 64em) { .app__topbar { display: none; } }
+
+    /* ===== Modal: Gerar link de NPS (dialog nativo: foco/Escape/backdrop) ===== */
+    .modal {
+      inset: 0; margin: auto;                 /* centraliza: o reset * { margin: 0 } mata o auto do UA */
+      padding: 0; inline-size: min(34rem, 92vw); max-block-size: 88vh;
+      background-color: var(--color-surface-2); color: var(--color-text);
+      border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
+    }
+    .modal::backdrop { background-color: rgba(18, 18, 18, 0.5); }
+    .modal__box { display: flex; flex-direction: column; max-block-size: 88vh; }
+    .modal__head { display: flex; align-items: flex-start; gap: var(--space-md); padding: var(--space-lg) var(--space-lg) var(--space-md); }
+    .modal__title { font-family: var(--font-display); font-weight: var(--fw-medium); font-size: var(--fs-heading-md); line-height: var(--lh-tight); }
+    .modal__sub { margin-block-start: var(--space-2xs); font-size: var(--fs-body-sm); color: var(--color-text-muted); }
+    .modal__x { margin-inline-start: auto; flex: none; }
+    .modal__body { display: flex; flex-direction: column; gap: var(--space-lg); padding: 0 var(--space-lg) var(--space-lg); overflow-y: auto; }
+    .modal__foot { display: flex; justify-content: flex-end; gap: var(--space-sm); padding: var(--space-md) var(--space-lg); border-block-start: 1px solid var(--color-border); }
+
+    .mform { display: flex; flex-direction: column; gap: var(--space-md); }
+    .mform__row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); }
+    .mfield { display: flex; flex-direction: column; gap: var(--space-2xs); }
+    .mfield__label { font-size: var(--fs-body-xs); font-weight: var(--fw-medium); color: var(--color-text-muted); }
+    .mfield__control { inline-size: 100%; }
+
+    /* Alterna configurar ↔ compartilhar (marcadores data-config / data-shared no dialog) */
+    .modal[data-state="config"] [data-shared] { display: none; }
+    .modal[data-state="shared"] [data-config] { display: none; }
+    /* pós-geração não tem CTA no rodapé: fechar pelo X/Escape; copiar são as ações inline */
+    .modal[data-state="shared"] .modal__foot { display: none; }
+
+    .link-summary { display: flex; flex-direction: column; gap: 2px; padding: var(--space-sm) var(--space-md);
+      background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+    .link-summary__project { font-weight: var(--fw-medium); color: var(--color-text); }
+    .link-summary__meta { font-size: var(--fs-body-xs); color: var(--color-text-muted); }
+
+    .link-result { display: flex; flex-direction: column; gap: var(--space-md); }
+    .link-result__link {
+      display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap;
+      padding: var(--space-sm) var(--space-md); background-color: var(--color-surface);
+      border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    }
+    .link-result__icon { inline-size: 1rem; block-size: 1rem; color: var(--color-text-muted); flex: none; }
+    .link-result__url {
+      flex: 1 1 12rem; min-inline-size: 0; font-family: var(--font-mono); font-size: var(--fs-body-sm);
+      color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .msg__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); margin-block-end: var(--space-2xs); }
+    .msg__text {
+      margin: 0; padding: var(--space-md); background-color: var(--color-surface);
+      border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      font-size: var(--fs-body-sm); line-height: var(--lh-base); color: var(--color-text); white-space: pre-wrap;
+    }
+    /* Validade do link: informação de prazo, então fica junto do link e não no rodapé. */
+    .link-expiry { display: flex; align-items: center; gap: var(--space-xs); margin: 0; font-size: var(--fs-body-sm); color: var(--color-text); }
+    .link-expiry svg { inline-size: 1rem; block-size: 1rem; color: var(--color-text-muted); flex: none; }
+    .link-expiry strong { font-weight: var(--fw-semibold); }
+
+    .link-note { display: flex; gap: var(--space-xs); margin: 0; font-size: var(--fs-body-xs); color: var(--color-text-muted); }
+    .link-note svg { inline-size: 0.9rem; block-size: 0.9rem; flex: none; margin-block-start: 1px; }
+
+    /* CTA "Gerar link" nos cards da coluna Sem link (owner à esquerda, ação à direita) */
+    /* Link expirado: borda vermelha no card inteiro, além do chip e da ação. */
+    .kcard.is-expired { border-color: var(--color-danger); }
+
+    .kcard__cta { margin-inline-start: auto; flex: none; }
+    .kcard__cta svg { inline-size: 0.85rem; block-size: 0.85rem; }
+
+    /* ===== Tooltip de etapa no cabeçalho do Kanban (ⓘ) ===== */
+    .kanban__col-head { position: relative; }   /* âncora do tooltip (a coluna limita a largura) */
+    .kanban__info {
+      display: inline-flex; align-items: center; justify-content: center; flex: none;
+      inline-size: 1.5rem; block-size: 1.5rem; padding: 0; border: 0; background: none; cursor: help;
+      color: var(--color-text-muted); border-radius: var(--radius-full);
+      transition: color var(--transition-fast), background-color var(--transition-fast);
+    }
+    .kanban__info:hover { color: var(--color-text); background-color: var(--color-tertiary-hover); }
+    .kanban__info:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+    .kanban__info svg { inline-size: 0.9rem; block-size: 0.9rem; }
+    .kanban__tip {
+      position: absolute; inset-block-start: calc(100% + 4px); inset-inline-start: 0; z-index: var(--z-tooltip);
+      inline-size: max-content; max-inline-size: min(16rem, calc(100% - 0.25rem));
+      padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-md);
+      background-color: var(--color-surface-2); color: var(--color-text);
+      border: 1px solid var(--color-border); box-shadow: var(--shadow-md);
+      font-size: var(--fs-body-xs); font-weight: var(--fw-medium); line-height: var(--lh-base); text-align: start;
+      opacity: 0; visibility: hidden; pointer-events: none; transition: opacity var(--transition-fast);
+    }
+    .kanban__info:hover ~ .kanban__tip,
+    .kanban__info:focus-visible ~ .kanban__tip,
+    .kanban__col-head.is-open .kanban__tip { opacity: 1; visibility: visible; pointer-events: auto; }
+
+    /* ===== Card com link é clicável → modal de detalhe da coleta ===== */
+    .kcard[data-card-open] { cursor: pointer; }
+    .modal--wide { inline-size: min(40rem, 92vw); }
+    /* KPIs do detalhe: linha leve, sem caixas, separada por fios finos. */
+    .dt-stats { display: flex; flex-wrap: wrap; gap: var(--space-md) var(--space-lg); align-items: baseline; }
+    .dt-stat { display: flex; align-items: baseline; gap: var(--space-xs); }
+    .dt-stat + .dt-stat { padding-inline-start: var(--space-lg); border-inline-start: 1px solid var(--color-border); }
+    .dt-stat__label { font-size: var(--fs-body-xs); color: var(--color-text-muted); }
+    .dt-stat__value { font-family: var(--font-mono); font-weight: var(--fw-semibold); font-size: var(--fs-body-md);
+      color: var(--color-text); font-variant-numeric: tabular-nums; }
+    .dt-section { display: flex; flex-direction: column; gap: var(--space-sm); }
+    .dt-section__title { font-size: var(--fs-body-xs); font-weight: var(--fw-semibold); text-transform: uppercase; letter-spacing: var(--ls-label); color: var(--color-text-muted); }
+    .dt-links { display: flex; flex-direction: column; gap: var(--space-sm); }
+    /* rótulo do formato do link (Completo/Simplificado): um projeto pode ter os dois */
+    .dt-fmt { flex: none; min-inline-size: 5.5rem; font-size: var(--fs-body-xs); font-weight: var(--fw-semibold); color: var(--color-text-muted); }
+    /* Validade por link: o operador precisa ver na hora de copiar/cobrar se o link
+       está perto de vencer. Ícone + texto, cor por proximidade (nunca só cor). */
+    .dt-linkexp { flex: none; display: inline-flex; align-items: center; gap: var(--space-2xs); font-size: var(--fs-body-xs); font-weight: var(--fw-medium); white-space: nowrap; }
+    .dt-linkexp svg { inline-size: 0.85rem; block-size: 0.85rem; flex: none; }
+    .dt-linkexp--ok     { color: var(--color-text-muted); }
+    .dt-linkexp--warn   { color: var(--color-warn); }
+    .dt-linkexp--danger { color: var(--color-danger); }
+    /* Reforça o alerta quando falta pouco: fundo tênue de atenção. */
+    .dt-linkexp--warn, .dt-linkexp--danger { padding: 1px var(--space-2xs); border-radius: var(--radius-sm); }
+    .dt-linkexp--warn   { background-color: var(--color-warn-bg); }
+    .dt-linkexp--danger { background-color: var(--color-danger-bg); }
+    /* tag de formato numa RESPOSTA (Completo tem dimensões; Simplificado só nota+comentário) */
+    .resp__fmt { padding: 1px var(--space-2xs); border-radius: var(--radius-sm); border: 1px solid var(--color-border);
+      font-size: var(--fs-body-xs); font-weight: var(--fw-medium); color: var(--color-text-muted); white-space: nowrap; }
+    .dt-seg { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+    .dt-resp-list { border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: clip; }
+    .dt-resp-list .resp { padding-inline: var(--space-md); }
+    .dt-empty { padding: var(--space-lg); text-align: center; border: 1px dashed var(--color-border); border-radius: var(--radius-md); }
+    .dt-empty__title { font-weight: var(--fw-medium); color: var(--color-text); }
+    .dt-empty__text { margin-block-start: var(--space-2xs); font-size: var(--fs-body-sm); color: var(--color-text-muted); }
+
+    /* ---- "NPS por projeto": linha expansível com todas as notas do projeto ---- */
+    [data-nps-table] tbody tr.is-expandable { cursor: pointer; }
+    /* Alvo mínimo de 24px (WCAG 2.2 AA): o texto sozinho rendia 21px de altura. */
+    .notas-toggle { display: inline-flex; align-items: center; gap: var(--space-xs); border: 0; background: none;
+      min-block-size: 1.5rem; padding: 0; cursor: pointer; font: inherit; color: inherit; text-align: start; }
+    .notas-toggle svg { inline-size: 1rem; block-size: 1rem; flex: none; color: var(--color-text-muted); transition: transform var(--transition-fast); }
+    .notas-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
+    .notas-toggle:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+    /* a linha injetada da expansão fica fora da zebra e do hover da tabela */
+    [data-nps-table] .data-table--zebra tbody tr:nth-child(even) { background-color: transparent; }
+    [data-nps-table] .data-table--zebra tbody tr:nth-child(even of :not(.nps-notas-row)) { background-color: var(--color-surface); }
+    [data-nps-table] .data-table tbody tr.nps-notas-row { block-size: auto; }
+    [data-nps-table] .data-table tbody tr.nps-notas-row:hover { background-color: transparent; }
+    .nps-notas-row > td { padding: var(--space-sm) var(--space-md) var(--space-md); }
+    .nps-notas { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-md);
+      background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+    .nps-notas__summary { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
+    .nps-notas__bar { display: flex; flex: 1 1 12rem; min-inline-size: 10rem; block-size: 0.5rem;
+      border-radius: var(--radius-full); overflow: hidden; }
+    .nps-notas__meta { margin-inline-start: auto; font-size: var(--fs-body-xs); color: var(--color-text-muted); }
+    .nps-notas__chips { display: flex; flex-wrap: wrap; gap: var(--space-2xs); }
+    .nps-notas__chip { display: inline-flex; align-items: center; justify-content: center; inline-size: 1.75rem; block-size: 1.75rem;
+      border-radius: var(--radius-sm); font-size: var(--fs-body-xs); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+    .nps-notas__chip--good   { background-color: var(--color-good-bg);   color: var(--color-good); }
+    .nps-notas__chip--warn   { background-color: var(--color-warn-bg);   color: var(--color-warn); }
+    .nps-notas__chip--danger { background-color: var(--color-danger-bg); color: var(--color-danger); }
+    .nps-notas__comments-title { font-size: var(--fs-body-xs); font-weight: var(--fw-semibold); color: var(--color-text-muted);
+      text-transform: uppercase; letter-spacing: 0.04em; }
+    .nps-notas__comments { display: flex; flex-direction: column; gap: var(--space-sm); margin: 0; padding: 0; list-style: none; }
+    .nps-notas__comment { display: flex; gap: var(--space-sm); align-items: flex-start; }
+    .nps-notas__comment .nps-notas__chip { flex: none; }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+  <div class="app" data-app>
+    <!-- ===================== SIDEBAR ===================== -->
+    <aside class="app__sidebar" id="app-sidebar" data-sidebar aria-label="Navegação principal">
+      <a class="app__brand" href="#" aria-label="Operations PX, início">
+        <svg class="logo-brq logo-brq--white" viewBox="164 98 1239 702" fill="currentColor" aria-hidden="true" focusable="false">
+          <g class="logo-brq__mark">
+            <path d="M381.16 345.79C380.76 345.79 380.36 345.76 379.95 345.76H377.71L381.16 345.79Z"/>
+            <path d="M649.4 438.39H649.18V648.36C649.18 652.56 652.58 655.96 656.78 655.96H746.73C750.93 655.96 754.33 652.56 754.33 648.36V344.91H846.52C850.72 344.91 854.12 341.51 854.12 337.31V249.93C854.12 245.57 850.55 242.15 846.19 242.32C739.57 246.38 653.85 331.88 649.38 438.4L649.4 438.39Z"/>
+            <path d="M373.63 242.41H268.15V106.43C268.15 102.23 264.75 98.83 260.55 98.83H172.06C167.86 98.83 164.46 102.23 164.46 106.43V146.42C164.46 259.21 255.57 345.15 368.21 345.77L408.15 345.79H418.53C450.03 345.79 475.56 371.33 475.56 402.82V494.76C475.56 526.26 450.02 551.79 418.53 551.79H326.66C295.16 551.79 269.63 526.25 269.63 494.76V379.29C269.63 375.09 266.23 371.69 262.03 371.69H172.08C167.88 371.69 164.48 375.09 164.48 379.29V451.58C164.48 569.53 267.7 664.26 387.34 656.51C486.76 650.07 566.27 571.07 577.63 472.09C591.9 347.79 495.09 242.4 373.66 242.4L373.63 242.41Z"/>
+            <path d="M1096.41 656.02H1201.89V792C1201.89 796.2 1205.29 799.6 1209.49 799.6H1297.98C1302.18 799.6 1305.58 796.2 1305.58 792V752.01C1305.58 571.91 1214.47 553.28 1101.83 552.66L1061.89 552.64H1051.51C1020.01 552.64 994.48 527.1 994.48 495.61V403.67C994.48 372.17 1020.02 346.64 1051.51 346.64H1143.38C1174.88 346.64 1200.41 372.18 1200.41 403.67V519.73C1200.41 523.93 1203.81 527.33 1208.01 527.33H1297.96C1302.16 527.33 1305.56 523.93 1305.56 519.73V446.85C1305.56 328.9 1202.34 234.17 1082.7 241.92C983.28 248.36 903.77 327.36 892.41 426.34C878.14 550.64 974.95 656.03 1096.38 656.03L1096.41 656.02Z"/>
+          </g>
+        </svg>
+        <span class="app__brand-name">Operations PX</span>
+      </a>
+
+      <nav class="side-nav" aria-label="Seções">
+        <ul class="side-nav__list" role="list">
+          <li><a class="side-nav__link" href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            Projetos</a></li>
+          <li><a class="side-nav__link" href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
+            Marcos</a></li>
+          <li><a class="side-nav__link" href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            Saúde</a></li>
+          <li><a class="side-nav__link" href="#" aria-current="page">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>
+            NPS</a></li>
+        </ul>
+      </nav>
+
+      <div class="app__sidebar-foot">
+        <button class="side-foot__btn" type="button" data-theme-toggle aria-pressed="false" aria-label="Alternar tema claro e escuro">
+          <svg class="side-foot__icon side-foot__icon--moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          <svg class="side-foot__icon side-foot__icon--sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          <span class="side-foot__txt side-foot__txt--dark" aria-hidden="true">Modo escuro</span>
+          <span class="side-foot__txt side-foot__txt--light" aria-hidden="true">Modo claro</span>
+        </button>
+      </div>
+    </aside>
+    <div class="app__scrim" data-nav-scrim aria-hidden="true"></div>
+
+    <!-- ===================== MAIN ===================== -->
+    <div class="app__main">
+      <header class="app__topbar">
+        <button class="icon-btn topbar__toggle" type="button" data-nav-toggle aria-controls="app-sidebar" aria-expanded="false" aria-label="Abrir menu de navegação">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+        </button>
+        <span class="topbar__title">NPS</span>
+      </header>
+
+      <main class="app__content" id="conteudo">
+        <div class="app__content-inner">
+          <!-- Page header -->
+          <div class="page-head">
+            <div class="page-head__text">
+              <h1 class="page-head__title">NPS</h1>
+            </div>
+            <div class="page-head__actions">
+              <button class="btn btn--secondary btn--sm" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                Exportar CSV
+              </button>
+              <button class="btn btn--primary btn--sm" type="button" data-link-open>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                Gerar link
+              </button>
+            </div>
+          </div>
+
+
+          <!-- ===================== ABAS ===================== -->
+          <div class="tabs" data-tabs>
+            <div class="tabs__bar">
+              <div class="tabs__list" role="tablist" aria-label="Visões de NPS">
+                <!-- Cada subpágina tem rota própria (#/coleta, #/resultados, #/respostas): no produto
+                     viram páginas roteadas do Blazor (/nps/coleta etc.). Ver script "Rotas" no fim. -->
+                <a class="tab" role="tab" id="tabbtn-coleta" aria-controls="tab-coleta" aria-selected="true" href="#/coleta">Coleta</a>
+                <a class="tab" role="tab" id="tabbtn-resultados" aria-controls="tab-resultados" aria-selected="false" href="#/resultados">Resultados</a>
+                <a class="tab" role="tab" id="tabbtn-respostas" aria-controls="tab-respostas" aria-selected="false" href="#/respostas">Respostas</a>
+              </div>
+              <span class="tabs__count" data-nps-count><strong>19</strong> de 19 projetos</span>
+            </div>
+
+            <!-- Barra de filtro ÚNICA, abaixo das abas: facetas globais (esq) + refino da aba ativa (dir) -->
+            <section class="filterbar" aria-label="Filtros">
+              <div class="filterbar__row">
+                <div class="search">
+                  <svg class="search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <label class="visually-hidden" for="busca-nps">Buscar projeto, cliente ou comentário</label>
+                  <input class="search__input" id="busca-nps" type="search" placeholder="Buscar…" data-nps-search />
+                </div>
+
+                <!-- Um botão só abre todos os filtros. O conteúdo do menu (facetas e
+                     valores) é montado pelo controlador conforme a aba ativa. -->
+                <div class="fmenu" data-fmenu>
+                  <button class="btn btn--secondary btn--sm fmenu__btn" type="button" data-fmenu-btn aria-haspopup="dialog" aria-expanded="false">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+                    Filtro
+                    <span class="fmenu__badge" data-fmenu-badge hidden></span>
+                  </button>
+                  <div class="fmenu__pop" data-fmenu-pop role="dialog" aria-label="Filtros" hidden></div>
+                </div>
+
+                <span class="filterbar__count" data-nps-count></span>
+              </div>
+
+              <div class="filterbar__applied" data-nps-applied hidden>
+                <div class="filterbar__tokens" data-nps-tokens></div>
+                <button class="filterbar__clear" type="button" data-nps-clear hidden>Limpar tudo</button>
+              </div>
+            </section>
+
+            <!-- ===================== ABA: COLETA (Kanban) ===================== -->
+            <div id="tab-coleta" role="tabpanel" aria-labelledby="tabbtn-coleta">
+              <!-- Faixa fina: o RESULTADO conta a carteira inteira -->
+              <div class="result-strip">
+                <div class="result-strip__item">
+                  <span class="result-strip__label">NPS oficial</span>
+                  <span class="result-strip__value">52<span class="kpi__value-dec">,6</span></span>
+                </div>
+                <span class="result-strip__sep" aria-hidden="true"></span>
+                <div class="result-strip__item">
+                  <span class="result-strip__label">Respostas</span>
+                  <span class="result-strip__value">173</span>
+                </div>
+                <span class="result-strip__sep" aria-hidden="true"></span>
+                <div class="result-strip__item">
+                  <span class="result-strip__label">Projetos</span>
+                  <span class="result-strip__value">19</span>
+                </div>
+                <p class="result-strip__note">O quadro mostra a carteira inteira. A única coisa que sai da vista é a coleta dispensada, e ela volta quando você quiser.</p>
+              </div>
+
+
+              <!-- Quadro Kanban: 4 colunas por status de coleta -->
+              <div class="kanban">
+                <!-- Coluna 1: Sem link -->
+                <section class="kanban__col" aria-labelledby="col-semlink">
+                  <header class="kanban__col-head">
+                    <span class="kanban__dot kanban__dot--neutral" aria-hidden="true"></span>
+                    <h2 class="kanban__col-title" id="col-semlink">Sem link</h2><button class="kanban__info" type="button" aria-label="Sobre a etapa Sem link" aria-describedby="tip-col-semlink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></button><span class="kanban__tip" id="tip-col-semlink" role="tooltip">Projeto ainda sem link de NPS gerado. Gere um link e envie para começar a coletar.</span>
+                    <span class="kanban__count">4</span>
+                  </header>
+
+                  <div class="kanban__cards">
+                    <article class="kcard"><button class="kcard__kebab" type="button" aria-label="Ações da coleta" aria-haspopup="true" aria-expanded="false" data-kebab><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><div class="kcard__menu" role="menu" hidden><button class="kcard__menu-item" type="button" role="menuitem" data-dispense>Dispensar coleta</button></div>
+                      <p class="kcard__title">Middleware Fiscal</p>
+                      <p class="kcard__client">Vivo · DC6</p>
+                      <div class="kcard__meta">
+                        <span class="kcard__resp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>0 respostas</span>
+                        <span class="kcard__timing kcard__timing--age"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Sem link há 8d</span>
+                      </div>
+                      <div class="kcard__foot"><span class="kcard__owner"><span class="kcard__role">DM</span><span class="kcard__owner-name">Felipe Aguiar</span></span><button class="btn btn--secondary btn--sm kcard__cta" type="button" data-link-open data-open-project="Middleware Fiscal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Gerar link</button></div>
+                    </article>
+                    <article class="kcard"><button class="kcard__kebab" type="button" aria-label="Ações da coleta" aria-haspopup="true" aria-expanded="false" data-kebab><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><div class="kcard__menu" role="menu" hidden><button class="kcard__menu-item" type="button" role="menuitem" data-dispense>Dispensar coleta</button></div>
+                      <p class="kcard__title">Motor de Crédito</p>
+                      <p class="kcard__client">BV · DC5</p>
+                      <div class="kcard__meta">
+                        <span class="kcard__resp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>0 respostas</span>
+                        <span class="kcard__timing kcard__timing--age"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Sem link há 21d</span>
+                      </div>
+                      <div class="kcard__foot"><span class="kcard__owner"><span class="kcard__role">DM</span><span class="kcard__owner-name">Elisa Rocha</span></span><button class="btn btn--secondary btn--sm kcard__cta" type="button" data-link-open data-open-project="Motor de Crédito"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Gerar link</button></div>
+                    </article>
+                    <article class="kcard"><button class="kcard__kebab" type="button" aria-label="Ações da coleta" aria-haspopup="true" aria-expanded="false" data-kebab><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><div class="kcard__menu" role="menu" hidden><button class="kcard__menu-item" type="button" role="menuitem" data-dispense>Dispensar coleta</button></div>
+                      <p class="kcard__title">Data Lake</p>
+                      <p class="kcard__client">Natura · DC4</p>
+                      <div class="kcard__meta">
+                        <span class="kcard__resp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>0 respostas</span>
+                        <span class="kcard__timing kcard__timing--age"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Sem link há 5d</span>
+                      </div>
+                      <div class="kcard__foot"><span class="kcard__owner"><span class="kcard__role">DM</span><span class="kcard__owner-name">Diego Matos</span></span><button class="btn btn--secondary btn--sm kcard__cta" type="button" data-link-open data-open-project="Data Lake"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Gerar link</button></div>
+                    </article>
+                    <article class="kcard"><button class="kcard__kebab" type="button" aria-label="Ações da coleta" aria-haspopup="true" aria-expanded="false" data-kebab><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><div class="kcard__menu" role="menu" hidden><button class="kcard__menu-item" type="button" role="menuitem" data-dispense>Dispensar coleta</button></div>
+                      <p class="kcard__title">Nova Plataforma</p>
+                      <p class="kcard__client">Bradesco · DC1</p>
+                      <div class="kcard__meta">
+                        <span class="kcard__resp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>0 respostas</span>
+                        <span class="kcard__timing kcard__timing--age"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4"/><path d="M16 3v4"/><path d="M3 11h18"/></svg>Agendado</span>
+                      </div>
+                      <div class="kcard__foot"><span class="kcard__owner"><span class="kcard__role">DM</span><span class="kcard__owner-name">Ana Prado</span></span><button class="btn btn--secondary btn--sm kcard__cta" type="button" data-link-open data-open-project="Nova Plataforma"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Gerar link</button></div>
+                    </article>
+                  </div>
+                </section>
+
+                <!-- Coluna 2: Aguardando resposta -->
+                <section class="kanban__col" aria-labelledby="col-aguardando">
+                  <header class="kanban__col-head">
+                    <span class="kanban__dot kanban__dot--info" aria-hidden="true"></span>
+                    <h2 class="kanban__col-title" id="col-aguardando">Aguardando resposta</h2><button class="kanban__info" type="button" aria-label="Sobre a etapa Aguardando resposta" aria-describedby="tip-col-aguardando"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></button><span class="kanban__tip" id="tip-col-aguardando" role="tooltip">Link já enviado, mas sem nenhuma resposta ainda. Bom momento para reforçar o pedido. O link vale 20 dias; depois disso o card pede um link novo.</span>
+                    <span class="kanban__count">3</span>
+                  </header>
+
+                  <div class="kanban__cards">
+                    <article class="kcard" role="button" tabindex="0" data-card-open aria-label="Ver detalhes da coleta de Omnichannel"><button class="kcard__kebab" type="button" aria-label="Ações da coleta" aria-haspopup="true" aria-expanded="false" data-kebab><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><div class="kcard__menu" role="menu" hidden><button class="kcard__menu-item" type="button" role="menuitem" data-dispense>Dispensar coleta</button></div>
+                      <p class="kcard__title">Omnichannel</p>
+                      <p class="kcard__client">Raia Drogasil · DC4</p>
+                      <div class="kcard__meta">
+                        <span class="kcard__resp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>0 respostas</span>
+                        <span class="kcard__timing kcard__timing--deadline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.17a2 2 0 0 0-.59-1.41L12 12l-4.41 4.42A2 2 0 0 0 7 17.83V22"/><path d="M7 2v4.17a2 2 0 0 0 .59 1.41L12 12l4.41-4.42A2 2 0 0 0 17 6.17V2"/></svg>Expira em 14d</span>
+                      </div>
+                      <div class="kcard__foot"><span class="kcard__owner"><span class="kcard__role">DM</span><span class="kcard__owner-name">Diego Matos</span></span></div>
+                      
+                    </article>
+                    <article class="kcard" role="button" tabindex="0" data-card-open aria-label="Ver detalhes da coleta de Portal B2B"><button class="kcard__kebab" type="button" aria-label="Ações da coleta" aria-haspopup="true" aria-expanded="false" data-kebab><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><div class="kcard__menu" role="menu" hidden><button class="kcard__menu-item" type="button" role="menuitem" data-dispense>Dispensar coleta</button></div>
+                      <p class="kcard__title">Portal B2B</p>
+                      <p class="kcard__client">Dasa · DC3</p>
+                      <div class="kcard__meta">
+                        <span class="kcard__resp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>0 respostas</span>
+                        <span class="kcard__timing kcard__timing--deadline is-warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.17a2 2 0 0 0-.59-1.41L12 12l-4.41 4.42A2 2 0 0 0 7 17.83V22"/><path d="M7 2v4.17a2 2 0 0 0 .59 1.41L12 12l4.41-4.42A2 2 0 0 0 17 6.17V2"/></svg>Expira em 2d</span>
+                      </div>
+                      <div class="kcard__foot"><span class="kcard__owner"><span class="kcard__role">DM</span><span class="kcard__owner-name">Carla Nunes</span></span></div>
+                      
+                    </article>
+                    <article class="kcard is-expired" role="button" tabindex="0" data-expired data-card-open aria-label="Ver detalhes da coleta de Hub de Pagamentos"><button class="kcard__kebab" type="button" aria-label="Ações da coleta" aria-haspopup="true" aria-expanded="false" data-kebab><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><div class="kcard__menu" role="menu" hidden><button class="kcard__menu-item" type="button" role="menuitem" data-dispense>Dispensar coleta</button></div>
+                      <p class="kcard__title">Hub de Pagamentos</p>
+                      <p class="kcard__client">Stone · DC2</p>
+                      <div class="kcard__meta">
+                        <span class="kcard__resp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>0 respostas</span>
+                        <span class="kcard__timing kcard__timing--deadline is-danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.17a2 2 0 0 0-.59-1.41L12 12l-4.41 4.42A2 2 0 0 0 7 17.83V22"/><path d="M7 2v4.17a2 2 0 0 0 .59 1.41L12 12l4.41-4.42A2 2 0 0 0 17 6.17V2"/></svg>Expirado há 3d</span>
+                      </div>
+                      <div class="kcard__foot"><span class="kcard__owner"><span class="kcard__role">DM</span><span class="kcard__owner-name">Bruno Salles</span></span><button class="btn btn--secondary btn--sm kcard__cta" type="button" data-link-open data-open-project="Hub de Pagamentos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Gerar novo link</button></div>
+                      
+                    </article>
+                  </div>
+                </section>
+
+                <!-- Coluna 3: Recoleta (resposta > 45 dias) -->
+                <section class="kanban__col" aria-labelledby="col-recoleta">
+                  <header class="kanban__col-head">
+                    <span class="kanban__dot kanban__dot--danger" aria-hidden="true"></span>
+                    <h2 class="kanban__col-title" id="col-recoleta">Recoleta</h2><button class="kanban__info" type="button" aria-label="Sobre a etapa Recoleta" aria-describedby="tip-col-recoleta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></button><span class="kanban__tip" id="tip-col-recoleta" role="tooltip">Última resposta há mais de 45 dias. Vale recoletar para ter um sinal atual do projeto.</span>
+                    <span class="kanban__count">3</span>
+                  </header>
+
+                  <div class="kanban__cards">
+                    <article class="kcard" role="button" tabindex="0" data-card-open aria-label="Ver detalhes da coleta de GenAI Atendimento"><button class="kcard__kebab" type="button" aria-label="Ações da coleta" aria-haspopup="true" aria-expanded="false" data-kebab><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><div class="kcard__menu" role="menu" hidden><button class="kcard__menu-item" type="button" role="menuitem" data-dispense>Dispensar coleta</button></div>
+                      <p class="kcard__title">GenAI Atendimento</p>
+                      <p class="kcard__client">Banco Hyundai · DC3</p>
+                      <div class="kcard__meta">
+                        <span class="kcard__resp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>9 respostas</span>
+                        <span class="kcard__timing kcard__timing--recency"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>há 78d</span>
+                      </div>
+                      <div class="kcard__foot"><span class="kcard__owner"><span class="kcard__role">DM</span><span class="kcard__owner-name">Carla Nunes</span></span></div>
+                      
+                    </article>
+                    <article class="kcard" role="button" tabindex="0" data-card-open aria-label="Ver detalhes da coleta de Modernização Core"><button class="kcard__kebab" type="button" aria-label="Ações da coleta" aria-haspopup="true" aria-expanded="false" data-kebab><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><div class="kcard__menu" role="menu" hidden><button class="kcard__menu-item" type="button" role="menuitem" data-dispense>Dispensar coleta</button></div>
+                      <p class="kcard__title">Modernização Core</p>
+                      <p class="kcard__client">Ambev · DC5</p>
+                      <div class="kcard__meta">
+                        <span class="kcard__resp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>12 respostas</span>
+                        <span class="kcard__timing kcard__timing--recency"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>há 63d</span>
+                      </div>
+                      <div class="kcard__foot"><span class="kcard__owner"><span class="kcard__role">DM</span><span class="kcard__owner-name">Elisa Rocha</span></span></div>
+                      
+                    </article>
+                    <article class="kcard" role="button" tabindex="0" data-card-open aria-label="Ver detalhes da coleta de Portal do Cliente"><button class="kcard__kebab" type="button" aria-label="Ações da coleta" aria-haspopup="true" aria-expanded="false" data-kebab><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><div class="kcard__menu" role="menu" hidden><button class="kcard__menu-item" type="button" role="menuitem" data-dispense>Dispensar coleta</button></div>
+                      <p class="kcard__title">Portal do Cliente</p>
+                      <p class="kcard__client">Sicredi · DC6</p>
+                      <div class="kcard__meta">
+                        <span class="kcard__resp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>14 respostas</span>
+                        <span class="kcard__timing kcard__timing--recency"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>há 52d</span>
+                      </div>
+                      <div class="kcard__foot"><span class="kcard__owner"><span class="kcard__role">DM</span><span class="kcard__owner-name">Felipe Aguiar</span></span></div>
+                      
+                    </article>
+                    <article class="kcard" role="button" tabindex="0" data-card-open aria-label="Ver detalhes da coleta de E-commerce V1"><button class="kcard__kebab" type="button" aria-label="Ações da coleta" aria-haspopup="true" aria-expanded="false" data-kebab><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><div class="kcard__menu" role="menu" hidden><button class="kcard__menu-item" type="button" role="menuitem" data-dispense>Dispensar coleta</button></div>
+                      <p class="kcard__title">E-commerce V1</p>
+                      <p class="kcard__client">Magalu · DC2</p>
+                      <div class="kcard__meta">
+                        <span class="kcard__resp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>6 respostas</span>
+                        <span class="kcard__timing kcard__timing--recency"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>há 62d</span>
+                      </div>
+                      <div class="kcard__foot"><span class="kcard__owner"><span class="kcard__role">DM</span><span class="kcard__owner-name">Bruno Salles</span></span></div>
+                    </article>
+                    <article class="kcard" role="button" tabindex="0" data-card-open aria-label="Ver detalhes da coleta de Migração Legada"><button class="kcard__kebab" type="button" aria-label="Ações da coleta" aria-haspopup="true" aria-expanded="false" data-kebab><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><div class="kcard__menu" role="menu" hidden><button class="kcard__menu-item" type="button" role="menuitem" data-dispense>Dispensar coleta</button></div>
+                      <p class="kcard__title">Migração Legada</p>
+                      <p class="kcard__client">Itaú · DC1</p>
+                      <div class="kcard__meta">
+                        <span class="kcard__resp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>11 respostas</span>
+                        <span class="kcard__timing kcard__timing--recency"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>há 88d</span>
+                      </div>
+                      <div class="kcard__foot"><span class="kcard__owner"><span class="kcard__role">DM</span><span class="kcard__owner-name">Ana Prado</span></span></div>
+                    </article>
+                  </div>
+                </section>
+
+                <!-- Coluna 4: Em dia (resposta ≤ 45 dias) -->
+                <section class="kanban__col" aria-labelledby="col-emdia">
+                  <header class="kanban__col-head">
+                    <span class="kanban__dot kanban__dot--good" aria-hidden="true"></span>
+                    <h2 class="kanban__col-title" id="col-emdia">Em dia</h2><button class="kanban__info" type="button" aria-label="Sobre a etapa Em dia" aria-describedby="tip-col-emdia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></button><span class="kanban__tip" id="tip-col-emdia" role="tooltip">Recebeu resposta nos últimos 45 dias. Coleta em dia.</span>
+                    <span class="kanban__count">7</span>
+                  </header>
+                  <div class="kanban__cards">
+                    <article class="kcard" role="button" tabindex="0" data-card-open aria-label="Ver detalhes da coleta de Core Banking"><button class="kcard__kebab" type="button" aria-label="Ações da coleta" aria-haspopup="true" aria-expanded="false" data-kebab><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><div class="kcard__menu" role="menu" hidden><button class="kcard__menu-item" type="button" role="menuitem" data-dispense>Dispensar coleta</button></div>
+                      <p class="kcard__title">Core Banking</p>
+                      <p class="kcard__client">Santander · DC1</p>
+                      <div class="kcard__meta">
+                        <span class="kcard__resp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>24 respostas</span>
+                        <span class="kcard__timing kcard__timing--recency"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>há 12d</span>
+                      </div>
+                      <div class="kcard__foot"><span class="kcard__owner"><span class="kcard__role">DM</span><span class="kcard__owner-name">Ana Prado</span></span></div>
+                      
+                    </article>
+                    <article class="kcard" role="button" tabindex="0" data-card-open aria-label="Ver detalhes da coleta de Jornada Digital"><button class="kcard__kebab" type="button" aria-label="Ações da coleta" aria-haspopup="true" aria-expanded="false" data-kebab><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><div class="kcard__menu" role="menu" hidden><button class="kcard__menu-item" type="button" role="menuitem" data-dispense>Dispensar coleta</button></div>
+                      <p class="kcard__title">Jornada Digital</p>
+                      <p class="kcard__client">CPFL · DC2</p>
+                      <div class="kcard__meta">
+                        <span class="kcard__resp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>21 respostas</span>
+                        <span class="kcard__timing kcard__timing--recency"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>há 8d</span>
+                      </div>
+                      <div class="kcard__foot"><span class="kcard__owner"><span class="kcard__role">DM</span><span class="kcard__owner-name">Bruno Salles</span></span></div>
+                      
+                    </article>
+                    <article class="kcard" role="button" tabindex="0" data-card-open aria-label="Ver detalhes da coleta de Onboarding Digital"><button class="kcard__kebab" type="button" aria-label="Ações da coleta" aria-haspopup="true" aria-expanded="false" data-kebab><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><div class="kcard__menu" role="menu" hidden><button class="kcard__menu-item" type="button" role="menuitem" data-dispense>Dispensar coleta</button></div>
+                      <p class="kcard__title">Onboarding Digital</p>
+                      <p class="kcard__client">Porto · DC1</p>
+                      <div class="kcard__meta">
+                        <span class="kcard__resp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>20 respostas</span>
+                        <span class="kcard__timing kcard__timing--recency"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>há 18d</span>
+                      </div>
+                      <div class="kcard__foot"><span class="kcard__owner"><span class="kcard__role">DM</span><span class="kcard__owner-name">Ana Prado</span></span></div>
+                      
+                    </article>
+                    <article class="kcard" role="button" tabindex="0" data-card-open aria-label="Ver detalhes da coleta de App Investimentos"><button class="kcard__kebab" type="button" aria-label="Ações da coleta" aria-haspopup="true" aria-expanded="false" data-kebab><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><div class="kcard__menu" role="menu" hidden><button class="kcard__menu-item" type="button" role="menuitem" data-dispense>Dispensar coleta</button></div>
+                      <p class="kcard__title">App Investimentos</p>
+                      <p class="kcard__client">B3 · DC3</p>
+                      <div class="kcard__meta">
+                        <span class="kcard__resp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>18 respostas</span>
+                        <span class="kcard__timing kcard__timing--recency"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>há 25d</span>
+                      </div>
+                      <div class="kcard__foot"><span class="kcard__owner"><span class="kcard__role">DM</span><span class="kcard__owner-name">Carla Nunes</span></span></div>
+                      
+                    </article>
+                    <article class="kcard" role="button" tabindex="0" data-card-open aria-label="Ver detalhes da coleta de Plataforma de Dados"><button class="kcard__kebab" type="button" aria-label="Ações da coleta" aria-haspopup="true" aria-expanded="false" data-kebab><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><div class="kcard__menu" role="menu" hidden><button class="kcard__menu-item" type="button" role="menuitem" data-dispense>Dispensar coleta</button></div>
+                      <p class="kcard__title">Plataforma de Dados</p>
+                      <p class="kcard__client">RD Saúde · DC4</p>
+                      <div class="kcard__meta">
+                        <span class="kcard__resp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>15 respostas</span>
+                        <span class="kcard__timing kcard__timing--recency"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>há 34d</span>
+                      </div>
+                      <div class="kcard__foot"><span class="kcard__owner"><span class="kcard__role">DM</span><span class="kcard__owner-name">Diego Matos</span></span></div>
+                      
+                    </article>
+                    <article class="kcard" role="button" tabindex="0" data-card-open aria-label="Ver detalhes da coleta de Hub de Integração"><button class="kcard__kebab" type="button" aria-label="Ações da coleta" aria-haspopup="true" aria-expanded="false" data-kebab><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><div class="kcard__menu" role="menu" hidden><button class="kcard__menu-item" type="button" role="menuitem" data-dispense>Dispensar coleta</button></div>
+                      <p class="kcard__title">Hub de Integração</p>
+                      <p class="kcard__client">Localiza · DC2</p>
+                      <div class="kcard__meta">
+                        <span class="kcard__resp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>15 respostas</span>
+                        <span class="kcard__timing kcard__timing--recency"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>há 41d</span>
+                      </div>
+                      <div class="kcard__foot"><span class="kcard__owner"><span class="kcard__role">DM</span><span class="kcard__owner-name">Bruno Salles</span></span></div>
+                      
+                    </article>
+                    <article class="kcard" role="button" tabindex="0" data-card-open aria-label="Ver detalhes da coleta de Portal RH"><button class="kcard__kebab" type="button" aria-label="Ações da coleta" aria-haspopup="true" aria-expanded="false" data-kebab><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button><div class="kcard__menu" role="menu" hidden><button class="kcard__menu-item" type="button" role="menuitem" data-dispense>Dispensar coleta</button></div>
+                      <p class="kcard__title">Portal RH</p>
+                      <p class="kcard__client">Vale · DC5</p>
+                      <div class="kcard__meta">
+                        <span class="kcard__resp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>8 respostas</span>
+                        <span class="kcard__timing kcard__timing--recency"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>há 30d</span>
+                      </div>
+                      <div class="kcard__foot"><span class="kcard__owner"><span class="kcard__role">DM</span><span class="kcard__owner-name">Elisa Rocha</span></span></div>
+                    </article>
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            <!-- ===================== ABA: RESULTADOS (analytics) ===================== -->
+            <div id="tab-resultados" role="tabpanel" aria-labelledby="tabbtn-resultados" hidden>
+          <!-- KPI row: os 9 campos de NpsDashboardView, sem inventar tendência -->
+          <div class="kpi-grid">
+            <div class="kpi">
+              <p class="kpi__label">NPS oficial</p>
+              <div class="kpi__row">
+                <span class="kpi__value">52<span class="kpi__value-dec">,6</span></span>
+              </div>
+              <p class="kpi__foot">% promotores − % detratores</p>
+            </div>
+            <div class="kpi">
+              <p class="kpi__label">Respostas</p>
+              <div class="kpi__row">
+                <span class="kpi__value">173</span>
+              </div>
+              <p class="kpi__foot">60% de 288 enviados</p>
+            </div>
+            <div class="kpi">
+              <p class="kpi__label">Score médio</p>
+              <div class="kpi__row">
+                <span class="kpi__value">8<span class="kpi__value-dec">,5</span></span>
+              </div>
+              <p class="kpi__foot">média das notas (1 a 10)</p>
+            </div>
+            <div class="kpi">
+              <p class="kpi__label">Projetos vencidos</p>
+              <div class="kpi__row">
+                <span class="kpi__value">7</span>
+              </div>
+              <p class="kpi__foot">sem resposta há 90+ dias</p>
+            </div>
+          </div>
+
+          <!-- Distribuição + dimensões -->
+          <div class="panel-grid panel-grid--2">
+            <section class="panel" aria-labelledby="p-dist">
+              <div class="panel__head">
+                <div>
+                  <h2 class="panel__title" id="p-dist">Distribuição das respostas</h2>
+                  <p class="panel__sub">173 respostas classificadas</p>
+                </div>
+              </div>
+              <div class="panel__body">
+                <div class="dist">
+                  <div class="dist__bar" role="img" aria-label="Distribuição das respostas: 11,6% detratores, 24,3% neutros e 64,2% promotores.">
+                    <span class="dist__seg dist__seg--danger" style="inline-size: 11.6%"></span>
+                    <span class="dist__seg dist__seg--warn"   style="inline-size: 24.3%"></span>
+                    <span class="dist__seg dist__seg--good"   style="inline-size: 64.2%"></span>
+                  </div>
+                  <ul class="dist__legend" role="list">
+                    <li class="dist__item">
+                      <span class="dist__dot dist__dot--danger" aria-hidden="true"></span>
+                      <span class="dist__name">Detrator <span class="visually-hidden">(notas de 1 a 6)</span></span>
+                      <span class="dist__count">20</span>
+                      <span class="dist__pct">11,6%</span>
+                    </li>
+                    <li class="dist__item">
+                      <span class="dist__dot dist__dot--warn" aria-hidden="true"></span>
+                      <span class="dist__name">Neutro <span class="visually-hidden">(notas 7 e 8)</span></span>
+                      <span class="dist__count">42</span>
+                      <span class="dist__pct">24,3%</span>
+                    </li>
+                    <li class="dist__item">
+                      <span class="dist__dot dist__dot--good" aria-hidden="true"></span>
+                      <span class="dist__name">Promotor <span class="visually-hidden">(notas 9 e 10)</span></span>
+                      <span class="dist__count">111</span>
+                      <span class="dist__pct">64,2%</span>
+                    </li>
+                  </ul>
+                  <p class="dist__formula">NPS = 64,2 − 11,6 = <strong>52,6</strong></p>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel" aria-labelledby="p-dim">
+              <div class="panel__head">
+                <div>
+                  <h2 class="panel__title" id="p-dim">Médias por aspecto</h2>
+                  <p class="panel__sub">Formulário completo · 140 respostas · escala de 1 a 5</p>
+                </div>
+              </div>
+              <div class="panel__body">
+                <div class="chart">
+                  <div class="chart__plot" style="min-block-size: 11rem"
+                    data-chart='{"type":"bar","title":"Média por aspecto, de 1 a 5: Qualidade técnica 4,6; Prazos acordados 3,3; Comunicação 3,8; Valor para o negócio 4,3.","categories":["Qualidade","Prazos","Comunicação","Valor"],"series":[{"name":"Média","data":[4.6,3.3,3.8,4.3]}],"options":{"height":180,"valueLabels":true}}'></div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <!-- NPS por projeto -->
+          <section class="panel" aria-labelledby="p-proj" data-nps-table>
+            <div class="panel__head">
+              <div>
+                <h2 class="panel__title" id="p-proj">NPS por projeto</h2>
+                <p class="panel__sub"><span data-count>19</span> projetos listados · clique numa linha com respostas para ver todas as notas</p>
+              </div>
+            </div>
+            <div class="panel__body panel__body--flush">
+              <div class="table-wrap" tabindex="0" role="region" aria-label="Tabela de NPS por projeto (rolável)">
+                <table class="data-table data-table--zebra" data-sortable data-table-target>
+                  <caption class="visually-hidden">NPS por projeto, com cliente, delivery center, delivery manager, respostas, score e status. Linhas de projeto com respostas expandem para listar todas as notas.</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col"><button class="data-table__sort" type="button" data-sort>Projeto <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></button></th>
+                      <th scope="col"><button class="data-table__sort" type="button" data-sort>Cliente <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></button></th>
+                      <th scope="col"><button class="data-table__sort" type="button" data-sort>DC <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></button></th>
+                      <th scope="col">Delivery manager</th>
+                      <th scope="col" class="is-num"><button class="data-table__sort" type="button" data-sort>Respostas <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></button></th>
+                      <th scope="col" class="is-num"><button class="data-table__sort" type="button" data-sort>NPS <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></button></th>
+                      <th scope="col">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr data-status="respondido"><td class="data-table__cell-strong">App Investimentos</td><td>B3</td><td>DC3</td><td>Carla Nunes</td><td class="is-num">18</td><td class="is-num" data-sort-value="55.6">55,6</td><td><span class="pill pill--good">Respondido</span></td></tr>
+                    <tr data-status="respondido"><td class="data-table__cell-strong">Core Banking</td><td>Santander</td><td>DC1</td><td>Ana Prado</td><td class="is-num">24</td><td class="is-num" data-sort-value="75">75,0</td><td><span class="pill pill--good">Respondido</span></td></tr>
+                    <tr data-status="pendente"><td class="data-table__cell-strong">Data Lake</td><td>Natura</td><td>DC4</td><td>Diego Matos</td><td class="is-num">0</td><td class="is-num" data-sort-value="-101">—</td><td><span class="pill pill--danger">Pendente</span></td></tr>
+                    <tr data-status="respondido"><td class="data-table__cell-strong">E-commerce V1</td><td>Magalu</td><td>DC2</td><td>Bruno Salles</td><td class="is-num">6</td><td class="is-num" data-sort-value="33.3">33,3</td><td><span class="pill pill--good">Respondido</span></td></tr>
+                    <tr data-status="respondido"><td class="data-table__cell-strong">GenAI Atendimento</td><td>Banco Hyundai</td><td>DC3</td><td>Carla Nunes</td><td class="is-num">9</td><td class="is-num" data-sort-value="22.2">22,2</td><td><span class="pill pill--good">Respondido</span></td></tr>
+                    <tr data-status="respondido"><td class="data-table__cell-strong">Hub de Integração</td><td>Localiza</td><td>DC2</td><td>Bruno Salles</td><td class="is-num">15</td><td class="is-num" data-sort-value="40">40,0</td><td><span class="pill pill--good">Respondido</span></td></tr>
+                    <tr data-status="link-gerado"><td class="data-table__cell-strong">Hub de Pagamentos</td><td>Stone</td><td>DC2</td><td>Bruno Salles</td><td class="is-num">0</td><td class="is-num" data-sort-value="-101">—</td><td><span class="pill pill--info">Link gerado</span></td></tr>
+                    <tr data-status="respondido"><td class="data-table__cell-strong">Jornada Digital</td><td>CPFL</td><td>DC2</td><td>Bruno Salles</td><td class="is-num">21</td><td class="is-num" data-sort-value="66.7">66,7</td><td><span class="pill pill--good">Respondido</span></td></tr>
+                    <tr data-status="pendente"><td class="data-table__cell-strong">Middleware Fiscal</td><td>Vivo</td><td>DC6</td><td>Felipe Aguiar</td><td class="is-num">0</td><td class="is-num" data-sort-value="-101">—</td><td><span class="pill pill--danger">Pendente</span></td></tr>
+                    <tr data-status="respondido"><td class="data-table__cell-strong">Migração Legada</td><td>Itaú</td><td>DC1</td><td>Ana Prado</td><td class="is-num">11</td><td class="is-num" data-sort-value="63.6">63,6</td><td><span class="pill pill--good">Respondido</span></td></tr>
+                    <tr data-status="respondido"><td class="data-table__cell-strong">Modernização Core</td><td>Ambev</td><td>DC5</td><td>Elisa Rocha</td><td class="is-num">12</td><td class="is-num" data-sort-value="33.3">33,3</td><td><span class="pill pill--good">Respondido</span></td></tr>
+                    <tr data-status="pendente"><td class="data-table__cell-strong">Motor de Crédito</td><td>BV</td><td>DC5</td><td>Elisa Rocha</td><td class="is-num">0</td><td class="is-num" data-sort-value="-101">—</td><td><span class="pill pill--danger">Pendente</span></td></tr>
+                    <tr data-status="pendente"><td class="data-table__cell-strong">Nova Plataforma</td><td>Bradesco</td><td>DC1</td><td>Ana Prado</td><td class="is-num">0</td><td class="is-num" data-sort-value="-101">—</td><td><span class="pill pill--danger">Pendente</span></td></tr>
+                    <tr data-status="link-gerado"><td class="data-table__cell-strong">Omnichannel</td><td>Raia Drogasil</td><td>DC4</td><td>Diego Matos</td><td class="is-num">0</td><td class="is-num" data-sort-value="-101">—</td><td><span class="pill pill--info">Link gerado</span></td></tr>
+                    <tr data-status="respondido"><td class="data-table__cell-strong">Onboarding Digital</td><td>Porto</td><td>DC1</td><td>Ana Prado</td><td class="is-num">20</td><td class="is-num" data-sort-value="65">65,0</td><td><span class="pill pill--good">Respondido</span></td></tr>
+                    <tr data-status="respondido"><td class="data-table__cell-strong">Plataforma de Dados</td><td>RD Saúde</td><td>DC4</td><td>Diego Matos</td><td class="is-num">15</td><td class="is-num" data-sort-value="60">60,0</td><td><span class="pill pill--good">Respondido</span></td></tr>
+                    <tr data-status="link-gerado"><td class="data-table__cell-strong">Portal B2B</td><td>Dasa</td><td>DC3</td><td>Carla Nunes</td><td class="is-num">0</td><td class="is-num" data-sort-value="-101">—</td><td><span class="pill pill--info">Link gerado</span></td></tr>
+                    <tr data-status="respondido"><td class="data-table__cell-strong">Portal do Cliente</td><td>Sicredi</td><td>DC6</td><td>Felipe Aguiar</td><td class="is-num">14</td><td class="is-num" data-sort-value="7.1">7,1</td><td><span class="pill pill--good">Respondido</span></td></tr>
+                    <tr data-status="respondido"><td class="data-table__cell-strong">Portal RH</td><td>Vale</td><td>DC5</td><td>Elisa Rocha</td><td class="is-num">8</td><td class="is-num" data-sort-value="62.5">62,5</td><td><span class="pill pill--good">Respondido</span></td></tr>
+                  </tbody>
+                </table>
+                <div class="empty" data-empty hidden>
+                  <svg class="empty__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m13.5 8.5-5 5"/><path d="m8.5 8.5 5 5"/><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <p class="empty__title">Nenhum projeto encontrado</p>
+                  <p class="empty__text">Ajuste a busca ou remova os filtros de status.</p>
+                </div>
+              </div>
+            </div>
+            <div class="panel__foot pager">
+              <span class="pager__info">Mostrando <span data-count>19</span> de 19</span>
+              <span class="pager__spacer"></span>
+              <button class="btn btn--secondary btn--sm" type="button" disabled>Anterior</button>
+              <button class="btn btn--secondary btn--sm" type="button" disabled>Próximo</button>
+            </div>
+          </section>
+            </div>
+
+            <!-- ===================== ABA: RESPOSTAS ===================== -->
+            <div id="tab-respostas" role="tabpanel" aria-labelledby="tabbtn-respostas" hidden>
+              <section class="panel" aria-labelledby="p-feed" data-resp-feed>
+                <div class="panel__head">
+                  <div>
+                    <h2 class="panel__title" id="p-feed">Respostas</h2>
+                    <p class="panel__sub"><span data-resp-count>0</span> respostas · da mais recente para a mais antiga · abra uma linha para ver todos os campos</p>
+                  </div>
+                </div>
+                <div class="panel__body panel__body--flush">
+                  <!-- Tabela escaneável: o comentário aparece só como prévia de uma
+                       linha; o detalhe completo (aspectos, comentário inteiro,
+                       atribuição) vem ao abrir a resposta. -->
+                  <div class="table-wrap" tabindex="0" role="region" aria-label="Tabela de respostas (rolável)">
+                    <table class="data-table rtable">
+                      <thead>
+                        <tr>
+                          <th scope="col">Projeto</th>
+                          <th scope="col" class="is-num">Nota</th>
+                          <th scope="col">Classificação</th>
+                          <th scope="col">Formato</th>
+                          <th scope="col">Autor</th>
+                          <th scope="col">Comentário</th>
+                          <th scope="col" class="is-num">Recebida</th>
+                        </tr>
+                      </thead>
+                      <tbody data-resp-tbody></tbody>
+                    </table>
+                  </div>
+                  <div class="empty" data-resp-empty hidden>
+                    <svg class="empty__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m13.5 8.5-5 5"/><path d="m8.5 8.5 5 5"/><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    <p class="empty__title">Nenhuma resposta encontrada</p>
+                    <p class="empty__text">Ajuste a busca ou os filtros de formato, classificação e data.</p>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal: Gerar link de NPS (dois estados: configurar → compartilhar) -->
+  <dialog class="modal" id="modal-gerar-link" data-link-modal data-state="config" aria-labelledby="ml-title">
+    <div class="modal__box">
+      <header class="modal__head">
+        <div>
+          <h2 class="modal__title" id="ml-title">Gerar link de NPS</h2>
+          <p class="modal__sub">
+            <span data-config>Um link só, enviado para quantas pessoas quiser responderem.</span>
+            <span data-shared>Copie o link ou a mensagem pronta e envie ao time. Reenvie o mesmo link para cobrar.</span>
+          </p>
+        </div>
+        <button class="icon-btn modal__x" type="button" data-link-close aria-label="Fechar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </header>
+
+      <div class="modal__body">
+        <!-- Estado CONFIGURAR -->
+        <div class="mform" data-config>
+          <label class="mfield">
+            <span class="mfield__label">Projeto</span>
+            <select class="select mfield__control" data-link-project>
+              <option>App Investimentos</option>
+              <option>Core Banking</option>
+              <option>Data Lake</option>
+              <option>E-commerce V1</option>
+              <option>GenAI Atendimento</option>
+              <option>Hub de Integração</option>
+              <option>Hub de Pagamentos</option>
+              <option>Jornada Digital</option>
+              <option selected>Middleware Fiscal</option>
+              <option>Migração Legada</option>
+              <option>Modernização Core</option>
+              <option>Motor de Crédito</option>
+              <option>Nova Plataforma</option>
+              <option>Omnichannel</option>
+              <option>Onboarding Digital</option>
+              <option>Plataforma de Dados</option>
+              <option>Portal B2B</option>
+              <option>Portal do Cliente</option>
+              <option>Portal RH</option>
+            </select>
+          </label>
+          <div class="mform__row">
+            <label class="mfield">
+              <span class="mfield__label">Formato</span>
+              <select class="select mfield__control" data-link-format>
+                <option>Completo</option>
+                <option>Simplificado</option>
+              </select>
+            </label>
+            <label class="mfield">
+              <span class="mfield__label">Idioma</span>
+              <select class="select mfield__control" data-link-lang>
+                <option value="pt">Português</option>
+                <option value="en">English</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <!-- Estado COMPARTILHAR -->
+        <div class="link-summary" data-shared>
+          <span class="link-summary__project" data-summary-project></span>
+          <span class="link-summary__meta" data-summary-meta></span>
+        </div>
+
+        <div class="link-result" data-shared>
+          <div class="link-result__link">
+            <svg class="link-result__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            <span class="link-result__url" data-link-url></span>
+            <button class="btn btn--secondary btn--sm" type="button" data-copy="link">Copiar link</button>
+          </div>
+          <p class="link-expiry">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4"/><path d="M16 3v4"/><path d="M3 11h18"/></svg>
+            <span data-link-expiry></span>
+          </p>
+          <div class="msg">
+            <div class="msg__head">
+              <span class="mfield__label">Mensagem sugerida</span>
+              <button class="btn btn--tertiary btn--sm" type="button" data-copy="msg">Copiar mensagem</button>
+            </div>
+            <p class="msg__text" data-link-msg></p>
+          </div>
+          <p class="link-note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            As respostas são anônimas: nome e e-mail são opcionais. Para cobrar, reenvie o mesmo link a quem ainda não respondeu.
+          </p>
+        </div>
+      </div>
+
+      <footer class="modal__foot">
+        <button class="btn btn--primary" type="button" data-link-generate>Gerar link</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <!-- Modal: detalhe da coleta (cards com link: Aguardando / Recoleta / Em dia) -->
+  <dialog class="modal modal--wide" id="modal-detalhe" data-detail-modal aria-labelledby="dt-title">
+    <div class="modal__box">
+      <header class="modal__head">
+        <div>
+          <h2 class="modal__title" id="dt-title" data-dt-name>—</h2>
+          <p class="modal__sub" data-dt-sub></p>
+        </div>
+        <button class="icon-btn modal__x" type="button" data-detail-close aria-label="Fechar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </header>
+
+      <div class="modal__body">
+        <div class="dt-stats">
+          <div class="dt-stat"><span class="dt-stat__label">NPS</span><span class="dt-stat__value" data-dt-nps>—</span></div>
+          <div class="dt-stat"><span class="dt-stat__label">Respostas</span><span class="dt-stat__value" data-dt-resp>0</span></div>
+          <div class="dt-stat"><span class="dt-stat__label">Última resposta</span><span class="dt-stat__value" data-dt-last>—</span></div>
+        </div>
+
+        <section class="dt-section">
+          <h3 class="dt-section__title">Links de coleta</h3>
+          <div class="dt-links" data-dt-links></div>
+        </section>
+
+        <section class="dt-section">
+          <h3 class="dt-section__title">Respostas recentes</h3>
+          <ul class="resp-list dt-resp-list" data-dt-responses role="list"></ul>
+          <div class="dt-empty" data-dt-empty hidden>
+            <p class="dt-empty__title">Ainda sem respostas</p>
+            <p class="dt-empty__text">Reenvie o mesmo link para reforçar o pedido com quem ainda não respondeu.</p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Modal: detalhe de UMA resposta (aba Respostas). Todos os campos do que foi
+       respondido, com o comentário completo (pode ser longo) rolando no corpo. -->
+  <dialog class="modal" id="modal-resposta" data-resp-modal aria-labelledby="rd-title">
+    <div class="modal__box">
+      <header class="modal__head">
+        <div>
+          <h2 class="modal__title" id="rd-title" data-rd-name>—</h2>
+          <p class="modal__sub" data-rd-sub>—</p>
+        </div>
+        <button class="icon-btn modal__x" type="button" data-resp-close aria-label="Fechar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </header>
+      <div class="modal__body">
+        <!-- Nota principal (NPS, 1 a 10) + classificação + formato -->
+        <div class="rd-top">
+          <span class="resp__score" data-rd-score aria-hidden="true">—</span>
+          <div class="rd-top__meta">
+            <span class="pill" data-rd-pill>—</span>
+            <p class="rd-top__scale" data-rd-scale>Recomendaria a BRQ · nota de 1 a 10</p>
+            <span class="dt-fmt" data-rd-fmt>—</span>
+          </div>
+        </div>
+
+        <!-- Aspectos (só formato Completo), escala de 1 a 5 -->
+        <div class="rd-aspects" data-rd-aspects hidden>
+          <div class="rd-aspects__head">
+            <p class="rd-section">Aspectos da entrega <span class="rd-section__hint">escala de 1 a 5</span></p>
+            <!-- Média dos quatro aspectos: leitura da entrega, distinta da nota de
+                 recomendação (NPS, 1 a 10). O "/5" evita confundir com a nota. -->
+            <span class="rd-aspects__avg" data-rd-asp-avg></span>
+          </div>
+          <ul class="rasp" data-rd-asp-list role="list"></ul>
+        </div>
+
+        <!-- Comentário completo -->
+        <div class="rd-comment" data-rd-comment-box>
+          <p class="rd-section">Comentário</p>
+          <p class="rd-comment__text" data-rd-comment>—</p>
+        </div>
+
+        <!-- Atribuição (D4: anônima por padrão) -->
+        <div class="rd-attr">
+          <p class="rd-section">Identificação</p>
+          <p class="rd-attr__text" data-rd-attr>—</p>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="assets/brq-ui.js"></script>
+  <script src="assets/brq-charts.js"></script>
+
+  <script>
+  /* Filtro global do NPS (page-local, não vai para a lib compartilhada).
+     Uma barra governa Coleta (Kanban) + Resultados (tabela): busca + DC + Tipo + DM.
+     Refinamentos locais compõem com ela: chips de status (tabela) e "mostrar dispensados" (Coleta).
+     O tipo de projeto não aparece na UI, então é carimbado por nome a partir deste mapa. */
+  (function () {
+    var TYPE_OF = {
+      "App Investimentos": "fixed-scope", "Core Banking": "squad", "Data Lake": "staffing",
+      "E-commerce V1": "staffing", "GenAI Atendimento": "squad", "Hub de Integração": "squad",
+      "Hub de Pagamentos": "squad", "Jornada Digital": "fixed-scope", "Middleware Fiscal": "staffing",
+      "Migração Legada": "fixed-scope", "Modernização Core": "fixed-scope", "Motor de Crédito": "fixed-scope",
+      "Nova Plataforma": "squad", "Omnichannel": "squad", "Onboarding Digital": "squad",
+      "Plataforma de Dados": "staffing", "Portal B2B": "fixed-scope", "Portal do Cliente": "squad", "Portal RH": "squad"
+    };
+    var TYPE_LABEL = { "squad": "Squad", "fixed-scope": "Escopo Fechado", "staffing": "Alocação" };
+    var TOTAL = 19;
+    function txt(el) { return el ? el.textContent.trim() : ""; }
+
+    // Carimba data-* nos cards do Kanban (nome/DC/DM lidos do próprio card; tipo pelo mapa).
+    document.querySelectorAll(".kcard").forEach(function (card) {
+      var name = txt(card.querySelector(".kcard__title"));
+      var client = txt(card.querySelector(".kcard__client")); // "Vivo · DC6"
+      card.setAttribute("data-name", name);
+      card.setAttribute("data-dc", (client.split("·")[1] || "").trim());
+      card.setAttribute("data-dm", txt(card.querySelector(".kcard__owner-name")));
+      card.setAttribute("data-type", TYPE_OF[name] || "");
+      card.setAttribute("data-client", txt(card.querySelector(".kcard__client")).split("·")[0].trim());
+    });
+
+    var tableSection = document.querySelector("[data-nps-table]");
+    var rows = tableSection ? [].slice.call(tableSection.querySelectorAll("tbody tr")) : [];
+    rows.forEach(function (row) {
+      var c = row.children;
+      var name = txt(c[0]);
+      row.setAttribute("data-name", name);
+      row.setAttribute("data-dc", txt(c[2]));
+      row.setAttribute("data-dm", txt(c[3]));
+      row.setAttribute("data-type", TYPE_OF[name] || "");
+      row.setAttribute("data-client", txt(c[1]));
+    });
+
+    /* Empresa: as opções saem dos próprios dados (uma empresa por projeto na
+       carteira de exemplo), em vez de uma lista fixa que sai de sincronia. */
+    var clientOpts = (function () {
+      var seen = {};
+      return rows.map(function (r) { return r.getAttribute("data-client") || ""; })
+        .filter(function (c) { return c && !seen[c] && (seen[c] = 1); })
+        .sort(function (a, b) { return a.localeCompare(b, "pt-BR"); })
+        .map(function (c) { return [c, c]; });
+    })();
+    var tableCounters = tableSection ? tableSection.querySelectorAll("[data-count]") : [];
+    var tableEmpty = tableSection ? tableSection.querySelector("[data-empty]") : null;
+
+    /* Estado único de filtro, compartilhado com o feed de Respostas (que lê via
+       evento nps:filter-change). Uma faceta ligada = um campo preenchido. */
+    /* Facetas de lista guardam ARRAYS (multi-seleção). period é intervalo (single)
+       e dispensed é um toggle (single). */
+    var state = { q: "", client: [], dc: [], type: [], dm: [], status: [], fmt: [], cls: [], dispensed: "" };
+    var period = { preset: "", from: "", to: "" };
+    var DAY_MS = 86400000;
+
+    /* ---------- Facetas: metadados que alimentam o menu e os chips ----------
+       tabs=null → vale em todas as abas; senão, só nas listadas. As facetas de
+       aba (status/formato/classificação/dispensadas) e as globais convivem no
+       MESMO menu, sem poluir a barra quando não estão em uso. */
+    var TYPE_OPTS = [["squad", "Squad"], ["fixed-scope", "Escopo Fechado"], ["staffing", "Alocação"]];
+    var DM_OPTS = ["Ana Prado", "Bruno Salles", "Carla Nunes", "Diego Matos", "Elisa Rocha", "Felipe Aguiar"].map(function (n) { return [n, n]; });
+    var DC_OPTS = ["DC1", "DC2", "DC3", "DC4", "DC5", "DC6"].map(function (d) { return [d, d]; });
+    var FACETS = [
+      { key: "client", multi: true, label: "Empresa", chip: "Empresa", tabs: null, type: "list", opts: clientOpts },
+      { key: "dc", multi: true, label: "Delivery Center", chip: "DC", tabs: null, type: "list", opts: DC_OPTS },
+      { key: "type", multi: true, label: "Tipo de projeto", chip: "Tipo", tabs: null, type: "list", opts: TYPE_OPTS },
+      { key: "dm", multi: true, label: "Delivery Manager", chip: "DM", tabs: null, type: "list", opts: DM_OPTS },
+      { key: "period", label: "Data de coleta", chip: "Coletado", tabs: ["resultados", "respostas"], type: "period" },
+      { key: "status", multi: true, label: "Status", chip: "Status", tabs: ["resultados"], type: "list", opts: [["respondido", "Respondido"], ["link-gerado", "Link gerado"], ["pendente", "Pendente"]] },
+      { key: "fmt", multi: true, label: "Formato", chip: "Formato", tabs: ["respostas"], type: "list", opts: [["Completo", "Completo"], ["Simplificado", "Simplificado"]] },
+      { key: "cls", multi: true, label: "Classificação", chip: "Classe", tabs: ["respostas"], type: "list", opts: [["promotor", "Promotor"], ["neutro", "Neutro"], ["detrator", "Detrator"]] },
+      { key: "dispensed", label: "Coletas dispensadas", chip: "Dispensadas", tabs: ["coleta"], type: "list", opts: [["", "Ocultar (padrão)"], ["show", "Mostrar"]] }
+    ];
+    function facet(key) { for (var i = 0; i < FACETS.length; i++) if (FACETS[i].key === key) return FACETS[i]; return null; }
+    function optLabel(f, val) {
+      if (!f.opts) return val;
+      for (var i = 0; i < f.opts.length; i++) if (f.opts[i][0] === val) return f.opts[i][1];
+      return val;
+    }
+
+    function currentTab() {
+      var a = document.querySelector('.tab[aria-selected="true"]');
+      return a ? (a.getAttribute("aria-controls") || "").replace("tab-", "") : "coleta";
+    }
+    function facetAvailable(f) { return !f.tabs || f.tabs.indexOf(currentTab()) >= 0; }
+
+    /* ---------- Período (régua = data da resposta) ---------- */
+    function lastResponseDays(el) {
+      var map = window.NPS_LAST_RESPONSE;
+      var name = el.getAttribute("data-name") || "";
+      return map && Object.prototype.hasOwnProperty.call(map, name) ? map[name] : null;
+    }
+    function inPeriod(days) {
+      if (!period.preset) return true;
+      if (days === null || days === undefined) return false;
+      if (period.preset !== "custom") return days <= parseInt(period.preset, 10);
+      if (!period.from && !period.to) return true;
+      var d = new Date(); d.setHours(0, 0, 0, 0);
+      d = new Date(d.getTime() - days * DAY_MS);
+      if (period.from && d < new Date(period.from + "T00:00:00")) return false;
+      if (period.to && d > new Date(period.to + "T23:59:59")) return false;
+      return true;
+    }
+    window.npsInPeriod = inPeriod;
+    var PERIOD_LABEL = { "30": "últimos 30 dias", "90": "últimos 90 dias", "180": "últimos 6 meses", "365": "últimos 12 meses" };
+    function periodLabel() {
+      if (period.preset !== "custom") return PERIOD_LABEL[period.preset] || period.preset;
+      var br = function (v) { var p = v.split("-"); return p[2] + "/" + p[1] + "/" + p[0]; };
+      if (period.from && period.to) return br(period.from) + " a " + br(period.to);
+      if (period.from) return "a partir de " + br(period.from);
+      if (period.to) return "até " + br(period.to);
+      return "intervalo personalizado";
+    }
+
+    /* ---------- Engines (inalterados no essencial) ---------- */
+    function has(arr, v) { return arr.indexOf(v) >= 0; }
+    function okGlobal(el) {
+      return (!state.q || el.textContent.toLowerCase().indexOf(state.q) !== -1)
+        && (!state.client.length || has(state.client, el.getAttribute("data-client") || ""))
+        && (!state.dc.length || has(state.dc, el.getAttribute("data-dc") || ""))
+        && (!state.type.length || has(state.type, el.getAttribute("data-type") || ""))
+        && (!state.dm.length || has(state.dm, el.getAttribute("data-dm") || ""));
+    }
+    function applyKanban() {
+      document.querySelectorAll(".kanban__col").forEach(function (col) {
+        var n = 0;
+        col.querySelectorAll(".kcard").forEach(function (card) {
+          var dispensed = card.getAttribute("data-dispensed") === "true";
+          var show = okGlobal(card) && !(dispensed && state.dispensed !== "show");
+          card.hidden = !show;
+          if (show) n++;
+        });
+        var badge = col.querySelector(".kanban__count");
+        if (badge) badge.textContent = String(n);
+      });
+    }
+    function applyTable() {
+      var shown = 0;
+      rows.forEach(function (row) {
+        var okStatus = !state.status.length || has(state.status, row.getAttribute("data-status") || "");
+        var show = okGlobal(row) && okStatus && inPeriod(lastResponseDays(row));
+        row.hidden = !show;
+        if (show) shown++;
+      });
+      for (var i = 0; i < tableCounters.length; i++) tableCounters[i].textContent = String(shown);
+      if (tableEmpty) tableEmpty.hidden = shown !== 0;
+    }
+
+    /* ---------- Chips aplicados + contador ---------- */
+    var countEl = document.querySelector("[data-nps-count]");
+    var tokensEl = document.querySelector("[data-nps-tokens]");
+    var clearEl = document.querySelector("[data-nps-clear]");
+    var appliedEl = document.querySelector("[data-nps-applied]");
+    var searchInput = document.querySelector("[data-nps-search]");
+
+    function activeFacets() {
+      var out = [];
+      FACETS.forEach(function (f) {
+        var v = facetSummary(f);
+        if (v) out.push({ f: f, v: v });
+      });
+      return out;
+    }
+
+    function clearOne(key) {
+      if (key === "period") { period.preset = ""; period.from = ""; period.to = ""; window.dispatchEvent(new CustomEvent("nps:period-change")); }
+      else if (key === "dispensed") state.dispensed = "";
+      else state[key] = [];
+      apply();
+    }
+
+    function renderApplied() {
+      var toks = activeFacets();
+      if (tokensEl) {
+        tokensEl.textContent = "";
+        toks.forEach(function (t) {
+          var b = document.createElement("button");
+          b.type = "button"; b.className = "ftoken";
+          b.setAttribute("aria-label", "Remover filtro " + t.f.chip + ": " + t.v);
+          var key = document.createElement("span"); key.className = "ftoken__key"; key.textContent = t.f.chip;
+          var x = document.createElement("span"); x.className = "ftoken__x"; x.setAttribute("aria-hidden", "true"); x.textContent = "✕";
+          b.appendChild(key);
+          b.appendChild(document.createTextNode(" " + t.v + " "));
+          b.appendChild(x);
+          b.addEventListener("click", function () { clearOne(t.f.key); });
+          tokensEl.appendChild(b);
+        });
+      }
+      var hasAny = toks.length > 0 || !!state.q;
+      if (clearEl) clearEl.hidden = !hasAny;
+      if (appliedEl) appliedEl.hidden = toks.length === 0;
+      if (badgeEl) { badgeEl.hidden = toks.length === 0; badgeEl.textContent = String(toks.length); }
+      if (countEl) {
+        var n = rows.filter(function (r) { return okGlobal(r) && inPeriod(lastResponseDays(r)); }).length;
+        countEl.innerHTML = "<strong>" + n + "</strong> de " + TOTAL + " projetos";
+      }
+    }
+
+    function apply() {
+      applyKanban();
+      applyTable();
+      renderApplied();
+      /* O feed de Respostas vive noutro script; recebe o estado por evento. */
+      window.dispatchEvent(new CustomEvent("nps:filter-change", { detail: { q: state.q, fmt: state.fmt.slice(), cls: state.cls.slice() } }));
+    }
+
+    /* ==================== Menu de filtros (popover Linear-like) ==================== */
+    var menuRoot = document.querySelector("[data-fmenu]");
+    var menuBtn = document.querySelector("[data-fmenu-btn]");
+    var menuPop = document.querySelector("[data-fmenu-pop]");
+    var badgeEl = document.querySelector("[data-fmenu-badge]");
+    var menuOpen = false, menuView = null;   /* null = raiz; senão a chave da faceta */
+
+    function ico(paths) {
+      return '<span class="fmenu__item-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + '</svg></span>';
+    }
+    var CHEVRON = '<span class="fmenu__item-chevron"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg></span>';
+    var CHECK = '<span class="fmenu__check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>';
+
+    function facetSummary(f) {
+      if (f.key === "period") return period.preset ? periodLabel() : "";
+      if (f.key === "dispensed") return state.dispensed === "show" ? "visíveis" : "";
+      var arr = state[f.key] || [];
+      if (!arr.length) return "";
+      var labels = arr.map(function (v) { return optLabel(f, v); });
+      return labels.length <= 2 ? labels.join(", ") : (labels.length + " selecionados");
+    }
+
+    function renderRoot() {
+      menuView = null;
+      var html = '<div class="fmenu__list" role="menu">';
+      FACETS.filter(facetAvailable).forEach(function (f) {
+        var val = facetSummary(f);
+        html += '<button class="fmenu__item" type="button" role="menuitem" data-facet="' + f.key + '">'
+          + '<span class="fmenu__item-label">' + f.label + '</span>'
+          + '<span class="fmenu__item-val">' + (val || "") + '</span>'
+          + CHEVRON + '</button>';
+      });
+      html += '</div>';
+      menuPop.innerHTML = html;
+      menuPop.querySelectorAll("[data-facet]").forEach(function (b) {
+        b.addEventListener("click", function () { renderFacet(b.getAttribute("data-facet")); });
+      });
+      focusFirst();
+    }
+
+    function renderFacet(key, focusVal) {
+      menuView = key;
+      var f = facet(key);
+      var clearBtn = "";
+      var selected = f.multi && state[key].length;
+      if (selected) clearBtn = '<button class="fmenu__clear-sel" type="button" data-fmenu-clearsel>Limpar</button>';
+      var head = '<div class="fmenu__head">'
+        + '<button class="fmenu__back" type="button" data-fmenu-back aria-label="Voltar aos filtros">'
+        + '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4L6 8l4 4"/></svg></button>'
+        + '<span class="fmenu__title">' + f.label + '</span>' + clearBtn + '</div>';
+
+      if (f.type === "period") { menuPop.innerHTML = head + renderPeriodBody(); wirePeriod(); focusFirst(); return; }
+
+      var html = head + '<div class="fmenu__list" role="menu">';
+      if (f.multi) {
+        f.opts.forEach(function (o) { html += item(o[0], o[1], has(state[key], o[0]), "menuitemcheckbox"); });
+      } else {
+        /* single (dispensadas): rádio, aplica e volta à raiz */
+        f.opts.forEach(function (o) { html += item(o[0], o[1], state[key] === o[0], "menuitemradio"); });
+      }
+      html += '</div>';
+      menuPop.innerHTML = html;
+      menuPop.querySelector("[data-fmenu-back]").addEventListener("click", renderRoot);
+      var cs = menuPop.querySelector("[data-fmenu-clearsel]");
+      if (cs) cs.addEventListener("click", function () { state[key] = []; apply(); renderFacet(key); });
+
+      menuPop.querySelectorAll("[data-val]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          var v = b.getAttribute("data-val");
+          if (f.multi) {
+            /* multi-seleção: alterna e FICA no painel, para marcar vários de uma vez */
+            var i = state[key].indexOf(v);
+            if (i >= 0) state[key].splice(i, 1); else state[key].push(v);
+            apply();
+            renderFacet(key, v);
+          } else {
+            state[key] = v; apply(); renderRoot();
+          }
+        });
+      });
+
+      if (focusVal != null) {
+        var back = menuPop.querySelector('[data-val="' + String(focusVal).replace(/"/g, '\\"') + '"]');
+        if (back) { back.focus(); return; }
+      }
+      focusFirst();
+    }
+
+    function item(val, label, checked, role) {
+      return '<button class="fmenu__item" type="button" role="' + (role || "menuitemradio") + '" aria-checked="' + (checked ? "true" : "false") + '" data-val="' + val.replace(/"/g, "&quot;") + '">'
+        + CHECK + '<span class="fmenu__item-label">' + label + '</span></button>';
+    }
+
+    function renderPeriodBody() {
+      var presets = [["", "Qualquer data"], ["30", "Últimos 30 dias"], ["90", "Últimos 90 dias"], ["180", "Últimos 6 meses"], ["365", "Últimos 12 meses"], ["custom", "Intervalo personalizado"]];
+      var html = '<div class="fmenu__list" role="menu">';
+      presets.forEach(function (o) { html += item(o[0], o[1], period.preset === o[0]); });
+      html += '</div>';
+      if (period.preset === "custom") {
+        html += '<div class="fmenu__range">'
+          + '<label>De <input class="select" type="date" data-period-from value="' + (period.from || "") + '"></label>'
+          + '<label>Até <input class="select" type="date" data-period-to value="' + (period.to || "") + '"></label></div>';
+      }
+      return html;
+    }
+    function wirePeriod() {
+      menuPop.querySelector("[data-fmenu-back]").addEventListener("click", renderRoot);
+      menuPop.querySelectorAll("[data-val]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          period.preset = b.getAttribute("data-val");
+          window.dispatchEvent(new CustomEvent("nps:period-change"));
+          apply();
+          if (period.preset === "custom") { menuPop.innerHTML = ''; renderFacet("period"); }
+          else renderRoot();
+        });
+      });
+      var from = menuPop.querySelector("[data-period-from]"), to = menuPop.querySelector("[data-period-to]");
+      if (from) from.addEventListener("change", function () { period.from = from.value; window.dispatchEvent(new CustomEvent("nps:period-change")); apply(); });
+      if (to) to.addEventListener("change", function () { period.to = to.value; window.dispatchEvent(new CustomEvent("nps:period-change")); apply(); });
+    }
+
+    function focusFirst() {
+      var el = menuPop.querySelector("[data-facet], [data-fmenu-back]");
+      if (el) el.focus();
+    }
+    function openMenu() {
+      menuOpen = true; menuPop.hidden = false; menuBtn.setAttribute("aria-expanded", "true");
+      renderRoot();
+    }
+    function closeMenu() {
+      if (!menuOpen) return;
+      menuOpen = false; menuPop.hidden = true; menuBtn.setAttribute("aria-expanded", "false");
+    }
+    if (menuBtn) menuBtn.addEventListener("click", function () { menuOpen ? closeMenu() : openMenu(); });
+    /* Clique DENTRO do popover não fecha o menu. Precisa parar aqui porque o
+       innerHTML re-renderiza os itens: o alvo do clique é destacado antes de
+       chegar ao document, e o teste .contains(target) daria falso. */
+    if (menuPop) menuPop.addEventListener("click", function (e) { e.stopPropagation(); });
+    document.addEventListener("click", function (e) { if (menuOpen && menuRoot && !menuRoot.contains(e.target)) closeMenu(); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && menuOpen) { closeMenu(); menuBtn.focus(); } });
+
+    /* ---------- Busca, limpar tudo, refresh do quadro, troca de aba ---------- */
+    if (searchInput) searchInput.addEventListener("input", function () { state.q = searchInput.value.trim().toLowerCase(); apply(); });
+    window.addEventListener("nps:kanban-refresh", applyKanban);
+    window.addEventListener("nps:tab-change", function () {
+      closeMenu();
+      renderApplied();   /* a faceta "Coletado" pode continuar aplicada em outra aba */
+      applyKanban(); applyTable();
+    });
+
+    if (clearEl) clearEl.addEventListener("click", function () {
+      state.q = ""; state.client = []; state.dc = []; state.type = []; state.dm = [];
+      state.status = []; state.fmt = []; state.cls = []; state.dispensed = "";
+      period.preset = ""; period.from = ""; period.to = "";
+      if (searchInput) searchInput.value = "";
+      window.dispatchEvent(new CustomEvent("nps:period-change"));
+      closeMenu();
+      apply();
+    });
+
+    apply();
+  })();
+  </script>
+
+  <script>
+  /* Modal "Gerar link": fluxo de link compartilhado + mensagem sugerida (page-local).
+     dialog nativo (foco/Escape/backdrop). Token e mensagem são de exemplo, montados no front. */
+  (function () {
+    var modal = document.querySelector("[data-link-modal]");
+    if (!modal) return;
+    var projectSel = modal.querySelector("[data-link-project]");
+    var formatSel = modal.querySelector("[data-link-format]");
+    var langSel = modal.querySelector("[data-link-lang]");
+    var urlEl = modal.querySelector("[data-link-url]");
+    var msgEl = modal.querySelector("[data-link-msg]");
+    var sumProject = modal.querySelector("[data-summary-project]");
+    var sumMeta = modal.querySelector("[data-summary-meta]");
+    var expiryEl = modal.querySelector("[data-link-expiry]");
+    var LANG_LABEL = { pt: "Português", en: "English" };
+
+    /* Regra de negócio: o link vale 20 dias contados da geração. Depois disso não
+       se reaproveita link nenhum, gera-se um novo. */
+    var LINK_DIAS = 20;
+    function expiryDate() {
+      var d = new Date(); d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() + LINK_DIAS);
+      return d;
+    }
+    function fmtBR(d) {
+      var p = function (n) { return String(n).padStart(2, "0"); };
+      return p(d.getDate()) + "/" + p(d.getMonth() + 1) + "/" + d.getFullYear();
+    }
+    function fmtCurto(d) {
+      var p = function (n) { return String(n).padStart(2, "0"); };
+      return p(d.getDate()) + "/" + p(d.getMonth() + 1);
+    }
+
+    // token de EXEMPLO, determinístico por projeto (formato GUID). No produto vem do backend.
+    function fakeToken(seed) {
+      var h = 2166136261;
+      for (var i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = (h * 16777619) >>> 0; }
+      var hex = h.toString(16).padStart(8, "0");
+      return hex + "-" + hex.slice(0, 4) + "-4" + hex.slice(1, 4) + "-8" + hex.slice(2, 5) + "-" + hex + hex.slice(0, 4);
+    }
+    function urlFor(project) { return "https://ops.brq.com/nps/" + fakeToken(project); }
+    function messageFor(project, lang, url, expira) {
+      if (lang === "en") {
+        return "Hi! We're collecting NPS for the " + project + " project and your feedback really matters. "
+          + "It takes under a minute and your answer is anonymous:\n" + url
+          + "\nThe survey is open until " + fmtCurto(expira) + ". Thank you!";
+      }
+      return "Olá! Estamos coletando o NPS do projeto " + project + " e a sua opinião faz diferença. "
+        + "Leva menos de 1 minuto e a resposta é anônima:\n" + url
+        + "\nA pesquisa fica aberta até " + fmtCurto(expira) + ". Obrigado!";
+    }
+    function fill() {
+      var project = projectSel ? projectSel.value : "";
+      var lang = langSel ? langSel.value : "pt";
+      var format = formatSel ? formatSel.value : "";
+      var url = urlFor(project);
+      var expira = expiryDate();
+      if (urlEl) urlEl.textContent = url;
+      if (expiryEl) expiryEl.innerHTML = "Este link vale por " + LINK_DIAS + " dias: expira em <strong>" + fmtBR(expira) + "</strong>.";
+      if (msgEl) msgEl.textContent = messageFor(project, lang, url, expira);
+      if (sumProject) sumProject.textContent = project;
+      if (sumMeta) sumMeta.textContent = format + " · " + (LANG_LABEL[lang] || lang);
+    }
+    function setState(s) { modal.setAttribute("data-state", s); }
+
+    function open(project) {
+      if (project && projectSel) { projectSel.value = project; } // pré-seleciona o projeto do card
+      setState("config");                                        // reabre sempre no estado configurar
+      try { modal.showModal(); } catch (e) { modal.setAttribute("open", ""); }
+    }
+    function close() {
+      try { modal.close(); } catch (e) { modal.removeAttribute("open"); }
+    }
+
+    document.querySelectorAll("[data-link-open]").forEach(function (b) {
+      b.addEventListener("click", function () { open(b.getAttribute("data-open-project")); });
+    });
+    /* "Gerar novo" a partir do detalhe (link vencido) reabre este modal já no projeto. */
+    window.addEventListener("nps:open-generate", function (e) { open((e.detail || {}).project || ""); });
+    modal.querySelectorAll("[data-link-close]").forEach(function (b) { b.addEventListener("click", close); });
+    modal.addEventListener("click", function (e) { if (e.target === modal) close(); }); // clique no backdrop
+
+    /* Decisão de produto: ao gerar um link novo (primeiro ou substituto de um
+       expirado), o card volta para "Aguardando resposta" com o prazo zerado. */
+    function moveCardToAwaiting(project) {
+      var card = [].slice.call(document.querySelectorAll(".kcard")).filter(function (c) {
+        var t = c.querySelector(".kcard__title");
+        return t && t.textContent.trim() === project;
+      })[0];
+      if (!card) return;
+      var target = document.querySelector('[aria-labelledby="col-aguardando"] .kanban__cards');
+      if (!target) return;
+
+      card.classList.remove("is-expired");
+      card.removeAttribute("data-expired");
+      /* Link novo: o chip passa a ser um PRAZO (ampulheta), 20 dias à frente e sem
+         alarme (folga). Substitui o que estava lá (recência/idade/expirado). */
+      var chip = card.querySelector(".kcard__timing");
+      if (chip) {
+        chip.className = "kcard__timing kcard__timing--deadline";
+        chip.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.17a2 2 0 0 0-.59-1.41L12 12l-4.41 4.42A2 2 0 0 0 7 17.83V22"/><path d="M7 2v4.17a2 2 0 0 0 .59 1.41L12 12l4.41-4.42A2 2 0 0 0 17 6.17V2"/></svg>Expira em ' + LINK_DIAS + 'd';
+      }
+      var cta = card.querySelector(".kcard__cta");
+      if (cta) cta.remove();
+      if (!card.hasAttribute("data-card-open")) {
+        card.setAttribute("data-card-open", "");
+        card.setAttribute("role", "button");
+        card.setAttribute("tabindex", "0");
+      }
+      target.appendChild(card);
+      window.dispatchEvent(new CustomEvent("nps:kanban-refresh"));
+    }
+
+    var genBtn = modal.querySelector("[data-link-generate]");
+    if (genBtn) genBtn.addEventListener("click", function () {
+      fill();
+      setState("shared");
+      moveCardToAwaiting(projectSel ? projectSel.value : "");
+    });
+
+    modal.querySelectorAll("[data-copy]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var what = btn.getAttribute("data-copy");
+        var text = what === "msg" ? (msgEl ? msgEl.textContent : "") : (urlEl ? urlEl.textContent : "");
+        if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
+        var label = btn.textContent;
+        btn.textContent = "Copiado!";
+        btn.disabled = true;
+        setTimeout(function () { btn.textContent = label; btn.disabled = false; }, 1500);
+      });
+    });
+  })();
+  </script>
+
+  <script>
+  /* Tooltips das etapas do Kanban: hover/foco mostram (CSS); clique fixa (toque); Escape/clique-fora fecham. */
+  (function () {
+    var infos = document.querySelectorAll(".kanban__info");
+    if (!infos.length) return;
+    function closeAll(except) {
+      document.querySelectorAll(".kanban__col-head.is-open").forEach(function (h) {
+        if (h !== except) h.classList.remove("is-open");
+      });
+    }
+    infos.forEach(function (btn) {
+      var head = btn.closest(".kanban__col-head");
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var willOpen = !head.classList.contains("is-open");
+        closeAll(head);
+        head.classList.toggle("is-open", willOpen);
+      });
+    });
+    document.addEventListener("click", function () { closeAll(null); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeAll(null); });
+  })();
+  </script>
+
+  <script>
+  /* Modal de detalhe da coleta (page-local). Abre ao clicar num card COM link.
+     Puxa NPS/respostas da tabela de Resultados (mesmo seed) + estágio/recência do card;
+     link e respostas recentes são exemplos determinísticos montados no front. */
+  (function () {
+    var modal = document.querySelector("[data-detail-modal]");
+    if (!modal) return;
+    var nameEl = modal.querySelector("[data-dt-name]");
+    var subEl = modal.querySelector("[data-dt-sub]");
+    var npsEl = modal.querySelector("[data-dt-nps]");
+    var respEl = modal.querySelector("[data-dt-resp]");
+    var lastEl = modal.querySelector("[data-dt-last]");
+    var linksEl = modal.querySelector("[data-dt-links]");
+    var listEl = modal.querySelector("[data-dt-responses]");
+    var emptyEl = modal.querySelector("[data-dt-empty]");
+
+    function txt(el) { return el ? el.textContent.trim() : ""; }
+    function hash(s) { var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; } return h; }
+    function fakeToken(seed) {
+      var hx = hash(seed).toString(16).padStart(8, "0");
+      return hx + "-" + hx.slice(0, 4) + "-4" + hx.slice(1, 4) + "-8" + hx.slice(2, 5) + "-" + hx + hx.slice(0, 4);
+    }
+    function dias(n) { return n + (n === 1 ? " dia" : " dias"); }
+
+    var COMMENTS = [
+      "Time acessível e previsível. Seguimos confiantes na entrega.",
+      "Entrega no prazo, mas a comunicação de mudanças pode chegar antes.",
+      "Qualidade técnica boa; faltou antecipar um ou outro risco.",
+      "", "Parceria excelente, recomendo sem ressalvas.", ""
+    ];
+    var NAMES = ["Marina Tavares", "Rafael Lino", "Juliana Peixoto", "Otávio Brandão", "Carla Mendes", "Bruno Dias"];
+    function scoreClass(s) { return s >= 9 ? "good" : (s >= 7 ? "warn" : "danger"); }
+    function scoreLabel(s) { return s >= 9 ? "Promotor" : (s >= 7 ? "Neutro" : "Detrator"); }
+
+    // Se o projeto tem os dois links, as respostas vêm de ambos os formatos; senão, só Completo.
+    function buildResponses(name, count, baseDays, hasBoth) {
+      var out = [], h = hash(name), n = Math.min(3, count), scores = [10, 9, 8, 7, 9, 6];
+      for (var i = 0; i < n; i++) {
+        out.push({
+          score: scores[(h + i * 2) % scores.length],
+          comment: COMMENTS[(h + i * 3) % COMMENTS.length],
+          who: NAMES[(h + i) % NAMES.length],
+          days: baseDays + i * 4,
+          format: hasBoth && (h + i) % 2 === 1 ? "Simplificado" : "Completo"
+        });
+      }
+      return out;
+    }
+    function renderResponses(items) {
+      listEl.textContent = "";
+      items.forEach(function (r) {
+        var cls = scoreClass(r.score);
+        var li = document.createElement("li"); li.className = "resp";
+        var score = document.createElement("span");
+        score.className = "resp__score resp__score--" + cls; score.setAttribute("aria-hidden", "true"); score.textContent = String(r.score);
+        var body = document.createElement("div"); body.className = "resp__body";
+        /* A nota já é o número grande à esquerda; a pill diz só a classificação. */
+        var pill = document.createElement("span"); pill.className = "pill pill--" + cls; pill.textContent = scoreLabel(r.score);
+        var head = document.createElement("p"); head.className = "resp__head";
+        head.appendChild(pill); body.appendChild(head);
+        if (r.comment) { var c = document.createElement("p"); c.className = "resp__comment"; c.textContent = "“" + r.comment + "”"; body.appendChild(c); }
+        /* Formato vai como texto discreto no rodapé, não como tag competindo. */
+        var meta = document.createElement("p"); meta.className = "resp__meta"; meta.textContent = r.who + " · há " + dias(r.days) + " · " + r.format;
+        body.appendChild(meta);
+        li.appendChild(score); li.appendChild(body); listEl.appendChild(li);
+      });
+    }
+    function tableRow(name) { return document.querySelector('[data-nps-table] tbody tr[data-name="' + name + '"]'); }
+
+    // Um projeto pode ter link Completo E Simplificado ao mesmo tempo (cada um com seu token).
+    // primaryExp = dias até o link principal expirar (negativo = já expirou); se null,
+    // deriva do hash (cards que não são de "aguardando" costumam ter link vencido).
+    function buildLinks(name, primaryExp) {
+      var h = hash(name);
+      var expA = primaryExp != null ? primaryExp : -((h % 12) + 1);   // sem contexto: expirado
+      var links = [{ fmt: "Completo", url: "https://ops.brq.com/nps/" + fakeToken(name + "|completo"), exp: expA }];
+      if (h % 2 === 0) {
+        var expB = expA - 3;   // o 2º formato foi gerado alguns dias antes
+        links.push({ fmt: "Simplificado", url: "https://ops.brq.com/nps/" + fakeToken(name + "|simplificado"), exp: expB });
+      }
+      return links;
+    }
+    var CLOCK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+    // Estado de validade: perto de vencer (≤ 5 dias) vira atenção; vencido, crítico.
+    function expBadge(exp) {
+      var span = document.createElement("span");
+      if (exp <= 0) { span.className = "dt-linkexp dt-linkexp--danger"; span.innerHTML = CLOCK_SVG + "<span>expirado há " + dias(-exp) + "</span>"; }
+      else if (exp <= 5) { span.className = "dt-linkexp dt-linkexp--warn"; span.innerHTML = CLOCK_SVG + "<span>expira em " + dias(exp) + "</span>"; }
+      else { span.className = "dt-linkexp dt-linkexp--ok"; span.innerHTML = CLOCK_SVG + "<span>expira em " + dias(exp) + "</span>"; }
+      return span;
+    }
+    function renderLinks(links) {
+      linksEl.textContent = "";
+      links.forEach(function (lk) {
+        var row = document.createElement("div"); row.className = "link-result__link";
+        var fmt = document.createElement("span"); fmt.className = "dt-fmt"; fmt.textContent = lk.fmt;
+        var url = document.createElement("span"); url.className = "link-result__url"; url.textContent = lk.url;
+        row.appendChild(fmt); row.appendChild(url); row.appendChild(expBadge(lk.exp));
+        if (lk.exp <= 0) {
+          /* Link vencido não se reaproveita (D8): a ação é gerar um novo. */
+          var gen = document.createElement("button"); gen.type = "button"; gen.className = "btn btn--secondary btn--sm";
+          gen.textContent = "Gerar novo"; gen.setAttribute("aria-label", "Gerar novo link " + lk.fmt);
+          gen.addEventListener("click", function () { close(); window.dispatchEvent(new CustomEvent("nps:open-generate", { detail: { project: currentName } })); });
+          row.appendChild(gen);
+        } else {
+          var btn = document.createElement("button"); btn.type = "button"; btn.className = "btn btn--secondary btn--sm"; btn.textContent = "Copiar";
+          btn.setAttribute("aria-label", "Copiar link " + lk.fmt);
+          btn.addEventListener("click", function () {
+            if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(lk.url); }
+            btn.textContent = "Copiado!"; btn.disabled = true;
+            setTimeout(function () { btn.textContent = "Copiar"; btn.disabled = false; }, 1500);
+          });
+          row.appendChild(btn);
+        }
+        linksEl.appendChild(row);
+      });
+    }
+
+    var currentName = "";
+    function open(card) {
+      var name = txt(card.querySelector(".kcard__title"));
+      currentName = name;
+      var cd = txt(card.querySelector(".kcard__client")).split("·");
+      var client = (cd[0] || "").trim(), dc = (cd[1] || "").trim();
+      var dm = txt(card.querySelector(".kcard__owner-name"));
+      var responses = parseInt((txt(card.querySelector(".kcard__resp")).match(/\d+/) || [0])[0], 10) || 0;
+      var chipTxt = txt(card.querySelector(".kcard__timing"));
+      var chipDays = parseInt((chipTxt.match(/(\d+)\s*d/) || [])[1], 10);
+      var col = card.closest(".kanban__col");
+      var stage = col ? (col.getAttribute("aria-labelledby") || "").replace("col-", "") : "";
+      var row = tableRow(name);
+      var nps = row ? txt(row.children[5]) : "—";
+
+      /* Lê o chip do card. Prazo (ampulheta) e recência (histórico) são exclusivos:
+         "Expira em Xd" → +X · "Expirado há Xd" → -X · "há Xd" → recência (lastDays). */
+      var primaryExp = null, lastDays = null;
+      if (!isNaN(chipDays)) {
+        if (/expira em/i.test(chipTxt)) primaryExp = chipDays;
+        else if (/expirado/i.test(chipTxt)) primaryExp = -chipDays;
+        else if (/^há/i.test(chipTxt)) lastDays = chipDays;
+      }
+
+      nameEl.textContent = name;
+      subEl.textContent = [client, dc, dm].filter(Boolean).join(" · ");
+      npsEl.textContent = responses > 0 ? nps : "—";
+      respEl.textContent = String(responses);
+      lastEl.textContent = responses > 0 && lastDays ? "há " + dias(lastDays) : "—";
+
+      var links = buildLinks(name, primaryExp);
+      renderLinks(links);
+
+      if (responses > 0) {
+        var built = buildResponses(name, responses, lastDays || 3, links.length === 2);
+        renderResponses(built);
+        listEl.hidden = false; emptyEl.hidden = true;
+      } else {
+        listEl.textContent = ""; listEl.hidden = true; emptyEl.hidden = false;
+      }
+      try { modal.showModal(); } catch (e) { modal.setAttribute("open", ""); }
+    }
+    function close() { try { modal.close(); } catch (e) { modal.removeAttribute("open"); } }
+
+    document.querySelectorAll("[data-card-open]").forEach(function (card) {
+      card.addEventListener("click", function () { open(card); });
+      card.addEventListener("keydown", function (e) {
+        if (e.target !== card) { return; }   // não abrir detalhe ao usar o kebab/menu de dentro do card
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(card); }
+      });
+    });
+    modal.querySelectorAll("[data-detail-close]").forEach(function (b) { b.addEventListener("click", close); });
+    modal.addEventListener("click", function (e) { if (e.target === modal) close(); });
+  })();
+  </script>
+
+  <script>
+  /* Aba "Respostas": feed de respostas individuais (page-local). Gerado dos projetos respondidos
+     (mesmo seed, via tabela de Resultados). Filtros locais: busca + formato + classificação.
+     Exemplos determinísticos no front; no produto viria de ListResponses com Format por resposta. */
+  (function () {
+    var panel = document.querySelector("[data-resp-feed]");
+    if (!panel) return;
+    var countEl = panel.querySelector("[data-resp-count]");
+    var emptyEl = panel.querySelector("[data-resp-empty]");
+    var search = document.querySelector("[data-nps-search]"); // busca GLOBAL do topo governa o feed
+
+    function txt(el) { return el ? el.textContent.trim() : ""; }
+    function hash(s) { var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; } return h; }
+    function dias(n) { return n + (n === 1 ? " dia" : " dias"); }
+    var COMMENTS = [
+      "Time acessível e previsível. Seguimos confiantes na entrega.",
+      "Entrega no prazo, mas a comunicação de mudanças pode chegar antes.",
+      "Qualidade técnica boa; faltou antecipar um ou outro risco.",
+      "", "Parceria excelente, recomendo sem ressalvas.", "",
+      "Prazo estourou de novo e a gente descobriu na reunião de status.", ""
+    ];
+    var NAMES = ["Marina Tavares", "Rafael Lino", "Juliana Peixoto", "Otávio Brandão", "Carla Mendes", "Bruno Dias", "Sofia Braga"];
+    var SCORES = [10, 9, 8, 7, 9, 6, 8, 4, 10, 5];
+    function clsOf(s) { return s >= 9 ? "promotor" : (s >= 7 ? "neutro" : "detrator"); }
+    function pillOf(c) { return c === "promotor" ? "good" : (c === "neutro" ? "warn" : "danger"); }
+    function labelOf(c) { return c === "promotor" ? "Promotor" : (c === "neutro" ? "Neutro" : "Detrator"); }
+
+    // universo = projetos respondidos (linhas "respondido" na tabela de Resultados)
+    var rows = [].slice.call(document.querySelectorAll('[data-nps-table] tbody tr[data-status="respondido"]'));
+    var ASPECTS = ["Qualidade técnica", "Prazos acordados", "Comunicação", "Valor para o negócio"];
+    function firstName(full) { return full.split(" ")[0]; }
+    function emailOf(full) {
+      return firstName(full).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") + "@cliente.com.br";
+    }
+    var feed = [];
+    rows.forEach(function (row) {
+      var name = txt(row.children[0]), client = txt(row.children[1]), dc = txt(row.children[2]);
+      var responses = parseInt(txt(row.children[4]), 10) || 0;
+      var h = hash(name), hasBoth = h % 2 === 0, n = Math.min(2, responses);
+      for (var i = 0; i < n; i++) {
+        var s = SCORES[(h + i * 3) % SCORES.length], c = clsOf(s);
+        var fmt = hasBoth && (h + i) % 2 === 1 ? "Simplificado" : "Completo";
+        var anon = (h + i) % 3 !== 0;   /* anônima por padrão (D4): ~2/3 sem atribuição */
+        var who = anon ? null : NAMES[(h + i) % NAMES.length];
+        /* Aspectos (1 a 5) só no Completo, derivados da nota para ficarem coerentes */
+        var aspects = null;
+        if (fmt === "Completo") {
+          aspects = ASPECTS.map(function (label, k) {
+            var base = Math.max(1, Math.min(5, Math.round(s / 2) + ((h + i + k) % 3) - 1));
+            return { label: label, val: base };
+          });
+        }
+        feed.push({
+          project: name, client: client, dc: dc, cls: c, score: s, fmt: fmt,
+          comment: COMMENTS[(h + i * 2) % COMMENTS.length],
+          who: who, email: who ? emailOf(who) : null, anon: anon,
+          aspects: aspects, days: (h % 28) + i * 5 + 1
+        });
+      }
+    });
+    feed.sort(function (a, b) { return a.days - b.days; });
+
+    /* ---------- Tabela ---------- */
+    var tbody = panel.querySelector("[data-resp-tbody]");
+    function cell(cls, text) { var td = document.createElement("td"); if (cls) td.className = cls; if (text != null) td.textContent = text; return td; }
+
+    feed.forEach(function (r, idx) {
+      var pc = pillOf(r.cls);
+      var tr = document.createElement("tr");
+      tr.setAttribute("data-fmt", r.fmt); tr.setAttribute("data-cls", r.cls); tr.setAttribute("data-days", String(r.days));
+      tr.setAttribute("data-idx", String(idx));
+
+      /* Projeto = botão que abre o detalhe (nome acessível da ação) */
+      var tdName = document.createElement("td"); tdName.className = "data-table__cell-strong";
+      var btn = document.createElement("button"); btn.type = "button"; btn.className = "rtable__open";
+      btn.setAttribute("aria-label", "Abrir resposta de " + r.project);
+      btn.textContent = r.project;
+      tdName.appendChild(btn);
+      tr.appendChild(tdName);
+
+      tr.appendChild(cell("is-num rtable__score", String(r.score)));
+
+      var tdCls = cell("", null);
+      var pill = document.createElement("span"); pill.className = "pill pill--" + pc; pill.textContent = labelOf(r.cls);
+      tdCls.appendChild(pill); tr.appendChild(tdCls);
+
+      var tdFmt = cell("", null);
+      var fmt = document.createElement("span"); fmt.className = "resp__fmt"; fmt.textContent = r.fmt;
+      tdFmt.appendChild(fmt); tr.appendChild(tdFmt);
+
+      tr.appendChild(cell(r.anon ? "rtable__author rtable__author--anon" : "rtable__author", r.anon ? "Anônimo" : r.who));
+
+      tr.appendChild(cell(r.comment ? "rtable__comment" : "rtable__comment rtable__comment--empty", r.comment || "sem comentário"));
+
+      tr.appendChild(cell("is-num rtable__date", "há " + dias(r.days)));
+
+      tbody.appendChild(tr);
+      btn.addEventListener("click", function (e) { e.stopPropagation(); openDetail(r); });
+      tr.addEventListener("click", function () { openDetail(r); });
+    });
+
+    var state = { fmt: [], cls: [] };
+    var items = [].slice.call(tbody.querySelectorAll("tr"));
+    function apply() {
+      var q = (search ? search.value : "").trim().toLowerCase();
+      var shown = 0;
+      items.forEach(function (tr) {
+        var days = parseInt(tr.getAttribute("data-days"), 10);
+        var ok = (!q || tr.textContent.toLowerCase().indexOf(q) !== -1)
+          && (!state.fmt.length || state.fmt.indexOf(tr.getAttribute("data-fmt")) >= 0)
+          && (!state.cls.length || state.cls.indexOf(tr.getAttribute("data-cls")) >= 0)
+          && (!window.npsInPeriod || window.npsInPeriod(days));
+        tr.hidden = !ok; if (ok) shown++;
+      });
+      if (countEl) countEl.textContent = String(shown);
+      if (emptyEl) emptyEl.hidden = shown !== 0;
+    }
+
+    /* ---------- Modal de detalhe ---------- */
+    var modal = document.querySelector("[data-resp-modal]");
+    var mName = modal.querySelector("[data-rd-name]"), mSub = modal.querySelector("[data-rd-sub]");
+    var mScore = modal.querySelector("[data-rd-score]"), mPill = modal.querySelector("[data-rd-pill]"), mFmt = modal.querySelector("[data-rd-fmt]");
+    var mAspBox = modal.querySelector("[data-rd-aspects]"), mAspList = modal.querySelector("[data-rd-asp-list]"), mAspAvg = modal.querySelector("[data-rd-asp-avg]");
+    var mComment = modal.querySelector("[data-rd-comment]");
+    var mAttr = modal.querySelector("[data-rd-attr]");
+
+    function openDetail(r) {
+      var pc = pillOf(r.cls);
+      mName.textContent = r.project;
+      mSub.textContent = [r.client, r.dc, "há " + dias(r.days)].filter(Boolean).join(" · ");
+      mScore.className = "resp__score resp__score--" + pc; mScore.textContent = String(r.score);
+      mPill.className = "pill pill--" + pc; mPill.textContent = labelOf(r.cls);
+      mFmt.textContent = r.fmt;
+
+      mAspList.textContent = "";
+      if (r.aspects) {
+        var soma = r.aspects.reduce(function (t, a) { return t + a.val; }, 0);
+        var media = (soma / r.aspects.length).toFixed(1).replace(".", ",");
+        mAspAvg.innerHTML = "Média <strong>" + media + "</strong><span>/5</span>";
+        r.aspects.forEach(function (a) {
+          var li = document.createElement("li"); li.className = "rasp__item";
+          var lab = document.createElement("span"); lab.className = "rasp__label"; lab.textContent = a.label;
+          var bar = document.createElement("span"); bar.className = "rasp__bar";
+          var fill = document.createElement("span"); fill.className = "rasp__fill"; fill.style.inlineSize = (a.val / 5 * 100) + "%";
+          bar.appendChild(fill);
+          var val = document.createElement("span"); val.className = "rasp__val"; val.innerHTML = a.val + "<span>/5</span>";
+          li.appendChild(lab); li.appendChild(bar); li.appendChild(val);
+          mAspList.appendChild(li);
+        });
+        mAspBox.hidden = false;
+      } else {
+        mAspBox.hidden = true;   /* Simplificado não tem aspectos */
+      }
+
+      if (r.comment) { mComment.textContent = "“" + r.comment + "”"; mComment.className = "rd-comment__text"; }
+      else { mComment.textContent = "Sem comentário nesta resposta."; mComment.className = "rd-comment__text rd-comment__text--empty"; }
+
+      if (r.anon) { mAttr.textContent = "Resposta anônima (o respondente optou por não se identificar)."; mAttr.className = "rd-attr__text rd-attr__text--anon"; }
+      else { mAttr.textContent = r.who + " · " + r.email; mAttr.className = "rd-attr__text"; }
+
+      try { modal.showModal(); } catch (e) { modal.setAttribute("open", ""); }
+    }
+    function closeDetail() { try { modal.close(); } catch (e) { modal.removeAttribute("open"); } }
+    modal.querySelectorAll("[data-resp-close]").forEach(function (b) { b.addEventListener("click", closeDetail); });
+    modal.addEventListener("click", function (e) { if (e.target === modal) closeDetail(); });
+
+    /* Última resposta por projeto: o motor de filtros usa este mapa como data
+       de coleta da linha da tabela de Resultados. */
+    window.NPS_LAST_RESPONSE = feed.reduce(function (acc, r) {
+      if (!(r.project in acc) || r.days < acc[r.project]) acc[r.project] = r.days;
+      return acc;
+    }, {});
+
+    if (search) search.addEventListener("input", apply);
+    window.addEventListener("nps:period-change", apply);
+    /* Formato e classificação moram no menu de filtros único: o controlador
+       publica o estado por evento, e a tabela só reflete. */
+    window.addEventListener("nps:filter-change", function (e) {
+      var d = e.detail || {};
+      state.fmt = d.fmt || [];
+      state.cls = d.cls || [];
+      apply();
+    });
+    apply();
+  })();
+  </script>
+
+  <script>
+  /* Troca de aba: avisa o controlador de filtros (que oferece facetas diferentes
+     por aba e recalcula os painéis). O menu em si é montado sob demanda, não há
+     mais grupos de refino para esconder aqui. */
+  (function () {
+    var tablist = document.querySelector(".tabs__list");
+    if (!tablist) return;
+    function sync() { window.dispatchEvent(new CustomEvent("nps:tab-change")); }
+    new MutationObserver(sync).observe(tablist, { attributes: true, subtree: true, attributeFilter: ["aria-selected"] });
+  })();
+  </script>
+
+  <script>
+  /* Menu "⋯" do card: dispensar / reativar coleta. Marca data-dispensed e avisa o motor do Kanban. */
+  (function () {
+    var openCard = null;
+    function closeMenu() {
+      if (!openCard) return;
+      var m = openCard.querySelector(".kcard__menu"), b = openCard.querySelector("[data-kebab]");
+      if (m) m.hidden = true;
+      if (b) b.setAttribute("aria-expanded", "false");
+      openCard.classList.remove("is-menu-open");
+      openCard = null;
+    }
+    /* Botão "Reativar coleta" no próprio card: dispensar é reversível, e a volta
+       não pode depender de o operador descobrir o menu "⋯". */
+    function syncUndo(card) {
+      var dispensed = card.getAttribute("data-dispensed") === "true";
+      var undo = card.querySelector(".kcard__undo");
+      if (!dispensed) { if (undo) undo.remove(); return; }
+      if (undo) return;
+      var foot = card.querySelector(".kcard__foot");
+      if (!foot) return;
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "btn btn--secondary btn--sm kcard__undo";
+      b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Reativar coleta';
+      b.addEventListener("click", function (e) {
+        e.stopPropagation();
+        card.setAttribute("data-dispensed", "false");
+        syncUndo(card);
+        window.dispatchEvent(new CustomEvent("nps:kanban-refresh"));
+      });
+      foot.appendChild(b);
+    }
+
+    document.querySelectorAll(".kcard").forEach(function (card) {
+      var btn = card.querySelector("[data-kebab]");
+      var menu = card.querySelector(".kcard__menu");
+      var item = card.querySelector("[data-dispense]");
+      if (!btn || !menu || !item) return;
+      syncUndo(card);
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var wasOpen = openCard === card;
+        closeMenu();
+        if (!wasOpen) {
+          item.textContent = card.getAttribute("data-dispensed") === "true" ? "Reativar coleta" : "Dispensar coleta";
+          menu.hidden = false; btn.setAttribute("aria-expanded", "true"); card.classList.add("is-menu-open");
+          openCard = card;
+        }
+      });
+      menu.addEventListener("click", function (e) { e.stopPropagation(); });
+      item.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var dispensed = card.getAttribute("data-dispensed") === "true";
+        card.setAttribute("data-dispensed", dispensed ? "false" : "true");
+        syncUndo(card);
+        closeMenu();
+        window.dispatchEvent(new CustomEvent("nps:kanban-refresh"));
+      });
+    });
+    document.addEventListener("click", closeMenu);
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeMenu(); });
+  })();
+  </script>
+
+  <script>
+  /* "NPS por projeto": clicar numa linha COM respostas expande todas as notas daquele projeto.
+     Os dados espelham o NpsDevDataSeeder (mesmas contagens, ordem, nomes e comentários), então o
+     painel mostra exatamente o que a API devolveria com o seed. Uma expansão por vez; ordenar ou
+     filtrar a tabela fecha a expansão (a linha injetada sairia do lugar na reordenação). */
+  (function () {
+    var table = document.querySelector("[data-nps-table] table");
+    if (!table) return;
+
+    // Espelho de BuildSpecs(): promotores/neutros/detratores, dias da última resposta,
+    // formato do formulário e início da sequência global de contatos (nomes idênticos ao seed).
+    var SEED = {
+      "Core Banking":        { p: 19, n: 4, d: 1, last: 12,  fmt: "Completo",     seq: 0 },
+      "Jornada Digital":     { p: 15, n: 5, d: 1, last: 8,   fmt: "Completo",     seq: 30 },
+      "Onboarding Digital":  { p: 14, n: 5, d: 1, last: 18,  fmt: "Completo",     seq: 58 },
+      "App Investimentos":   { p: 12, n: 4, d: 2, last: 25,  fmt: "Simplificado", seq: 84 },
+      "Plataforma de Dados": { p: 10, n: 4, d: 1, last: 34,  fmt: "Completo",     seq: 108 },
+      "Hub de Integração":   { p: 8,  n: 5, d: 2, last: 41,  fmt: "Completo",     seq: 131 },
+      "Modernização Core":   { p: 6,  n: 4, d: 2, last: 63,  fmt: "Completo",     seq: 153 },
+      "GenAI Atendimento":   { p: 4,  n: 3, d: 2, last: 78,  fmt: "Simplificado", seq: 171 },
+      "Portal do Cliente":   { p: 6,  n: 3, d: 5, last: 52,  fmt: "Completo",     seq: 185 },
+      "Migração Legada":     { p: 8,  n: 2, d: 1, last: 130, fmt: "Completo",     seq: 262 },
+      "Portal RH":           { p: 6,  n: 1, d: 1, last: 160, fmt: "Completo",     seq: 277 },
+      "E-commerce V1":       { p: 3,  n: 2, d: 1, last: 200, fmt: "Simplificado", seq: 289 }
+    };
+    var FIRST = ["Marina", "Rafael", "Juliana", "Otávio", "Camila", "Bruno", "Fernanda", "Lucas", "Patrícia", "Thiago",
+      "Aline", "Rodrigo", "Beatriz", "Gustavo", "Larissa", "Felipe", "Mariana", "André", "Renata", "Vinícius"];
+    var LAST = ["Silva", "Souza", "Oliveira", "Costa", "Pereira", "Almeida", "Nunes", "Ribeiro", "Carvalho", "Gomes",
+      "Martins", "Rocha", "Barbosa", "Teixeira", "Moreira", "Cardoso", "Araújo", "Freitas", "Pinto", "Correia"];
+    var PROM_C = [
+      "Time entregou com previsibilidade e comunicou bem os riscos.",
+      "Parceria excelente, recomendo. Qualidade técnica acima da média.",
+      "Antecipou dois riscos de integração antes da virada.",
+      "Muito satisfeito com o ritmo e a transparência das entregas."
+    ];
+    var PAS_C = [
+      "Entrega consistente, mas a comunicação de mudanças pode melhorar.",
+      "Bom trabalho no geral; algumas sprints fecharam com repriorização.",
+      "Qualidade boa, prazos às vezes apertados."
+    ];
+    var DETR_C = [
+      "Prazo estourou pela terceira vez e descobrimos na reunião de status.",
+      "Falta de clareza no escopo gerou retrabalho.",
+      "Comunicação falha em pontos críticos do projeto."
+    ];
+    var DETR_CYCLE = [4, 6, 3, 5, 2, 0, 1];
+
+    function clsOf(s) { return s >= 9 ? "good" : (s >= 7 ? "warn" : "danger"); }
+    function labelOf(s) { return s >= 9 ? "Promotor" : (s >= 7 ? "Neutro" : "Detrator"); }
+    function dias(n) { return n + (n === 1 ? " dia" : " dias"); }
+    function plural(n, um, varios) { return n + " " + (n === 1 ? um : varios); }
+    function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
+
+    // Réplica de ScoresFor + CommentFor + nomes do seed (ordem: promotores, neutros, detratores).
+    function buildAll(seed) {
+      var out = [], total = seed.p + seed.n + seed.d;
+      for (var i = 0; i < total; i++) {
+        var score = i < seed.p ? (i % 2 === 0 ? 10 : 9)
+          : i < seed.p + seed.n ? ((i - seed.p) % 2 === 0 ? 8 : 7)
+          : DETR_CYCLE[(i - seed.p - seed.n) % DETR_CYCLE.length];
+        var comment = "";
+        if (i % 3 === 0) {
+          var pick = Math.floor(i / 3);
+          comment = score >= 9 ? PROM_C[pick % PROM_C.length] : score >= 7 ? PAS_C[pick % PAS_C.length] : DETR_C[pick % DETR_C.length];
+        }
+        out.push({
+          score: score,
+          who: FIRST[(seed.seq + i) % FIRST.length] + " " + LAST[((seed.seq + i) * 7) % LAST.length],
+          days: i === 0 ? seed.last : seed.last + 1 + (i % 14),
+          comment: comment
+        });
+      }
+      return out;
+    }
+
+    function buildPanel(name, seed) {
+      var all = buildAll(seed), total = all.length;
+      // Exibição em ordem detrator → neutro → promotor (a geração continua na ordem do seed,
+      // para nomes/datas/comentários de cada resposta não mudarem).
+      var display = all.filter(function (r) { return clsOf(r.score) === "danger"; })
+        .concat(all.filter(function (r) { return clsOf(r.score) === "warn"; }))
+        .concat(all.filter(function (r) { return clsOf(r.score) === "good"; }));
+      var wrap = el("div", "nps-notas");
+
+      var summary = el("div", "nps-notas__summary");
+      var bar = el("div", "nps-notas__bar");
+      bar.setAttribute("role", "img");
+      bar.setAttribute("aria-label", plural(seed.d, "detrator", "detratores") + ", " + plural(seed.n, "neutro", "neutros") + " e " + plural(seed.p, "promotor", "promotores") + ".");
+      [["danger", seed.d], ["warn", seed.n], ["good", seed.p]].forEach(function (s) {
+        if (!s[1]) return;
+        var seg = el("span", "dist__seg dist__seg--" + s[0]);
+        seg.style.inlineSize = (s[1] / total * 100).toFixed(1) + "%";
+        bar.appendChild(seg);
+      });
+      summary.appendChild(bar);
+      summary.appendChild(el("span", "pill pill--danger", plural(seed.d, "detrator", "detratores")));
+      summary.appendChild(el("span", "pill pill--warn", plural(seed.n, "neutro", "neutros")));
+      summary.appendChild(el("span", "pill pill--good", plural(seed.p, "promotor", "promotores")));
+      summary.appendChild(el("span", "nps-notas__meta", "Formulário " + seed.fmt + " · última resposta há " + dias(seed.last)));
+      wrap.appendChild(summary);
+
+      var chips = el("div", "nps-notas__chips");
+      chips.setAttribute("role", "img");
+      chips.setAttribute("aria-label", "Todas as " + total + " notas: " + display.map(function (r) { return r.score; }).join(", ") + ".");
+      display.forEach(function (r) {
+        var chip = el("span", "nps-notas__chip nps-notas__chip--" + clsOf(r.score), String(r.score));
+        chip.title = labelOf(r.score) + " · " + r.who + " · há " + dias(r.days);
+        chips.appendChild(chip);
+      });
+      wrap.appendChild(chips);
+
+      var withComment = display.filter(function (r) { return r.comment; });
+      if (withComment.length) {
+        wrap.appendChild(el("p", "nps-notas__comments-title", "Comentários (" + withComment.length + ")"));
+        var ul = el("ul", "nps-notas__comments");
+        ul.setAttribute("role", "list");
+        withComment.forEach(function (r) {
+          var li = el("li", "nps-notas__comment");
+          var chip = el("span", "nps-notas__chip nps-notas__chip--" + clsOf(r.score), String(r.score));
+          chip.setAttribute("aria-hidden", "true");
+          li.appendChild(chip);
+          var body = el("div", "resp__body");
+          body.appendChild(el("p", "resp__comment", "“" + r.comment + "”"));
+          body.appendChild(el("p", "resp__meta", r.who + " · há " + dias(r.days)));
+          li.appendChild(body);
+          ul.appendChild(li);
+        });
+        wrap.appendChild(ul);
+      }
+      return wrap;
+    }
+
+    var openRow = null, panelRow = null;
+    function close() {
+      if (panelRow) panelRow.remove();
+      if (openRow) {
+        openRow.classList.remove("is-open");
+        var b = openRow.querySelector("[data-notas-toggle]");
+        if (b) { b.setAttribute("aria-expanded", "false"); b.removeAttribute("aria-controls"); }
+      }
+      openRow = null; panelRow = null;
+    }
+    function open(row, name, seed, id) {
+      close();
+      var tr = document.createElement("tr");
+      tr.className = "nps-notas-row";
+      var td = document.createElement("td");
+      td.colSpan = row.cells.length;
+      td.id = id;
+      td.appendChild(buildPanel(name, seed));
+      tr.appendChild(td);
+      row.parentNode.insertBefore(tr, row.nextSibling);
+      row.classList.add("is-open");
+      var b = row.querySelector("[data-notas-toggle]");
+      if (b) { b.setAttribute("aria-expanded", "true"); b.setAttribute("aria-controls", id); }
+      openRow = row; panelRow = tr;
+    }
+
+    var idx = 0;
+    [].slice.call(table.querySelectorAll("tbody tr")).forEach(function (row) {
+      var name = row.getAttribute("data-name") || (row.cells[0] ? row.cells[0].textContent.trim() : "");
+      var seed = SEED[name];
+      if (!seed) return;   // sem respostas: nada a expandir
+      var id = "nps-notas-" + (++idx);
+      row.classList.add("is-expandable");
+      var cell = row.cells[0];
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "notas-toggle";
+      btn.setAttribute("data-notas-toggle", "");
+      btn.setAttribute("aria-expanded", "false");
+      /* aria-controls só entra quando a linha de expansão existe de fato (ela é
+         injetada ao abrir): apontar para um id inexistente quebra o leitor de tela. */
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
+      btn.appendChild(document.createTextNode(name));
+      cell.textContent = "";
+      cell.appendChild(btn);
+      function toggle() { if (openRow === row) { close(); } else { open(row, name, seed, id); } }
+      btn.addEventListener("click", function (e) { e.stopPropagation(); toggle(); });
+      row.addEventListener("click", function (e) { if (!e.target.closest("button")) toggle(); });
+    });
+
+    // Ordenar reprocessa as linhas da tabela: fecha a expansão ANTES (capture).
+    document.addEventListener("click", function (e) {
+      if (openRow && e.target.closest(".data-table__sort")) close();
+    }, true);
+    // Qualquer mudança de filtro (menu, chips, busca) reordena/oculta linhas: fecha a expansão.
+    window.addEventListener("nps:filter-change", function () { if (openRow) close(); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && openRow) close(); });
+  })();
+  </script>
+
+  <script>
+  /* Rotas: cada subpágina (aba) tem rota própria: #/coleta, #/resultados, #/respostas.
+     As abas são <a href>, então o CLIQUE já troca o painel (brq-ui) e a URL (nativo, com histórico).
+     Este script cobre o resto: deep link no load, voltar/avançar do navegador e teclado
+     (setas/Home/End selecionam sem clique: o observer espelha a URL, sem sujar o histórico).
+     No produto viram páginas roteadas do Blazor (/nps/coleta, /nps/resultados, /nps/respostas). */
+  (function () {
+    var ROUTES = { "#/coleta": "tabbtn-coleta", "#/resultados": "tabbtn-resultados", "#/respostas": "tabbtn-respostas" };
+    var DEFAULT_ROUTE = "#/coleta";
+    var tablist = document.querySelector(".tabs__list");
+    if (!tablist) return;
+
+    function activeTab() { return tablist.querySelector('[role="tab"][aria-selected="true"]'); }
+
+    // Aplica a rota SETANDO aria-selected/hidden diretamente (mesma lógica do select() do brq-ui),
+    // sem depender de click: no load este script roda ANTES de o initTabs registrar os listeners
+    // (DOMContentLoaded): e o initTabs respeita a aba já marcada como selecionada.
+    function applyRoute(hash) {
+      var id = ROUTES[hash];
+      if (!id) return;   // hash alheio (ex.: #conteudo do skip-link) não é rota: ignora
+      var target = document.getElementById(id);
+      if (!target || target.getAttribute("aria-selected") === "true") return;
+      [].slice.call(tablist.querySelectorAll('[role="tab"]')).forEach(function (t) {
+        var sel = t === target;
+        t.setAttribute("aria-selected", sel ? "true" : "false");
+        t.tabIndex = sel ? 0 : -1;
+      });
+      [].slice.call(document.querySelectorAll('[data-tabs] [role="tabpanel"]')).forEach(function (p) {
+        p.hidden = p.id !== target.getAttribute("aria-controls");
+      });
+    }
+
+    // deep link: abre já na subpágina da URL; sem rota, normaliza para a padrão (sem entrada extra no histórico)
+    if (ROUTES[location.hash]) { applyRoute(location.hash); }
+    else if (!location.hash) { history.replaceState(null, "", DEFAULT_ROUTE); }
+
+    window.addEventListener("hashchange", function () { applyRoute(location.hash); });
+
+    // aba mudou sem clique (setas) → espelha a rota na URL; no clique o hash já veio do próprio <a>
+    new MutationObserver(function () {
+      setTimeout(function () {
+        var tab = activeTab();
+        var route = tab ? tab.getAttribute("href") : null;
+        if (route && ROUTES[route] && location.hash !== route) history.replaceState(null, "", route);
+      }, 0);
+    }).observe(tablist, { attributes: true, subtree: true, attributeFilter: ["aria-selected"] });
+  })();
+  </script>
+</body>
+</html>
