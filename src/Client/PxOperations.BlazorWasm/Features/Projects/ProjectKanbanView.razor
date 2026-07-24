@@ -1,4 +1,5 @@
 @using PxOperations.BlazorWasm.Api
+@using PxOperations.Ui.Components.DataDisplay
 
 <div class="kanban-wrap">
     <div class="kanban-controls">
@@ -34,27 +35,23 @@
                                  @ondragend="OnDragEnd"
                                  @onclick="() => OnEdit.InvokeAsync(proj.Id)">
                                 <div class="kanban-card-top">
-                                    <span class="dc-tag">@proj.Dc</span>
-                                    <span class="sbadge @ProjectBadgeHelper.GetStatusBadgeClass(proj.Status)">
-                                        @ProjectBadgeHelper.GetStatusDot(proj.Status) @proj.Status
-                                    </span>
+                                    <BrqTag Label="@proj.Dc" Tone="BrqTagTone.Purple" Size="BrqSize.Small" />
+                                    <BrqStatusPill Label="@proj.Status" Tone="@ProjectBadgeHelper.GetStatusTone(proj.Status)" Size="BrqSize.Small" />
                                 </div>
                                 <div class="kanban-card-name">@proj.Name</div>
                                 <div class="kanban-card-meta">
                                     <span>@(proj.Client ?? "—")</span>
                                     <span class="kanban-card-sep">·</span>
-                                    <span class="tbadge @ProjectBadgeHelper.GetTypeBadgeClass(proj.Type)">@proj.Type</span>
+                                    <BrqTag Label="@proj.Type" Tone="BrqTagTone.Gray" Size="BrqSize.Small" />
                                 </div>
                                 <div class="kanban-card-dates">
                                     @ProjectBadgeHelper.FormatDate(proj.StartDate)
                                     <span class="kanban-card-sep">→</span>
                                     @ProjectBadgeHelper.FormatDate(proj.EndDate)
-                                    @ProjectBadgeHelper.RenderRemainingDays(proj.EndDate)
+                                    <BrqTag Label="@ProjectBadgeHelper.GetRemainingDaysLabel(proj.EndDate)" Tone="@ProjectBadgeHelper.GetRemainingDaysTagTone(proj.EndDate)" Size="BrqSize.Small" />
                                 </div>
                                 <div>
-                                    <span class="rbadge @ProjectBadgeHelper.GetRenewalBadgeClass(proj.Renewal)">
-                                        @ProjectBadgeHelper.GetRenewalIcon(proj.Renewal) @(proj.Renewal == "None" ? "—" : proj.Renewal)
-                                    </span>
+                                    <BrqTag Label="@ProjectBadgeHelper.GetRenewalLabel(proj.Renewal)" Tone="@ProjectBadgeHelper.GetRenewalTagTone(proj.Renewal)" Size="BrqSize.Small" />
                                 </div>
                                 @if (!string.IsNullOrEmpty(proj.DeliveryManager))
                                 {

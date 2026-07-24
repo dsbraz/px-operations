@@ -1,0 +1,23 @@
+<section class="brq-error-state" role="alert">
+    <div class="brq-error-icon" aria-hidden="true">!</div>
+    <div>
+        <h2>@Title</h2>
+        <p>@Description</p>
+    </div>
+    @if (OnRetry.HasDelegate)
+    {
+        <button type="button"
+                class="brq-button brq-button--secondary"
+                data-testid="@RetryTestId"
+                @onclick="OnRetry">
+            Tentar novamente
+        </button>
+    }
+</section>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Não foi possível carregar";
+    [Parameter, EditorRequired] public string Description { get; set; } = string.Empty;
+    [Parameter] public EventCallback OnRetry { get; set; }
+    [Parameter] public string? RetryTestId { get; set; }
+}

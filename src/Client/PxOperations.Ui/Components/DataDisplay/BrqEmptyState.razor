@@ -1,0 +1,15 @@
+<section class="brq-empty-state">
+    <div class="brq-empty-icon" aria-hidden="true">◇</div>
+    <h2>@Title</h2>
+    <p>@Description</p>
+    @if (Action is not null)
+    {
+        <div>@Action</div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Description { get; set; } = string.Empty;
+    [Parameter] public RenderFragment? Action { get; set; }
+}

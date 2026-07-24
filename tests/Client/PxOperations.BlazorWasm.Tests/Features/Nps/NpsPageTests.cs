@@ -7,7 +7,7 @@ using PxOperations.BlazorWasm.Tests.Helpers;
 
 namespace PxOperations.BlazorWasm.Tests.Features.Nps;
 
-public sealed class NpsPageTests : TestContext
+public sealed class NpsPageTests : BunitContext
 {
     [Fact]
     public void NpsPage_should_render_dashboard_and_projects()
@@ -20,7 +20,7 @@ public sealed class NpsPageTests : TestContext
         Services.AddScoped(_ => client);
         Services.AddScoped<NpsClient>();
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = Render<NpsPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -45,7 +45,7 @@ public sealed class NpsPageTests : TestContext
         Services.AddScoped(_ => client);
         Services.AddScoped<NpsClient>();
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = Render<NpsPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -66,7 +66,7 @@ public sealed class NpsPageTests : TestContext
         Services.AddScoped(_ => client);
         Services.AddScoped<NpsClient>();
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = Render<NpsPage>();
         cut.WaitForAssertion(() => Assert.Contains("Projeto NPS", cut.Markup));
 
         var generateLinkButton = cut.Find(".page-actions-bar button");
@@ -106,7 +106,7 @@ public sealed class NpsPageTests : TestContext
         Services.AddScoped(_ => client);
         Services.AddScoped<NpsClient>();
 
-        var cut = RenderComponent<NpsPublicPage>(parameters => parameters.Add(p => p.Token, token));
+        var cut = Render<NpsPublicPage>(parameters => parameters.Add(p => p.Token, token));
 
         cut.WaitForAssertion(() =>
         {
@@ -139,7 +139,7 @@ public sealed class NpsPageTests : TestContext
         Services.AddScoped(_ => client);
         Services.AddScoped<NpsClient>();
 
-        var cut = RenderComponent<NpsPublicPage>(parameters => parameters.Add(p => p.Token, token));
+        var cut = Render<NpsPublicPage>(parameters => parameters.Add(p => p.Token, token));
 
         cut.WaitForAssertion(() =>
         {
@@ -164,7 +164,7 @@ public sealed class NpsPageTests : TestContext
         Services.AddScoped(_ => client);
         Services.AddScoped<NpsClient>();
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = Render<NpsPage>();
         cut.WaitForAssertion(() => Assert.Contains("Projeto NPS", cut.Markup));
 
         cut.FindAll(".nps-row-actions button").Single(button => button.TextContent.Contains("Ver histórico")).Click();
@@ -222,7 +222,7 @@ public sealed class NpsPageTests : TestContext
         Services.AddScoped(_ => client);
         Services.AddScoped<NpsClient>();
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = Render<NpsPage>();
         cut.WaitForAssertion(() => Assert.Contains("Projeto NPS", cut.Markup));
 
         var filters = cut.FindAll(".toolbar select");

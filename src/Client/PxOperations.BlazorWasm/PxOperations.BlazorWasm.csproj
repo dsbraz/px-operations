@@ -19,6 +19,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\PxOperations.Ui\PxOperations.Ui.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <OpenApiReference Include="..\..\..\specs\openapi\PxOperations.Api.json"
                       CodeGenerator="NSwagCSharp"
                       Namespace="PxOperations.BlazorWasm.Api"

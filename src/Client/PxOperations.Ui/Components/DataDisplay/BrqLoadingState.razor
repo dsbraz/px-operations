@@ -1,0 +1,15 @@
+<div class="brq-loading-state"
+     role="status"
+     aria-label="@AccessibleLabel"
+     aria-live="polite">
+    <span class="brq-visually-hidden">@AccessibleLabel</span>
+    @for (var index = 0; index < Rows; index++)
+    {
+        <span class="brq-skeleton" aria-hidden="true"></span>
+    }
+</div>
+
+@code {
+    [Parameter] public string AccessibleLabel { get; set; } = "Carregando";
+    [Parameter] public int Rows { get; set; } = 4;
+}

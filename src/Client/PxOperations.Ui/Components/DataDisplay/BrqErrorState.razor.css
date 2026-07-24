@@ -1,0 +1,48 @@
+.brq-error-state {
+    align-items: center;
+    background: var(--brq-danger-bg);
+    border: 1px solid color-mix(in srgb, var(--brq-danger) 35%, var(--brq-border));
+    border-radius: var(--brq-radius-lg);
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    margin: 0 auto;
+    max-width: var(--brq-content-max);
+    padding: 1.25rem;
+}
+
+.brq-error-icon {
+    align-items: center;
+    background: var(--brq-danger);
+    border-radius: 999px;
+    color: #fff;
+    display: flex;
+    font-weight: 800;
+    height: 2rem;
+    justify-content: center;
+    width: 2rem;
+}
+
+.brq-error-state h2 {
+    color: var(--brq-danger);
+    font-size: 0.9375rem;
+    margin: 0;
+}
+
+.brq-error-state p {
+    color: var(--brq-text-muted);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    margin: 0.25rem 0 0;
+}
+
+@media (max-width: 36rem) {
+    .brq-error-state {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .brq-error-state ::deep .brq-button {
+        grid-column: 1 / -1;
+        justify-self: start;
+    }
+}

@@ -1,0 +1,8 @@
+<section class="kpi-grid" aria-label="@Label" role="list">
+    @ChildContent
+</section>
+
+@code {
+    [Parameter] public string Label { get; set; } = "Indicadores";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

@@ -25,6 +25,10 @@ public partial class ProjectFormModal : ComponentBase
 
     private bool isSaving;
     private string? error;
+    private string ModalTitle => EditingProject is not null ? "Editar projeto" : "Novo projeto";
+    private string ModalDescription => EditingProject is not null
+        ? "Atualize os dados do projeto."
+        : "Preencha os dados para adicionar um projeto à carteira.";
 
     protected override void OnParametersSet()
     {
@@ -116,4 +120,7 @@ public partial class ProjectFormModal : ComponentBase
             isSaving = false;
         }
     }
+
+    private Task HandleOpenChanged(bool open) =>
+        open ? Task.CompletedTask : OnClose.InvokeAsync();
 }

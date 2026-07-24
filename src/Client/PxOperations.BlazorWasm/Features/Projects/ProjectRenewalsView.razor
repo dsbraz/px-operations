@@ -1,94 +1,74 @@
 @using PxOperations.BlazorWasm.Api
+@using PxOperations.Ui.Components.DataDisplay
 
-<div class="renov-view">
-
-    <div class="renov-controls">
-        <select @bind="renovYear">
-            <option value="2025">2025</option>
-            <option value="2026">2026</option>
-            <option value="2027">2027</option>
-        </select>
-        <select @bind="renovPeriod">
-            <option value="ano">Ano completo</option>
-            <option value="q1">Q1 (Jan–Mar)</option>
-            <option value="q2">Q2 (Abr–Jun)</option>
-            <option value="q3">Q3 (Jul–Set)</option>
-            <option value="q4">Q4 (Out–Dez)</option>
-        </select>
-
-        <div class="renov-indicator">
-            <div class="ri-main">
-                <div class="ri-pct">@CoveragePct%</div>
-                <div class="ri-lbl">Cobertura @PeriodLabel @renovYear</div>
-                <div class="ri-bar-wrap"><div class="ri-bar-fill" style="width:@(CoveragePct)%"></div></div>
-            </div>
-            <div class="ri-sep"></div>
-            <div class="ri-breakdown">
-                <div class="ri-item"><div class="ri-num aprov">@Approved</div><div class="ri-sub">Aprovadas</div></div>
-                <div class="ri-item"><div class="ri-num andamento">@InProgress</div><div class="ri-sub">Em trat.</div></div>
-                <div class="ri-item"><div class="ri-num pend">@Pending</div><div class="ri-sub">Pendentes</div></div>
-                <div class="ri-item"><div class="ri-num" style="color:var(--muted)">@NoStatus</div><div class="ri-sub">Sem status</div></div>
+<div class="renewals-view">
+    <section class="renewals-summary" aria-labelledby="renewals-summary-title">
+        <div class="renewals-summary__coverage">
+            <span class="renewals-summary__eyebrow" id="renewals-summary-title">Cobertura de renovações</span>
+            <strong>@CoveragePct%</strong>
+            <span>@PeriodLabel @Year</span>
+            <div class="renewals-summary__track" role="progressbar" aria-valuenow="@CoveragePct" aria-valuemin="0" aria-valuemax="100" aria-label="Cobertura de renovações">
+                <span style="width: @(CoveragePct)%"></span>
             </div>
         </div>
-    </div>
+        <div class="renewals-summary__breakdown" aria-label="Resumo por status">
+            <div><strong>@Approved</strong><span>Aprovadas</span></div>
+            <div><strong>@InProgress</strong><span>Em andamento</span></div>
+            <div><strong>@Pending</strong><span>Pendentes</span></div>
+            <div><strong>@NoStatus</strong><span>Sem status</span></div>
+        </div>
+    </section>
 
     @if (ShowDcBars)
     {
-        <div class="dc-section">
-            <div class="sec-label">% de cobertura por DC — @PeriodLabel @renovYear</div>
-            <div class="dc-bars-grid">
-                @foreach (var bar in DcBars.Where(b => b.Total > 0))
+        <section class="renewals-section" aria-labelledby="renewals-dc-title">
+            <div class="renewals-section__head">
+                <h2 id="renewals-dc-title">Cobertura por Delivery Center</h2>
+                <span>@PeriodLabel @Year</span>
+            </div>
+            <div class="renewals-dc-grid">
+                @foreach (var bar in DcBars.Where(item => item.Total > 0))
                 {
-                    <div class="dc-bar-card">
-                        <div class="dcb-name">@bar.Dc</div>
-                        <div class="bar-track"><div class="bar-fill" style="width:@(bar.Pct)%"></div></div>
-                        <div class="dcb-nums">
-                            <span style="color:var(--muted);font-size:11px">@bar.WithStatus/@bar.Total com status</span>
-                            <span class="dcb-pct">@(bar.Pct)%</span>
-                        </div>
-                        <div class="dcb-sub">@bar.Approved aprovada@(bar.Approved != 1 ? "s" : "")</div>
-                    </div>
+                    <article class="renewals-dc-card">
+                        <div class="renewals-dc-card__head"><strong>@bar.Dc</strong><span>@bar.Pct%</span></div>
+                        <div class="renewals-dc-card__track"><span style="width: @(bar.Pct)%"></span></div>
+                        <span>@bar.WithStatus/@bar.Total com status · @bar.Approved aprovada@(bar.Approved != 1 ? "s" : "")</span>
+                    </article>
                 }
             </div>
-        </div>
+        </section>
     }
 
-    <div class="cards-section">
-        <div class="sec-label">
-            Projetos com renova&ccedil;&atilde;o registrada — @PeriodLabel @renovYear
+    <section class="renewals-section" aria-labelledby="renewals-projects-title">
+        <div class="renewals-section__head">
+            <h2 id="renewals-projects-title">Projetos com renovação registrada</h2>
+            <span>@Cards.Count projetos</span>
         </div>
         @if (Cards.Any())
         {
-            <div class="cards-grid">
-                @foreach (var p in Cards)
+            <div class="renewals-cards">
+                @foreach (var project in Cards)
                 {
-                    <div class="proj-card highlighted" @onclick="() => OnEdit.InvokeAsync(p.Id)" title="Clique para editar">
-                        <div class="pc-left">
-                            <div class="pc-name">@p.Name</div>
-                            <div class="pc-meta">@(p.Client ?? "—") · <strong>@p.Dc</strong> · @(p.DeliveryManager ?? "—")</div>
-                            @if (!string.IsNullOrWhiteSpace(p.RenewalObservation))
+                    <article class="renewal-card" tabindex="0" role="button" @onclick="() => OnEdit.InvokeAsync(project.Id)" @onkeydown="@(args => args.Key == "Enter" ? OnEdit.InvokeAsync(project.Id) : Task.CompletedTask)">
+                        <div class="renewal-card__body">
+                            <h3>@project.Name</h3>
+                            <p>@(project.Client ?? "—") · @project.Dc · @(project.DeliveryManager ?? "—")</p>
+                            @if (!string.IsNullOrWhiteSpace(project.RenewalObservation))
                             {
-                                <div class="pc-obs">@p.RenewalObservation</div>
+                                <span>@project.RenewalObservation</span>
                             }
                         </div>
-                        <div class="pc-right">
-                            <span class="rbadge @ProjectBadgeHelper.GetRenewalBadgeClass(p.Renewal)">
-                                @ProjectBadgeHelper.GetRenewalIcon(p.Renewal) @p.Renewal
-                            </span>
-                            @ProjectBadgeHelper.FormatDate(p.EndDate)
+                        <div class="renewal-card__meta">
+                            <BrqTag Label="@ProjectBadgeHelper.GetRenewalLabel(project.Renewal)" Tone="@ProjectBadgeHelper.GetRenewalTagTone(project.Renewal)" Size="BrqSize.Small" />
+                            <time datetime="@project.EndDate">@ProjectBadgeHelper.FormatDate(project.EndDate)</time>
                         </div>
-                    </div>
+                    </article>
                 }
             </div>
         }
         else
         {
-            <div class="empty" style="padding:40px">
-                <p style="font-size:13px;font-weight:600;color:var(--muted)">
-                    Nenhuma renova&ccedil;&atilde;o registrada para este per&iacute;odo
-                </p>
-            </div>
+            <div class="renewals-empty">Nenhuma renovação registrada para este período.</div>
         }
-    </div>
-
+    </section>
 </div>

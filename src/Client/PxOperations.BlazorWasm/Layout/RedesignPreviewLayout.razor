@@ -1,0 +1,19 @@
+@inherits LayoutComponentBase
+@using PxOperations.Ui.Components.Navigation
+
+<BrqAppShell ProductName="Operations PX"
+             CurrentSection="Projetos"
+             HomeHref="/preview/projects/dashboard"
+             NavigationItems="@navigationItems">
+    @Body
+</BrqAppShell>
+
+@code {
+    private static readonly IReadOnlyList<BrqNavigationItem> navigationItems =
+    [
+        new("Projetos", "/preview/projects/dashboard", "projects"),
+        new("Marcos", "/milestones", "milestones"),
+        new("Saúde", "/project-health", "health"),
+        new("NPS", "/nps", "nps")
+    ];
+}

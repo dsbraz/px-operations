@@ -8,7 +8,7 @@ namespace PxOperations.BlazorWasm.Tests.Features.Projects;
 /// Testes isolados do componente <see cref="ProjectListView"/>.
 /// O componente recebe projetos e flags via parâmetros — não injeta serviços.
 /// </summary>
-public sealed class ProjectListViewTests : TestContext
+public sealed class ProjectListViewTests : BunitContext
 {
     [Fact]
     public void Should_render_table_with_projects()
@@ -18,7 +18,7 @@ public sealed class ProjectListViewTests : TestContext
             ProjectsTestHelpers.MakeProject(id: 1, dc: "DC1", name: "Alpha", client: "Client A")
         };
 
-        var cut = RenderComponent<ProjectListView>(p => p
+        var cut = Render<ProjectListView>(p => p
             .Add(c => c.Projects, projects.ToList())
             .Add(c => c.IsLoading, false));
 
@@ -30,7 +30,7 @@ public sealed class ProjectListViewTests : TestContext
     [Fact]
     public void Should_render_empty_state_when_no_projects()
     {
-        var cut = RenderComponent<ProjectListView>(p => p
+        var cut = Render<ProjectListView>(p => p
             .Add(c => c.Projects, [])
             .Add(c => c.IsLoading, false));
 
@@ -40,7 +40,7 @@ public sealed class ProjectListViewTests : TestContext
     [Fact]
     public void Should_show_loading_card_when_is_loading_is_true()
     {
-        var cut = RenderComponent<ProjectListView>(p => p
+        var cut = Render<ProjectListView>(p => p
             .Add(c => c.Projects, [])
             .Add(c => c.IsLoading, true));
 
@@ -50,7 +50,7 @@ public sealed class ProjectListViewTests : TestContext
     [Fact]
     public void Should_show_error_card_when_error_message_is_set()
     {
-        var cut = RenderComponent<ProjectListView>(p => p
+        var cut = Render<ProjectListView>(p => p
             .Add(c => c.Projects, [])
             .Add(c => c.IsLoading, false)
             .Add(c => c.ErrorMessage, "Erro ao carregar projetos"));
@@ -66,7 +66,7 @@ public sealed class ProjectListViewTests : TestContext
             ProjectsTestHelpers.MakeProject(id: 1, name: "Alpha")
         };
 
-        var cut = RenderComponent<ProjectListView>(p => p
+        var cut = Render<ProjectListView>(p => p
             .Add(c => c.Projects, projects.ToList())
             .Add(c => c.IsLoading, false));
 
@@ -93,7 +93,7 @@ public sealed class ProjectListViewTests : TestContext
 
         int? editedId = null;
 
-        var cut = RenderComponent<ProjectListView>(p => p
+        var cut = Render<ProjectListView>(p => p
             .Add(c => c.Projects, projects.ToList())
             .Add(c => c.IsLoading, false)
             .Add(c => c.OnEdit, Microsoft.AspNetCore.Components.EventCallback.Factory.Create<int>(
@@ -114,7 +114,7 @@ public sealed class ProjectListViewTests : TestContext
 
         int? deletedId = null;
 
-        var cut = RenderComponent<ProjectListView>(p => p
+        var cut = Render<ProjectListView>(p => p
             .Add(c => c.Projects, projects.ToList())
             .Add(c => c.IsLoading, false)
             .Add(c => c.OnDelete, Microsoft.AspNetCore.Components.EventCallback.Factory.Create<int>(

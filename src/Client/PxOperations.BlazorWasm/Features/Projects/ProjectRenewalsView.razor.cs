@@ -7,17 +7,16 @@ namespace PxOperations.BlazorWasm.Features.Projects;
 public partial class ProjectRenewalsView : ComponentBase
 {
     [Parameter, EditorRequired] public List<ProjectResponse> Projects { get; set; } = [];
+    [Parameter] public string Year { get; set; } = "2026";
+    [Parameter] public string Period { get; set; } = "ano";
     [Parameter] public EventCallback<int> OnEdit { get; set; }
-
-    private string renovYear   = "2026";
-    private string renovPeriod = "ano";
 
     private bool InRenovPeriod(string? endDate)
     {
         if (endDate is null) return false;
         if (!DateTime.TryParse(endDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)) return false;
-        if (!int.TryParse(renovYear, out var year) || d.Year != year) return false;
-        return renovPeriod switch
+        if (!int.TryParse(Year, out var year) || d.Year != year) return false;
+        return Period switch
         {
             "q1" => d.Month <= 3,
             "q2" => d.Month >= 4 && d.Month <= 6,
@@ -46,7 +45,7 @@ public partial class ProjectRenewalsView : ComponentBase
     private int NoStatus    => Total - Approved - InProgress - Pending;
     private int CoveragePct => Total == 0 ? 0 : (Approved + InProgress + Pending) * 100 / Total;
 
-    private string PeriodLabel => renovPeriod switch
+    private string PeriodLabel => Period switch
     {
         "q1" => "Q1", "q2" => "Q2", "q3" => "Q3", "q4" => "Q4",
         _    => "Ano completo"

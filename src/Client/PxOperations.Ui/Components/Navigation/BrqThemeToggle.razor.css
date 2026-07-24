@@ -1,0 +1,37 @@
+.side-foot__btn {
+    align-items: center;
+    appearance: none;
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-md);
+    color: var(--color-sidebar-ink-muted);
+    cursor: pointer;
+    display: flex;
+    font: inherit;
+    font-size: 0.8125rem;
+    gap: var(--space-sm);
+    line-height: var(--lh-base);
+    padding-block: var(--space-xs);
+    padding-inline: var(--space-sm);
+    text-align: start;
+    transition:
+        background-color var(--transition-fast),
+        color var(--transition-fast);
+    width: 100%;
+}
+
+.side-foot__btn:hover {
+    background-color: var(--color-sidebar-hover);
+    color: var(--color-sidebar-ink);
+}
+
+.side-foot__btn:focus-visible {
+    outline: 2px solid var(--color-sidebar-accent);
+    outline-offset: 2px;
+}
+
+.side-foot__icon {
+    flex: none;
+    height: 1.125rem;
+    width: 1.125rem;
+}

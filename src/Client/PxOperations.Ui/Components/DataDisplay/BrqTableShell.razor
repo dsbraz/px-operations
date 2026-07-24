@@ -1,0 +1,14 @@
+<div class="table-wrap"
+     role="region"
+     aria-label="@Caption"
+     tabindex="0">
+    <table class="data-table data-table--zebra">
+        <caption>@Caption</caption>
+        @ChildContent
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Caption { get; set; } = string.Empty;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

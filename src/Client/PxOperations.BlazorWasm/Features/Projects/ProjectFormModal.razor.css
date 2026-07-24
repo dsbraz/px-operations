@@ -1,0 +1,85 @@
+::deep .project-form-dialog {
+    width: min(42rem, 92vw);
+}
+
+.project-form-error {
+    background: var(--color-danger-bg);
+    border: 1px solid color-mix(in srgb, var(--color-danger) 28%, transparent);
+    border-radius: var(--radius-md);
+    color: var(--color-danger);
+    font-size: var(--fs-body-sm);
+    padding: var(--space-sm) var(--space-md);
+}
+
+.project-form-error p {
+    margin: 0;
+}
+
+.fgrid {
+    display: grid;
+    gap: var(--space-md);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.fg {
+    display: grid;
+    gap: var(--space-2xs);
+}
+
+.fg.full,
+.fg-divider {
+    grid-column: 1 / -1;
+}
+
+.fg label {
+    color: var(--color-text);
+    font-size: var(--fs-body-xs);
+    font-weight: var(--fw-medium);
+}
+
+.fg input,
+.fg select,
+.fg textarea {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text);
+    font: inherit;
+    font-size: var(--fs-body-sm);
+    min-height: var(--control-h);
+    padding: var(--space-xs) var(--space-sm);
+    width: 100%;
+}
+
+.fg textarea {
+    min-height: 5rem;
+    resize: vertical;
+}
+
+.fg input:focus,
+.fg select:focus,
+.fg textarea:focus {
+    border-color: var(--color-accent);
+    outline: 2px solid color-mix(in srgb, var(--color-focus) 35%, transparent);
+    outline-offset: 1px;
+}
+
+.fg-divider {
+    border-top: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    font-size: var(--fs-body-xs);
+    font-weight: var(--fw-semibold);
+    margin-top: var(--space-xs);
+    padding-top: var(--space-md);
+}
+
+@media (max-width: 40rem) {
+    .fgrid {
+        grid-template-columns: 1fr;
+    }
+
+    .fg.full,
+    .fg-divider {
+        grid-column: auto;
+    }
+}

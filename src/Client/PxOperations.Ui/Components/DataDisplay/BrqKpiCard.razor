@@ -1,0 +1,17 @@
+<article class="kpi" role="listitem">
+    <p class="kpi__label">@Label</p>
+    <div class="kpi__row">
+        <strong class="kpi__value" data-testid="@DataTestId">@Value</strong>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Context))
+    {
+        <p class="kpi__foot">@Context</p>
+    }
+</article>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Value { get; set; } = string.Empty;
+    [Parameter] public string? Context { get; set; }
+    [Parameter] public string? DataTestId { get; set; }
+}

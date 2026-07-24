@@ -1,0 +1,106 @@
+<div class="app" data-brq-ui>
+    <a class="skip-link" href="#brq-main-content">Pular para o conteúdo</a>
+
+    <aside class="app__sidebar"
+           id="brq-app-sidebar"
+           aria-label="Navegação principal">
+        <a class="app__brand"
+            href="@HomeHref"
+           aria-label="@($"{ProductName}, início")">
+            <img class="logo-brq"
+                 src="_content/PxOperations.Ui/images/brq-logo.svg"
+                 alt=""
+                 aria-hidden="true" />
+            <span class="app__brand-name">@ProductName</span>
+        </a>
+
+        <BrqNavigationList AccessibleName="Seções"
+                           Items="@NavigationItems"
+                           OnNavigate="CloseMobileMenu" />
+
+        <div class="app__sidebar-foot">
+            <BrqThemeToggle />
+        </div>
+    </aside>
+
+    <div class="app__main">
+        <header class="app__topbar">
+            <button type="button"
+                    class="icon-btn topbar__toggle"
+                    aria-controls="brq-app-sidebar"
+                    aria-expanded="@(mobileMenuOpen ? "true" : "false")"
+                    aria-label="Abrir navegação"
+                    @onclick="OpenMobileMenu">
+                <svg viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="1.75"
+                     stroke-linecap="round"
+                     stroke-linejoin="round"
+                     aria-hidden="true">
+                    <path d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+            <span class="topbar__title">@CurrentSection</span>
+        </header>
+
+        <main id="brq-main-content"
+              class="app__content"
+              tabindex="-1">
+            <div class="app__content-inner">
+                @ChildContent
+            </div>
+        </main>
+    </div>
+
+    <BrqDialog Open="@mobileMenuOpen"
+               OpenChanged="SetMobileMenuOpen"
+               Title="Navegação principal"
+               CssClass="brq-mobile-dialog"
+               AutofocusSelector=".side-nav__link[aria-current='page']">
+        <div class="mobile-drawer">
+            <a class="app__brand"
+               href="@HomeHref"
+               aria-label="@($"{ProductName}, início")"
+               @onclick="CloseMobileMenu">
+                <img class="logo-brq"
+                     src="_content/PxOperations.Ui/images/brq-logo.svg"
+                     alt=""
+                     aria-hidden="true" />
+                <span class="app__brand-name">@ProductName</span>
+            </a>
+
+            <BrqNavigationList AccessibleName="Seções"
+                               Items="@NavigationItems"
+                               OnNavigate="CloseMobileMenu" />
+
+            <div class="mobile-drawer__foot">
+                <BrqThemeToggle />
+            </div>
+        </div>
+    </BrqDialog>
+</div>
+
+@code {
+    [Parameter] public string ProductName { get; set; } = "Operations PX";
+    [Parameter] public string CurrentSection { get; set; } = "Projetos";
+    [Parameter] public string HomeHref { get; set; } = "/preview/projects";
+    [Parameter, EditorRequired] public IReadOnlyList<BrqNavigationItem> NavigationItems { get; set; } = [];
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool mobileMenuOpen;
+
+    private void OpenMobileMenu() => mobileMenuOpen = true;
+
+    private Task CloseMobileMenu()
+    {
+        mobileMenuOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private Task SetMobileMenuOpen(bool value)
+    {
+        mobileMenuOpen = value;
+        return Task.CompletedTask;
+    }
+}

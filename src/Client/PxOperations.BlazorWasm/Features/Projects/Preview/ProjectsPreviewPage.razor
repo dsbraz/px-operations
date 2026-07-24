@@ -1,0 +1,276 @@
+@page "/preview/projects"
+@page "/preview/projects/dashboard"
+@page "/preview/projects/manage"
+@layout RedesignPreviewLayout
+@using PxOperations.BlazorWasm.Features.Projects
+@using PxOperations.Ui.Components.DataDisplay
+@using PxOperations.Ui.Components.Forms
+@using PxOperations.Ui.Components.Overlays
+
+<PageTitle>Projetos · Redesign preview · Operations PX</PageTitle>
+
+<div class="projects-preview">
+    <div class="projects-preview__header page-head">
+        <div class="page-head__text">
+            <h1 class="page-head__title">@(IsManagementView ? "Gestão de projetos" : "Dashboard de projetos")</h1>
+            <p class="page-head__sub">@(IsManagementView ? "Opere a carteira por lista, kanban ou renovações" : "Visão executiva da carteira e dos principais movimentos")</p>
+        </div>
+        <div class="page-head__actions">
+            <button type="button" class="btn btn--secondary btn--sm" @onclick="ExportCsv">
+                <span aria-hidden="true">↓</span> Exportar CSV
+            </button>
+            <button type="button" class="btn btn--primary btn--sm" @onclick="OpenCreateModal">
+                <span aria-hidden="true">+</span> Novo projeto
+            </button>
+        </div>
+    </div>
+
+    <nav class="projects-workspace-nav" aria-label="Área de projetos">
+        <a class="projects-workspace-nav__link @(!IsManagementView ? "is-active" : "")"
+           href="/preview/projects/dashboard" aria-current="@(!IsManagementView ? "page" : null)">
+            Dashboard
+        </a>
+        <a class="projects-workspace-nav__link @(IsManagementView ? "is-active" : "")"
+           href="/preview/projects/manage" aria-current="@(IsManagementView ? "page" : null)">
+            Gestão de projetos
+        </a>
+    </nav>
+
+    @if (isLoading)
+    {
+        <div class="projects-preview__state" role="status" aria-label="Carregando projetos">Carregando projetos…</div>
+    }
+    else if (hasLoadError)
+    {
+        <div class="projects-preview__state projects-preview__state--error" role="alert">
+            <strong>Não foi possível carregar os projetos</strong>
+            <button type="button" class="btn btn--secondary btn--sm" data-testid="retry-projects" @onclick="LoadProjectsAsync">Tentar novamente</button>
+        </div>
+    }
+    else
+    {
+        @if (!IsManagementView)
+        {
+        <section class="px-kpis" aria-label="Resumo da carteira">
+            <article class="px-kpi px-kpi--accent">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 5V3h8v2M8 10h8"/></svg>
+                <div><strong data-testid="projects-total">@projects.Count</strong><span>Projetos</span></div>
+            </article>
+            <article class="px-kpi px-kpi--success">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg>
+                <div><strong>@ActiveCount</strong><span>Em andamento</span></div>
+            </article>
+            <article class="px-kpi px-kpi--info">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M17 11a4 4 0 0 1 4 4v5"/></svg>
+                <div><strong>@ClientCount</strong><span>Clientes</span></div>
+            </article>
+            <article class="px-kpi px-kpi--warning">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                <div><strong>@ExpiringSoonCount</strong><span>Vencem em 60d</span></div>
+            </article>
+            <article class="px-kpi px-kpi--info">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7h-5V2"/><path d="M20 7a8 8 0 1 0 1 8"/></svg>
+                <div><strong>@RenewingCount</strong><span>Em renovação</span></div>
+            </article>
+            <article class="px-kpi px-kpi--success">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z"/></svg>
+                <div><strong>@ApprovedRenewalCount</strong><span>Aprovadas</span></div>
+            </article>
+        </section>
+
+        <section class="px-pulse" aria-labelledby="px-pulse-title">
+            <header class="px-pulse__head">
+                <div>
+                    <h2 id="px-pulse-title">O que mudou essa semana</h2>
+                    <span>@CurrentWeekLabel</span>
+                </div>
+            </header>
+            <div class="px-pulse__grid">
+                <article>
+                    <span>Novos programados</span>
+                    <strong>@NewScheduledProjects.Count</strong>
+                    <p>@ProjectNames(NewScheduledProjects, "Nenhum projeto")</p>
+                </article>
+                <article>
+                    <span>Iniciados na semana anterior</span>
+                    <strong>@StartedLastWeekProjects.Count</strong>
+                    <p>@ProjectNames(StartedLastWeekProjects, "Nenhum projeto")</p>
+                </article>
+                <article>
+                    <span>Encerrados na semana anterior</span>
+                    <strong>@EndedLastWeekProjects.Count</strong>
+                    <p>@ProjectNames(EndedLastWeekProjects, "Nenhum projeto")</p>
+                </article>
+                <article>
+                    <span>Renovações aprovadas</span>
+                    <strong>@ApprovedProjects.Count</strong>
+                    <p>@ProjectNames(ApprovedProjects, "Nenhuma renovação")</p>
+                </article>
+            </div>
+        </section>
+        <section class="projects-dashboard-cta" aria-labelledby="projects-dashboard-cta-title">
+            <div>
+                <span class="projects-dashboard-cta__eyebrow">Próxima ação</span>
+                <h2 id="projects-dashboard-cta-title">Precisa operar um projeto?</h2>
+                <p>Abra a gestão para pesquisar, filtrar, editar e acompanhar a carteira no formato que fizer mais sentido.</p>
+            </div>
+            <a class="btn btn--primary btn--sm" href="/preview/projects/manage">Abrir gestão de projetos</a>
+        </section>
+        }
+
+        @if (IsManagementView)
+        {
+        <section class="portfolio-panel" aria-label="Carteira de projetos">
+            <div class="view-tabs" role="tablist" aria-label="Visualização da carteira">
+                <button type="button" role="tab" aria-selected="@(activeTab == "lista")" class="vtab @(activeTab == "lista" ? "active" : "")" @onclick='() => SetActiveTab("lista")'>Lista</button>
+                <button type="button" role="tab" aria-selected="@(activeTab == "kanban")" class="vtab @(activeTab == "kanban" ? "active" : "")" @onclick='() => SetActiveTab("kanban")'>Kanban</button>
+                <button type="button" role="tab" aria-selected="@(activeTab == "renewals")" class="vtab @(activeTab == "renewals" ? "active" : "")" @onclick='() => SetActiveTab("renewals")'>Renovações</button>
+                <span class="view-tabs__count"><strong>@FilteredProjects.Count</strong> de @projects.Count projetos</span>
+            </div>
+
+            <div class="filterbar" aria-label="Filtros">
+            <div class="filterbar__row">
+                <div class="search">
+                    <svg class="search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                        <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+                    </svg>
+                    <label class="visually-hidden" for="projects-preview-search">Buscar projetos</label>
+                    <input class="search__input" id="projects-preview-search" type="search" aria-label="Buscar projetos"
+                           autocomplete="off" placeholder="Buscar projeto ou cliente…" value="@filterState.Search" @oninput="HandleSearchInput" />
+                </div>
+
+                <BrqFilterPanel ActiveFacetCount="@FilterPanelActiveCount" OnClear="ClearFacets">
+                    <fieldset><legend>Delivery Center</legend>
+                        @foreach (var option in DeliveryCenterOptions)
+                        {
+                            <label><input type="checkbox" value="@option" checked="@filterState.DeliveryCenters.Contains(option)"
+                                          @onchange="@(args => ToggleFacet(PreviewFacet.DeliveryCenter, option, args))" /><span>@option</span></label>
+                        }
+                    </fieldset>
+                    <fieldset><legend>Status</legend>
+                        @foreach (var option in StatusOptions)
+                        {
+                            <label><input type="checkbox" value="@option" checked="@filterState.Statuses.Contains(option)"
+                                          @onchange="@(args => ToggleFacet(PreviewFacet.Status, option, args))" /><span>@option</span></label>
+                        }
+                    </fieldset>
+                    <fieldset><legend>Tipo</legend>
+                        @foreach (var option in TypeOptions)
+                        {
+                            <label><input type="checkbox" value="@option" checked="@filterState.Types.Contains(option)"
+                                          @onchange="@(args => ToggleFacet(PreviewFacet.Type, option, args))" /><span>@option</span></label>
+                        }
+                    </fieldset>
+                    <fieldset><legend>Renovação</legend>
+                        @foreach (var option in RenewalOptions)
+                        {
+                            <label><input type="checkbox" value="@option" checked="@filterState.Renewals.Contains(option)"
+                                          @onchange="@(args => ToggleFacet(PreviewFacet.Renewal, option, args))" /><span>@RenewalOptionLabel(option)</span></label>
+                        }
+                    </fieldset>
+                    @if (activeTab == "renewals")
+                    {
+                        <fieldset class="filter-fieldset">
+                            <legend>Ano</legend>
+                            <select value="@renewalYear" @onchange="HandleRenewalYearChanged">
+                                <option value="2025">2025</option>
+                                <option value="2026">2026</option>
+                                <option value="2027">2027</option>
+                            </select>
+                        </fieldset>
+                        <fieldset class="filter-fieldset">
+                            <legend>Período</legend>
+                            <select value="@renewalPeriod" @onchange="HandleRenewalPeriodChanged">
+                                <option value="ano">Ano completo</option>
+                                <option value="q1">Q1 (Jan–Mar)</option>
+                                <option value="q2">Q2 (Abr–Jun)</option>
+                                <option value="q3">Q3 (Jul–Set)</option>
+                                <option value="q4">Q4 (Out–Dez)</option>
+                            </select>
+                        </fieldset>
+                    }
+                </BrqFilterPanel>
+
+            </div>
+            @if (ActiveFilterCount > 0)
+            {
+                <div class="filterbar__applied" aria-label="Filtros ativos">
+                    <div class="filterbar__tokens">
+                        @foreach (var token in ActiveFilterTokens)
+                        {
+                            <button type="button" class="ftoken" @onclick="token.Clear">
+                                <span class="ftoken__key">@token.Key</span><span>@token.Value</span><span class="ftoken__x" aria-hidden="true">×</span>
+                            </button>
+                        }
+                    </div>
+                    <button class="filterbar__clear" type="button" @onclick="ClearAllFilters">Limpar tudo</button>
+                </div>
+            }
+            </div>
+
+            <div class="projects-preview__results" role="status" data-results-status aria-live="polite">
+                @ResultsAnnouncement
+            </div>
+
+            <div class="portfolio-panel__content">
+                @if (activeTab == "lista")
+                {
+                    <ProjectListView Projects="@FilteredProjects" IsLoading="false" ShowHeader="false"
+                                     OnEdit="OpenEditModal" OnDelete="RequestDeleteProject" />
+                }
+                else if (activeTab == "kanban")
+                {
+                    <ProjectKanbanView Projects="@FilteredProjects" OnEdit="OpenEditModal"
+                                       OnProjectUpdated="HandleProjectUpdated" OnToast="ShowToast" OnError="HandleError" />
+                }
+                else
+                {
+                    <ProjectRenewalsView Projects="@FilteredProjects"
+                                         Year="@renewalYear"
+                                         Period="@renewalPeriod"
+                                         OnEdit="OpenEditModal" />
+                }
+            </div>
+        </section>
+        }
+    }
+
+    @if (showModal)
+    {
+        <ProjectFormModal EditingProject="@editingProject" OnClose="CloseModal" OnSaved="HandleProjectSaved" />
+    }
+
+    @if (pendingDeleteProject is not null)
+    {
+        <BrqDialog Open="true"
+                   OpenChanged="SetDeleteDialogOpen"
+                   Title="Excluir projeto"
+                   Description="@($"Você está prestes a excluir {pendingDeleteProject.Name}. Esta ação não pode ser desfeita.")"
+                   CssClass="project-delete-dialog"
+                   AutofocusSelector=".project-delete-cancel">
+            <ChildContent>
+                <p class="project-delete-copy">
+                    Confirme somente se o projeto não deve mais fazer parte da carteira.
+                </p>
+            </ChildContent>
+            <Footer>
+                <button type="button"
+                        class="btn btn--secondary btn--sm project-delete-cancel"
+                        @onclick="CancelDelete">
+                    Cancelar
+                </button>
+                <button type="button"
+                        class="btn btn--danger btn--sm"
+                        disabled="@isDeleting"
+                        @onclick="ConfirmDeleteProject">
+                    @(isDeleting ? "Excluindo…" : "Excluir projeto")
+                </button>
+            </Footer>
+        </BrqDialog>
+    }
+
+    @if (toastMessage is not null)
+    {
+        <div class="projects-preview__toast" role="status">✓ @toastMessage</div>
+    }
+</div>

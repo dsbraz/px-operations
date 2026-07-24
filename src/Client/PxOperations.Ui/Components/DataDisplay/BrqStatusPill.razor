@@ -1,0 +1,25 @@
+<span class="@CssClass">@Label</span>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public BrqStatusTone Tone { get; set; }
+    [Parameter] public BrqSize Size { get; set; } = BrqSize.Medium;
+
+    private string CssClass => $"{ToneClass} {SizeClass}";
+
+    private string ToneClass => Tone switch
+    {
+        BrqStatusTone.Positive => "pill pill--good",
+        BrqStatusTone.Warning => "pill pill--warn",
+        BrqStatusTone.Danger => "pill pill--danger",
+        BrqStatusTone.Info => "pill pill--info",
+        _ => "pill pill--neutral"
+    };
+
+    private string SizeClass => Size switch
+    {
+        BrqSize.Small => "pill--sm",
+        BrqSize.Large => "pill--lg",
+        _ => "pill--md"
+    };
+}

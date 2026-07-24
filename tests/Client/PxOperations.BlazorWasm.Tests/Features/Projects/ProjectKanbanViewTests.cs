@@ -13,7 +13,7 @@ namespace PxOperations.BlazorWasm.Tests.Features.Projects;
 /// Testes isolados do componente <see cref="ProjectKanbanView"/>.
 /// A maioria dos testes não precisa de HTTP; apenas o drag-drop usa <see cref="ProjectsClient"/>.
 /// </summary>
-public sealed class ProjectKanbanViewTests : TestContext
+public sealed class ProjectKanbanViewTests : BunitContext
 {
     // Registra um ProjectsClient de stub sem operações — suficiente para a maioria dos testes.
     private void RegisterEmptyClient()
@@ -34,7 +34,7 @@ public sealed class ProjectKanbanViewTests : TestContext
             ProjectsTestHelpers.MakeProject(id: 3, status: "Encerrado",    name: "Projeto Velho")
         };
 
-        var cut = RenderComponent<ProjectKanbanView>(p => p
+        var cut = Render<ProjectKanbanView>(p => p
             .Add(c => c.Projects, projects.ToList()));
 
         Assert.Contains("kanban-board", cut.Markup);
@@ -57,7 +57,7 @@ public sealed class ProjectKanbanViewTests : TestContext
                 renewal: "Pendente")
         };
 
-        var cut = RenderComponent<ProjectKanbanView>(p => p
+        var cut = Render<ProjectKanbanView>(p => p
             .Add(c => c.Projects, projects.ToList()));
 
         Assert.Contains("kanban-card", cut.Markup);
@@ -79,7 +79,7 @@ public sealed class ProjectKanbanViewTests : TestContext
             ProjectsTestHelpers.MakeProject(id: 2, name: "P2", renewal: "Pendente")
         };
 
-        var cut = RenderComponent<ProjectKanbanView>(p => p
+        var cut = Render<ProjectKanbanView>(p => p
             .Add(c => c.Projects, projects.ToList()));
 
         cut.FindAll("button.kgtab")[1].Click(); // 0=Status, 1=Renovação, 2=DC
@@ -101,7 +101,7 @@ public sealed class ProjectKanbanViewTests : TestContext
             ProjectsTestHelpers.MakeProject(id: 2, dc: "DC3", name: "P2")
         };
 
-        var cut = RenderComponent<ProjectKanbanView>(p => p
+        var cut = Render<ProjectKanbanView>(p => p
             .Add(c => c.Projects, projects.ToList()));
 
         cut.FindAll("button.kgtab")[2].Click(); // 0=Status, 1=Renovação, 2=DC
@@ -120,7 +120,7 @@ public sealed class ProjectKanbanViewTests : TestContext
             ProjectsTestHelpers.MakeProject(id: 1, name: "Alpha Squad"),
         };
 
-        var cut = RenderComponent<ProjectKanbanView>(p => p
+        var cut = Render<ProjectKanbanView>(p => p
             .Add(c => c.Projects, projects.ToList()));
 
         Assert.Contains("Alpha Squad", cut.Markup);
@@ -139,7 +139,7 @@ public sealed class ProjectKanbanViewTests : TestContext
 
         int? editedId = null;
 
-        var cut = RenderComponent<ProjectKanbanView>(p => p
+        var cut = Render<ProjectKanbanView>(p => p
             .Add(c => c.Projects, projects.ToList())
             .Add(c => c.OnEdit, Microsoft.AspNetCore.Components.EventCallback.Factory.Create<int>(
                 this, id => editedId = id)));
@@ -159,7 +159,7 @@ public sealed class ProjectKanbanViewTests : TestContext
             ProjectsTestHelpers.MakeProject(id: 1, status: "Em andamento", name: "Unico")
         };
 
-        var cut = RenderComponent<ProjectKanbanView>(p => p
+        var cut = Render<ProjectKanbanView>(p => p
             .Add(c => c.Projects, projects.ToList()));
 
         // Colunas "Programado" e "Encerrado" devem mostrar mensagem vazia
@@ -184,7 +184,7 @@ public sealed class ProjectKanbanViewTests : TestContext
 
         string? toastMessage = null;
 
-        var cut = RenderComponent<ProjectKanbanView>(p => p
+        var cut = Render<ProjectKanbanView>(p => p
             .Add(c => c.Projects, projects.ToList())
             .Add(c => c.OnToast, Microsoft.AspNetCore.Components.EventCallback.Factory.Create<string>(
                 this, msg => toastMessage = msg)));
