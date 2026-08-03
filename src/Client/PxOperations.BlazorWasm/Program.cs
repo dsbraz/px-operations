@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using PxOperations.BlazorWasm;
 using PxOperations.BlazorWasm.Api;
 using PxOperations.BlazorWasm.Configuration;
+using PxOperations.Ui;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -20,5 +21,6 @@ builder.Services.AddScoped<ProjectHealthClient>();
 builder.Services.AddScoped<ProjectsClient>();
 builder.Services.AddScoped<MilestonesClient>();
 builder.Services.AddScoped<NpsClient>();
+builder.Services.AddPxOperationsUi();
 
 await builder.Build().RunAsync();

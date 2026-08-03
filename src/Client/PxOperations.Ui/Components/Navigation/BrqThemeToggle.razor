@@ -1,0 +1,62 @@
+@implements IDisposable
+@inject IThemeService ThemeService
+
+<button type="button"
+        class="side-foot__btn"
+        aria-label="@AccessibleLabel"
+        aria-pressed="@(ThemeService.Current == ThemePreference.Dark ? "true" : "false")"
+        title="@AccessibleLabel"
+        @onclick="ToggleAsync">
+    @if (ThemeService.Current == ThemePreference.Dark)
+    {
+        <svg class="side-foot__icon"
+             viewBox="0 0 24 24"
+             fill="none"
+             stroke="currentColor"
+             stroke-width="1.75"
+             stroke-linecap="round"
+             stroke-linejoin="round"
+             aria-hidden="true">
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41" />
+        </svg>
+        <span>Modo claro</span>
+    }
+    else
+    {
+        <svg class="side-foot__icon"
+             viewBox="0 0 24 24"
+             fill="none"
+             stroke="currentColor"
+             stroke-width="1.75"
+             stroke-linecap="round"
+             stroke-linejoin="round"
+             aria-hidden="true">
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+        </svg>
+        <span>Modo escuro</span>
+    }
+</button>
+
+@code {
+    private string AccessibleLabel => ThemeService.Current == ThemePreference.Dark
+        ? "Ativar tema claro"
+        : "Ativar tema escuro";
+
+    protected override void OnInitialized() => ThemeService.Changed += HandleThemeChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        await ThemeService.InitializeAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => ThemeService.Changed -= HandleThemeChanged;
+
+    private async Task ToggleAsync() => await ThemeService.ToggleAsync();
+
+    private void HandleThemeChanged() => _ = InvokeAsync(StateHasChanged);
+}

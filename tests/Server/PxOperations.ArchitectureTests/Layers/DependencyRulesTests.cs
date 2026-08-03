@@ -80,7 +80,7 @@ public sealed class DependencyRulesTests
         var currentDirectory = AppContext.BaseDirectory;
         var directory = new DirectoryInfo(currentDirectory);
 
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "px-operations.sln")))
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "PX-Operations.sln")))
         {
             directory = directory.Parent;
         }

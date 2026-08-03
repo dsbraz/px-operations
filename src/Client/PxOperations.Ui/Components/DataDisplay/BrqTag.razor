@@ -1,0 +1,26 @@
+<span class="@CssClass">@Label</span>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public BrqTagTone Tone { get; set; } = BrqTagTone.Purple;
+    [Parameter] public BrqSize Size { get; set; } = BrqSize.Medium;
+
+    private string CssClass => $"{ToneClass} {SizeClass}";
+
+    private string ToneClass => Tone switch
+    {
+        BrqTagTone.Gray => "tag tag--gray",
+        BrqTagTone.Black => "tag tag--black",
+        BrqTagTone.Orange => "tag tag--orange",
+        BrqTagTone.Blue => "tag tag--blue",
+        BrqTagTone.Green => "tag tag--green",
+        _ => "tag tag--purple"
+    };
+
+    private string SizeClass => Size switch
+    {
+        BrqSize.Small => "tag--sm",
+        BrqSize.Large => "tag--lg",
+        _ => "tag--md"
+    };
+}

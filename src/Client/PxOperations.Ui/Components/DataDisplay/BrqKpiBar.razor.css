@@ -1,0 +1,18 @@
+.kpi-grid {
+    display: grid;
+    gap: var(--panel-gap);
+    grid-template-columns: 1fr;
+    margin-bottom: var(--panel-gap);
+}
+
+@media (min-width: 34em) {
+    .kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 64em) {
+    .kpi-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}

@@ -1,0 +1,579 @@
+/* =============================================================
+   BRQ · DESIGN TOKENS (portáveis)
+   Fonte da verdade do design para SITES e DASHBOARDS gerados.
+   Autocontido: não depende de nenhum outro arquivo. Copie este
+   arquivo junto do deliverable e linke-o ANTES de brq-core.css.
+
+   Contrato de acento (decisão do projeto):
+     • ROXO  #7f2ec9 = acento FUNCIONAL/interativo — links, foco,
+       aba/KPI ativo, série 1 de gráfico. Único acento com contraste
+       AA para TEXTO (6.7:1 sobre branco).
+     • LARANJA #ee7c38 = acento de MARCA — realce/energia: big-number
+       no hero, fills em faixa escura, detalhes decorativos. NUNCA
+       como texto pequeno sobre claro (2.8:1 — falha AA).
+   ============================================================= */
+
+:root {
+  /* ===========================================================
+     CORES — primárias (marca) e acentos
+     =========================================================== */
+  --color-black: #121212;
+  --color-white: #ffffff;
+
+  /* Acentos secundários. Contraste sobre BRANCO (WCAG):
+       purple 6.7:1 → OK como texto/link (AA normal)
+       blue   3.72:1 → só texto grande / UI / bordas (≥3)
+       orange 2.77:1 → só preenchimento/decorativo ou sobre escuro
+       green  2.17:1 → só preenchimento/decorativo ou sobre escuro
+     Como TEXTO legível, use sempre purple (ou preto). */
+  --color-purple: #7f2ec9;
+  --color-orange: #ee7c38;
+  --color-blue:   #5a85cb;
+  --color-green:  #5bc397;
+  --color-gray:   #626262;   /* 6.1:1 sobre branco → OK como texto secundário */
+
+  /* ---------- Escala de cinza ---------- */
+  --color-gray-500: #8d8d8d;  /* 3.32:1 → UI/bordas/texto grande, não corpo */
+  --color-gray-300: #b8b8b8;  /* bordas / divisores */
+  --color-gray-100: #cecece;  /* bordas sutis / superfícies */
+  --color-gray-75:  #ececec;  /* superfície sutil COM texto (balões, realces) */
+  --color-gray-50:  #fafafa;  /* superfície de fundo */
+
+  /* ---------- Aliases semânticos ---------- */
+  --color-bg:         var(--color-white);
+  --color-surface:    var(--color-gray-50);   /* cards, painéis */
+  --color-surface-2:  var(--color-white);      /* superfície sobre surface */
+  --color-text:       var(--color-black);
+  --color-text-muted: var(--color-gray);
+  --color-border:     var(--color-gray-100);
+  --color-primary:    var(--color-black);
+  /* Vidro fosco de barras sticky (header/topbar). rgba LITERAL de propósito:
+     color-mix vira color(srgb…) e engana o a11y-audit em superfície COM texto. */
+  --color-glass:      rgba(255, 255, 255, 0.85);
+  /* Realce SÓLIDO p/ hover/ativo em superfície COM texto (nav, listas). Sólido de
+     propósito: overlay translúcido faz o audit ler o fundo como escuro (ignora alpha). */
+  --color-hover:      #f1f1f1;
+
+  /* Acento FUNCIONAL (interativo/legível) = roxo */
+  --color-accent:       var(--color-purple);
+  --color-focus:        var(--color-purple);
+  /* Acento de MARCA (realce/energia, não-texto) = laranja */
+  --color-brand-accent: var(--color-orange);
+
+  /* Roxo ELEVADO p/ superfície ESCURA. O #7f2ec9 rende só 2.8:1 sobre #121212 —
+     abaixo dos 3:1 que WCAG 1.4.11 exige de indicador/contorno. Mesma família e já
+     validado: é o roxo que a paleta de gráfico usa no tema escuro. */
+  --color-accent-on-dark: #a94fd6;
+
+  /* ---------- Chrome do dashboard: sidebar SEGUE O TEMA ----------
+     Como Linear/Shopify/Clerk: sidebar clara no light, escura no dark — nunca fixa.
+     Estes tokens são ALIASES dos tokens de superfície/tinta, então invertem sozinhos
+     quando o bloco [data-theme="dark"] redefine --color-surface/--color-text/etc.
+     O que a marca dá de distintivo (trilho roxo, Geist nos rótulos) vem depois. */
+  --color-sidebar-bg:        var(--color-surface);      /* light #fafafa · dark #1a1a1c */
+  --color-sidebar-ink:       var(--color-text);         /* light #121212 · dark #fff   */
+  --color-sidebar-ink-muted: var(--color-text-muted);   /* light #626262 · dark #b8b8b8 */
+  --color-sidebar-hover:     var(--color-hover);        /* light #f1f1f1 · dark #232327 */
+  --color-sidebar-border:    var(--color-border);       /* light #cecece · dark #2a2a2e */
+  --color-sidebar-chip:      var(--color-gray-100);     /* chip do badge (override no dark) */
+  --color-sidebar-accent:    var(--color-accent);       /* ícone/acento do item ativo (override no dark) */
+  --color-sidebar-active-bg: var(--color-gray-75);      /* fundo da pílula ativa — cinza neutro (não roxo) */
+
+  /* Hovers derivados (color-mix, sem valor mágico) */
+  --color-primary-hover:   color-mix(in srgb, var(--color-black), var(--color-white) 12%);
+  --color-secondary-hover: color-mix(in srgb, var(--color-gray-50), var(--color-black) 6%);
+  --color-tertiary-hover:  color-mix(in srgb, var(--color-gray-50), var(--color-black) 4%);
+  --color-accent-hover:    color-mix(in srgb, var(--color-purple), var(--color-black) 12%);
+
+  /* ---------- Estados (status) — reservados p/ estado, nunca p/ séries de gráfico.
+     Sempre acompanhados de ícone + rótulo (nunca só cor). Tons de TEXTO com
+     contraste AA sobre claro; os *-bg são tintas suaves p/ pílulas. ---------- */
+  --color-good:   #16714a;   /* sucesso — verde escuro (AA como texto sobre tinta e branco) */
+  --color-warn:   #8a5310;   /* atenção — âmbar escuro (AA como texto) */
+  --color-danger: #c62828;   /* crítico — único vermelho semântico */
+  --color-info:   var(--color-purple);   /* informativo = roxo funcional */
+  /* Tintas SÓLIDAS (pré-calculadas). Superfície COM texto NÃO usa color-mix:
+     o color-mix resolve p/ color(srgb…) e engana o a11y-audit (mesma lição do
+     --color-gray-75). Texto sólido acima sobre a tinta ≥ 4.5:1 (AA). */
+  --color-good-bg:   #e4f2ec;
+  --color-warn-bg:   #f3ece0;
+  --color-danger-bg: #f9eaea;
+  --color-info-bg:   #f2eafa;
+
+  /* ===========================================================
+     GRÁFICOS — paletas VALIDADAS (dataviz: CVD/contraste OK).
+     Categórica: atribuir na ORDEM, nunca ciclar. 6ª série → "Outros".
+     Superfície-alvo padrão dos gráficos = CARD CLARO (branco).
+     =========================================================== */
+  /* Categórica (superfície clara) — série 1..5, ordem de atribuição */
+  --chart-1: #7f2ec9;  /* roxo    (série principal = acento funcional) */
+  --chart-2: #5a85cb;  /* azul */
+  --chart-3: #2e9e6e;  /* verde   (escurecido p/ contraste de superfície) */
+  --chart-4: #d9631e;  /* laranja (escurecido p/ contraste de superfície) */
+  --chart-5: #c0398a;  /* magenta */
+  --chart-other: var(--color-gray-500);           /* categoria "Outros" */
+  --chart-grid:  color-mix(in srgb, var(--color-black) 8%, transparent);
+  --chart-axis:  var(--color-gray-500);
+  --chart-ink:   var(--color-text);               /* rótulos/valores = tinta de texto */
+
+  /* Sequencial (magnitude) — 1 hue (roxo) claro→escuro */
+  --seq-1: #efe7f7;
+  --seq-2: #cdb0ea;
+  --seq-3: #a670dd;
+  --seq-4: #7f2ec9;
+  --seq-5: #4f1c7c;
+
+  /* Divergente (polaridade) — laranja ↔ cinza neutro ↔ azul */
+  --div-neg-2: #d9631e;
+  --div-neg-1: #e8a97e;
+  --div-mid:   #ececec;
+  --div-pos-1: #9fb8e0;
+  --div-pos-2: #5a85cb;
+
+  /* ===========================================================
+     TIPOGRAFIA — 3 famílias
+     Aspekta (display/heading) · Inter (body) · Geist Mono (decoration).
+
+     NENHUMA das três é carregada por esta RCL hoje: Aspekta não tem
+     licença registrada nem arquivo WOFF2, e Inter/Geist Mono viriam de
+     terceiros. As stacks abaixo degradam para system-ui/ui-monospace.
+     Ao resolver licença e formato, adicionar o @font-face aqui.
+     =========================================================== */
+  --font-display: "Aspekta", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-heading: var(--font-display);
+  --font-body:    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono:    "Geist Mono", ui-monospace, "SF Mono", "Menlo", "Consolas", monospace;
+
+  --fw-regular:  400;   /* Inter body */
+  --fw-medium:   450;   /* Aspekta */
+  --fw-semibold: 600;   /* Geist Mono decoration */
+  --fw-bold:     700;
+
+  --lh-tight: 1.1;   --lh-snug: 1.15;   --lh-base: 1.25;   --lh-loose: 1.4;
+
+  --ls-tighter: -1px; --ls-tight: -0.5px; --ls-normal: 0; --ls-wide: 5px; --ls-label: 0.05em;
+
+  /* Escala tipográfica. Display/Heading fluidos (clamp); Body/Decoration fixos. */
+  --fs-display-xxl: clamp(2.5rem, 1.4rem + 5vw, 5rem);       /* 40 → 80 */
+  --fs-display-xl:  clamp(2.25rem, 1.4rem + 3.6vw, 4rem);    /* 36 → 64 */
+  --fs-display-lg:  clamp(2rem, 1.4rem + 2.5vw, 3rem);       /* 32 → 48 */
+
+  --fs-heading-xxl: clamp(1.875rem, 1.4rem + 1.9vw, 2.5rem); /* 30 → 40 */
+  --fs-heading-xl:  clamp(1.625rem, 1.35rem + 1.2vw, 2rem);  /* 26 → 32 */
+  --fs-heading-lg:  clamp(1.375rem, 1.25rem + 0.55vw, 1.5rem);/* 22 → 24 */
+  --fs-heading-md:  clamp(1.125rem, 1.05rem + 0.35vw, 1.25rem);/* 18 → 20 */
+
+  --fs-body-xl: 1.5rem;   --fs-body-lg: 1.125rem; --fs-body-md: 1rem;
+  --fs-body-sm: 0.875rem; --fs-body-xs: 0.75rem;
+
+  --fs-decoration-4xl: 4.5rem; --fs-decoration-3xl: 4rem;  --fs-decoration-2xl: 3rem;
+  --fs-decoration-xl:  2.5rem; --fs-decoration-lg:  1.5rem; --fs-decoration-md:  1rem;
+  --fs-decoration-sm:  0.875rem; --fs-decoration-xs: 0.75rem;
+
+  /* ===========================================================
+     ESPAÇAMENTO (escala 4px)
+     =========================================================== */
+  --space-2xs: 0.25rem;  --space-xs: 0.5rem;  --space-sm: 0.75rem; --space-md: 1rem;
+  --space-lg:  1.5rem;   --space-xl: 2rem;    --space-2xl: 3rem;   --space-3xl: 4rem;
+  --space-4xl: 6rem;
+
+  /* Ritmo vertical padrão das FAIXAS de página (64 → 104px, fluido) */
+  --band-padding-block: clamp(var(--space-3xl), 4vw + 2rem, calc(var(--space-4xl) + var(--space-xs)));
+
+  /* ===========================================================
+     LAYOUT / GRID
+     =========================================================== */
+  --container-max: 1336px;
+  --container-padding: 1rem;
+  --grid-columns: 12;
+  --grid-gutter: 2rem;
+  --ratio-media: 3 / 4;      /* retrato fotográfico */
+
+  /* ===========================================================
+     DASHBOARD — shell (app: sidebar + topbar + conteúdo)
+     =========================================================== */
+  --sidebar-width: 15.5rem;       /* 248px — nav lateral */
+  --sidebar-width-collapsed: 0;   /* fora do fluxo no mobile (drawer) */
+  --topbar-height: 3.75rem;       /* 60px */
+  --content-max: 88rem;           /* medida máx. do conteúdo do dashboard */
+  --content-padding: clamp(1rem, 0.5rem + 2vw, 2rem);
+  --panel-gap: clamp(1rem, 0.6rem + 1.2vw, 1.5rem);  /* gap entre painéis/cards */
+  --table-row-h: 3rem;            /* altura mínima da linha da tabela */
+  --chart-h: 16rem;               /* altura padrão da área de plotagem */
+  --fs-stat: 1.625rem;            /* 26px — número-herói de KPI (denso, escala de dashboard) */
+  --control-h: 2.25rem;           /* 36px — altura ÚNICA de controles: botão sm, select, busca */
+
+  /* ===========================================================
+     BORDAS / SOMBRAS / TRANSIÇÕES / CAMADAS
+     =========================================================== */
+  --radius-sm: 4px;  --radius-md: 8px;  --radius-lg: 16px; --radius-xl: 20px;
+  --radius-2xl: 24px; --radius-media: 12px; --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 2px rgba(18, 18, 18, 0.06);
+  --shadow-md: 0 4px 12px rgba(18, 18, 18, 0.08);
+  --shadow-lg: 0 12px 32px rgba(18, 18, 18, 0.12);
+  --shadow-panel: 0 24px 40px -20px rgba(18, 18, 18, 0.16);
+
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+  --ease-out-back: cubic-bezier(0.34, 1.28, 0.64, 1);
+  --dur-reveal: 600ms;
+
+  --icon-sm: 1rem; --icon-md: 1.25rem; --icon-lg: 1.5rem;
+
+  --z-header: 100; --z-overlay: 200; --z-modal: 300; --z-tooltip: 400;
+}
+
+/* =============================================================
+   TEMA ESCURO — opcional, ativado por [data-theme="dark"] no <html>.
+   Superfícies e tinta invertem; a paleta de GRÁFICO escura é uma
+   REATRIBUIÇÃO validada (roxo↔azul colidem sob daltonismo no escuro,
+   então a ordem categórica muda): série 1..5 = roxo, verde, laranja,
+   azul, magenta. Documente o mapeamento ao usar tema escuro.
+   ============================================================= */
+:root[data-theme="dark"] {
+  --color-bg:         #141416;
+  --color-surface:    #1a1a1c;   /* card/painel escuro (superfície de gráfico) */
+  --color-surface-2:  #202024;
+  --color-text:       var(--color-white);
+  --color-text-muted: var(--color-gray-300);
+  --color-border:     #2a2a2e;
+  --color-glass:      rgba(20, 20, 22, 0.85);
+  --color-hover:      #232327;
+
+  /* Hover de botão/chip no dark: CLAREAR a superfície escura. No light esses tokens são um
+     cinza-claro (color-mix com gray-50); sem redefinir, o botão secundário virava cinza-claro
+     no hover e o texto claro sumia. */
+  --color-secondary-hover: color-mix(in srgb, var(--color-surface-2), var(--color-white) 8%);
+  --color-tertiary-hover:  color-mix(in srgb, var(--color-surface-2), var(--color-white) 6%);
+
+  /* Sidebar no tema escuro: bg/ink/border/hover já seguem os aliases acima.
+     Só o chip do badge e o trilho de acento precisam de valores próprios p/ o escuro. */
+  --color-sidebar-chip:   #2a2a2e;                     /* branco por cima → 14.2:1 */
+  --color-sidebar-accent: var(--color-accent-on-dark); /* roxo elevado (3:1+ sobre escuro) */
+  --color-sidebar-active-bg: #2a2a2e;                  /* cinza neutro escuro — ícone de acento passa ≥3:1 */
+  --color-focus: var(--color-accent-on-dark);
+
+  /* Tinta primária (links e .brq-button--primary) precisa inverter junto com o
+     texto — senão todo link vira #121212 sobre superfície escura (1.08:1).
+     O hover também inverte o sentido: clareia a partir do branco, não escurece. */
+  --color-primary:         var(--color-white);
+  --color-primary-hover:   color-mix(in srgb, var(--color-white), var(--color-black) 12%);
+
+  --color-good:   #4fc78a;  --color-warn: #e0a24a;  --color-danger: #ef6b6b;  --color-info: #b98ce6;
+  /* Tintas SÓLIDAS (pré-calculadas p/ superfície escura; texto claro por cima ≥ 4.5:1) */
+  --color-good-bg:   #243930;
+  --color-warn-bg:   #3e3224;
+  --color-danger-bg: #3f2829; /* ajuste de 1 RGB step para 4.5:1 com --color-danger */
+  --color-info-bg:   #372f40;
+
+  /* Paleta categórica p/ superfície escura — ordem reatribuída (CVD-safe) */
+  --chart-1: #a94fd6;  /* roxo   */
+  --chart-2: #2ea877;  /* verde  */
+  --chart-3: #d67435;  /* laranja*/
+  --chart-4: #3f93d9;  /* azul   */
+  --chart-5: #d95fa0;  /* magenta*/
+  --chart-other: var(--color-gray-300);
+  --chart-grid:  color-mix(in srgb, var(--color-white) 10%, transparent);
+  --chart-axis:  var(--color-gray-300);
+  --chart-ink:   var(--color-white);
+
+  --seq-1: #2a1f38; --seq-2: #4f2f78; --seq-3: #7f2ec9; --seq-4: #a670dd; --seq-5: #d9c2f2;
+}
+
+/* =============================================================
+   Blazor adapter
+   Os valores acima são a fonte de verdade visual do NPS.
+
+   O RESET abaixo é escopado em [data-brq-ui] (emitido pelo BrqAppShell)
+   para conviver com o cliente legado: um `* { margin: 0 }` ou um
+   `a { text-decoration: none }` globais reestilizariam todas as páginas
+   que ainda usam app.css.
+
+   As PRIMITIVAS de classe (.brq-button, .brq-icon-button,
+   .brq-visually-hidden, .brq-skip-link) são deliberadamente globais.
+   O prefixo brq- já as isola de app.css, e sem escopo de ancestral os
+   componentes continuam corretos fora do BrqAppShell.
+   ============================================================= */
+
+:root {
+  color-scheme: light;
+
+  /* Temporary aliases keep non-pilot states on the same palette while
+     their markup is progressively moved to the canonical NPS classes. */
+  --brq-bg: var(--color-bg);
+  --brq-surface: var(--color-surface);
+  --brq-surface-raised: var(--color-surface-2);
+  --brq-sidebar-bg: var(--color-sidebar-bg);
+  --brq-glass: var(--color-glass);
+  --brq-hover: var(--color-hover);
+  --brq-nav-active: var(--color-sidebar-active-bg);
+  --brq-neutral-bg: var(--color-surface);
+  --brq-accent-bg: var(--color-info-bg);
+  --brq-positive-bg: var(--color-good-bg);
+  --brq-warning-bg: var(--color-warn-bg);
+  --brq-danger-bg: var(--color-danger-bg);
+  --brq-text: var(--color-text);
+  --brq-text-muted: var(--color-text-muted);
+  --brq-border: var(--color-border);
+  --brq-border-strong: var(--color-gray-300);
+  --brq-accent: var(--color-accent);
+  --brq-accent-text: var(--color-info);
+  --brq-positive: var(--color-good);
+  --brq-warning: var(--color-warn);
+  --brq-danger: var(--color-danger);
+  --brq-font-body: var(--font-body);
+  --brq-font-heading: var(--font-heading);
+  --brq-font-mono: var(--font-mono);
+  --brq-radius-sm: var(--radius-sm);
+  --brq-radius-md: var(--radius-md);
+  --brq-radius-lg: var(--radius-lg);
+  --brq-shadow-sm: var(--shadow-sm);
+  --brq-shadow-lg: var(--shadow-lg);
+  --brq-transition-fast: var(--transition-fast);
+  --brq-sidebar-width: var(--sidebar-width);
+  --brq-topbar-height: var(--topbar-height);
+  --brq-content-max: var(--content-max);
+  --brq-content-padding: var(--content-padding);
+  --brq-panel-gap: var(--panel-gap);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+[data-brq-ui],
+[data-brq-ui] *,
+[data-brq-ui] *::before,
+[data-brq-ui] *::after {
+  box-sizing: border-box;
+}
+
+[data-brq-ui] * {
+  margin: 0;
+}
+
+[data-brq-ui] {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-md);
+  font-weight: var(--fw-regular);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+[data-brq-ui] img,
+[data-brq-ui] picture,
+[data-brq-ui] video,
+[data-brq-ui] canvas,
+[data-brq-ui] svg {
+  display: block;
+  max-width: 100%;
+}
+
+[data-brq-ui] input,
+[data-brq-ui] button,
+[data-brq-ui] textarea,
+[data-brq-ui] select {
+  color: inherit;
+  font: inherit;
+}
+
+[data-brq-ui] p,
+[data-brq-ui] h1,
+[data-brq-ui] h2,
+[data-brq-ui] h3,
+[data-brq-ui] h4,
+[data-brq-ui] h5,
+[data-brq-ui] h6 {
+  overflow-wrap: break-word;
+}
+
+[data-brq-ui] ul[role="list"],
+[data-brq-ui] ol[role="list"] {
+  list-style: none;
+  padding: 0;
+}
+
+[data-brq-ui] a {
+  color: inherit;
+  text-decoration: none;
+}
+
+[data-brq-ui] [hidden] {
+  display: none !important;
+}
+
+[data-brq-ui] h1,
+[data-brq-ui] h2,
+[data-brq-ui] h3,
+[data-brq-ui] h4,
+[data-brq-ui] h5 {
+  font-family: var(--font-display);
+  font-weight: var(--fw-medium);
+}
+
+[data-brq-ui] :focus-visible {
+  border-radius: var(--radius-sm);
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+[data-brq-ui] :focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* --- Primitivas globais (namespace brq-, sem escopo de ancestral) --- */
+
+.brq-visually-hidden {
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.brq-skip-link {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  box-sizing: border-box;
+  color: var(--color-text);
+  left: var(--space-md);
+  padding: var(--space-xs) var(--space-md);
+  position: fixed;
+  text-decoration: none;
+  top: var(--space-md);
+  transform: translateY(-200%);
+  transition: transform var(--transition-fast);
+  z-index: var(--z-modal);
+}
+
+.brq-skip-link:focus {
+  transform: translateY(0);
+}
+
+.brq-button {
+  --btn-px: var(--space-lg);
+  --btn-py: var(--space-sm);
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  box-sizing: border-box;
+  cursor: pointer;
+  display: inline-flex;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-md);
+  font-weight: var(--fw-medium);
+  gap: var(--space-xs);
+  justify-content: center;
+  letter-spacing: var(--ls-normal);
+  line-height: var(--lh-base);
+  padding: var(--btn-py) var(--btn-px);
+  text-decoration: none;
+  text-transform: none;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.brq-button svg {
+  height: var(--icon-sm);
+  width: var(--icon-sm);
+}
+
+.brq-button--sm {
+  --btn-px: var(--space-sm);
+  --btn-py: var(--space-xs);
+  font-size: var(--fs-body-sm);
+  gap: var(--space-2xs);
+}
+
+.brq-button--primary {
+  background-color: var(--color-black);
+  border-color: var(--color-black);
+  color: var(--color-white);
+}
+
+.brq-button--primary:hover {
+  background-color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+:root[data-theme="dark"] .brq-button--primary {
+  background-color: var(--color-white);
+  border-color: var(--color-white);
+  color: var(--color-black);
+}
+
+.brq-button--secondary {
+  background-color: var(--color-surface-2);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.brq-button--secondary:hover {
+  background-color: var(--color-secondary-hover);
+}
+
+.brq-button--tertiary {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--color-text);
+}
+
+.brq-button--tertiary:hover {
+  background-color: var(--color-tertiary-hover);
+}
+
+.brq-button:disabled,
+.brq-button[aria-disabled="true"] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.brq-icon-button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+  color: var(--color-text);
+  cursor: pointer;
+  display: inline-flex;
+  height: 2.5rem;
+  justify-content: center;
+  padding: 0;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
+  width: 2.5rem;
+}
+
+.brq-icon-button:hover {
+  background-color: var(--color-tertiary-hover);
+}
+
+.brq-icon-button svg {
+  height: var(--icon-md);
+  width: var(--icon-md);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-brq-ui],
+  [data-brq-ui] *,
+  [data-brq-ui] *::before,
+  [data-brq-ui] *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

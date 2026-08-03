@@ -1,0 +1,78 @@
+.table-wrap {
+    inline-size: 100%;
+    overflow-x: auto;
+    padding: 0;
+    position: static;
+    z-index: auto;
+}
+
+.table-wrap:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: -2px;
+}
+
+.data-table {
+    border-collapse: collapse;
+    font-size: var(--fs-body-sm);
+    inline-size: 100%;
+    min-inline-size: 58rem;
+}
+
+.data-table caption {
+    clip: rect(0 0 0 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+}
+
+.data-table ::deep th,
+.data-table ::deep td {
+    border-block-end: 1px solid var(--color-border);
+    border-block-start: 0;
+    border-inline: 0;
+    border-radius: 0;
+    padding: var(--space-sm) var(--space-md);
+    text-align: start;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.data-table ::deep thead th {
+    background-color: var(--color-surface);
+    color: var(--color-text-muted);
+    font-family: var(--font-body);
+    font-size: var(--fs-body-xs);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-normal);
+    position: sticky;
+    text-transform: none;
+    top: 0;
+    z-index: 1;
+}
+
+.data-table ::deep tbody tr {
+    background-color: transparent;
+    block-size: var(--table-row-h);
+    box-shadow: none;
+    transform: none;
+    transition: background-color var(--transition-fast);
+}
+
+.data-table ::deep tbody tr:hover {
+    background-color: var(--color-surface);
+    box-shadow: none;
+    transform: none;
+}
+
+.data-table ::deep tbody tr:nth-child(even) {
+    background-color: var(--color-surface);
+}
+
+.data-table ::deep .data-table__cell-strong {
+    color: var(--color-text);
+    font-weight: var(--fw-medium);
+}

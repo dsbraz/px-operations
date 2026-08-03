@@ -1,0 +1,41 @@
+@inject NavigationManager NavigationManager
+
+<nav class="side-nav" aria-label="@AccessibleName">
+    <ul class="side-nav__list" role="list">
+        @foreach (var item in Items)
+        {
+            <li>
+                <a class="side-nav__link"
+                   href="@item.Href"
+                   aria-current="@(IsActive(item) ? "page" : null)"
+                   @onclick="NotifyNavigationAsync">
+                    <BrqNavigationIcon Name="@item.Icon" />
+                    <span>@item.Label</span>
+                </a>
+            </li>
+        }
+    </ul>
+</nav>
+
+@code {
+    [Parameter] public string AccessibleName { get; set; } = "Navegação principal";
+    [Parameter, EditorRequired] public IReadOnlyList<BrqNavigationItem> Items { get; set; } = [];
+    [Parameter] public EventCallback OnNavigate { get; set; }
+
+    private Task NotifyNavigationAsync() => OnNavigate.InvokeAsync();
+
+    private bool IsActive(BrqNavigationItem item)
+    {
+        var current = "/" + NavigationManager
+            .ToBaseRelativePath(NavigationManager.Uri)
+            .Split('?', '#')[0]
+            .Trim('/');
+        var target = "/" + item.Href.Split('?', '#')[0].Trim('/');
+
+        if (item.MatchExact || target == "/")
+            return string.Equals(current, target, StringComparison.OrdinalIgnoreCase);
+
+        return string.Equals(current, target, StringComparison.OrdinalIgnoreCase)
+            || current.StartsWith(target + "/", StringComparison.OrdinalIgnoreCase);
+    }
+}

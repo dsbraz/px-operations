@@ -1,0 +1,97 @@
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JSRuntime
+
+<div class="fmenu" @ref="rootElement">
+    <button type="button"
+            class="brq-button brq-button--secondary brq-button--sm fmenu__btn"
+            aria-haspopup="dialog"
+            aria-expanded="@(expanded ? "true" : "false")"
+            aria-controls="@panelId"
+            @onclick="Toggle">
+        <svg viewBox="0 0 24 24"
+             fill="none"
+             stroke="currentColor"
+             stroke-width="1.75"
+             stroke-linecap="round"
+             stroke-linejoin="round"
+             aria-hidden="true">
+            <path d="M4 6h16M7 12h10M10 18h4" />
+        </svg>
+        <span>@Label</span>
+        @if (ActiveFacetCount > 0)
+        {
+            <span class="fmenu__badge" aria-label="@($"{ActiveFacetCount} facetas ativas")">
+                @ActiveFacetCount
+            </span>
+        }
+    </button>
+
+    @if (expanded)
+    {
+        <section id="@panelId"
+                 class="fmenu__pop"
+                 role="dialog"
+                 aria-label="Filtros">
+            <div class="fmenu__head">
+                <strong class="fmenu__title">Filtros</strong>
+                @if (ActiveFacetCount > 0)
+                {
+                    <button type="button"
+                            class="fmenu__clear-sel"
+                            @onclick="OnClear">
+                        Limpar tudo
+                    </button>
+                }
+            </div>
+            <div class="fmenu__content">
+                @ChildContent
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    private readonly string panelId = $"brq-filter-panel-{Guid.NewGuid():N}";
+    private bool expanded;
+    private ElementReference rootElement;
+    private IJSObjectReference? module;
+    private DotNetObjectReference<BrqFilterPanel>? selfReference;
+
+    [Parameter] public string Label { get; set; } = "Filtro";
+    [Parameter] public int ActiveFacetCount { get; set; }
+    [Parameter] public EventCallback OnClear { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private void Toggle() => expanded = !expanded;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        module = await JSRuntime.InvokeAsync<IJSObjectReference>(
+            "import", "./_content/PxOperations.Ui/Components/Forms/BrqFilterPanel.razor.js");
+        selfReference = DotNetObjectReference.Create(this);
+        await module.InvokeVoidAsync("attach", rootElement, selfReference);
+    }
+
+    [JSInvokable]
+    public Task CloseFromOutsideAsync()
+    {
+        if (!expanded) return Task.CompletedTask;
+        expanded = false;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (module is not null)
+        {
+            try { await module.InvokeVoidAsync("detach", rootElement); }
+            catch (JSDisconnectedException) { }
+            await module.DisposeAsync();
+        }
+
+        selfReference?.Dispose();
+    }
+}

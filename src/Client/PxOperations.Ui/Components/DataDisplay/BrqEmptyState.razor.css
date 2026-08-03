@@ -1,0 +1,39 @@
+.brq-empty-state {
+    align-items: center;
+    background: var(--brq-surface-raised);
+    border: 1px dashed var(--brq-border-strong);
+    border-radius: var(--brq-radius-lg);
+    display: flex;
+    flex-direction: column;
+    margin: 0 auto;
+    max-width: var(--brq-content-max);
+    padding: clamp(2rem, 6vw, 4rem) 1.5rem;
+    text-align: center;
+}
+
+.brq-empty-icon {
+    align-items: center;
+    background: var(--brq-accent-bg);
+    border-radius: 999px;
+    color: var(--brq-accent-text);
+    display: flex;
+    font-size: 1.5rem;
+    height: 3.5rem;
+    justify-content: center;
+    margin-bottom: 1rem;
+    width: 3.5rem;
+}
+
+.brq-empty-state h2 {
+    color: var(--brq-text);
+    font-size: 1.125rem;
+    margin: 0;
+}
+
+.brq-empty-state p {
+    color: var(--brq-text-muted);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    margin: 0.5rem 0 1rem;
+    max-width: 30rem;
+}

@@ -1,0 +1,31 @@
+<svg class="brq-navigation-icon"
+     viewBox="0 0 24 24"
+     fill="none"
+     stroke="currentColor"
+     stroke-width="1.75"
+     stroke-linecap="round"
+     stroke-linejoin="round"
+     aria-hidden="true">
+    @switch (Name)
+    {
+        case "milestones":
+            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+            <path d="M4 22v-7" />
+            break;
+        case "health":
+            <path d="M3 12h4l2.5-5 4.5 10 2-5h5" />
+            break;
+        case "nps":
+            <path d="m12 14 4-4" />
+            <path d="M3.34 19a10 10 0 1 1 17.32 0" />
+            break;
+        default:
+            <rect x="2" y="7" width="20" height="14" rx="2" />
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+            break;
+    }
+</svg>
+
+@code {
+    [Parameter] public string Name { get; set; } = "projects";
+}

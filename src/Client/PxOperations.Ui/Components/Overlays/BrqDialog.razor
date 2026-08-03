@@ -1,0 +1,39 @@
+@implements IAsyncDisposable
+
+<dialog @ref="dialogElement"
+        class="@DialogClass"
+        aria-labelledby="@titleId"
+        aria-describedby="@DescriptionId"
+        aria-modal="true"
+        data-open="@(Open ? "true" : "false")">
+    <div class="brq-dialog-surface">
+        <header class="brq-dialog-header">
+            <div>
+                <h2 id="@titleId">@Title</h2>
+                @if (!string.IsNullOrWhiteSpace(Description))
+                {
+                    <p id="@descriptionId">@Description</p>
+                }
+            </div>
+            <button type="button"
+                    class="brq-dialog-close"
+                    aria-label="Fechar diálogo"
+                    @onclick="RequestCloseAsync">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6 6l12 12M18 6 6 18" />
+                </svg>
+            </button>
+        </header>
+
+        <div class="brq-dialog-content">
+            @ChildContent
+        </div>
+
+        @if (Footer is not null)
+        {
+            <footer class="brq-dialog-footer">
+                @Footer
+            </footer>
+        }
+    </div>
+</dialog>

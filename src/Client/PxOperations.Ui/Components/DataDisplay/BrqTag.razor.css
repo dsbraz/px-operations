@@ -1,0 +1,71 @@
+.tag {
+    align-items: center;
+    align-self: flex-start;
+    background-color: var(--color-info-bg);
+    border: 1px solid color-mix(in srgb, var(--color-info) 24%, transparent);
+    border-radius: var(--radius-full);
+    color: var(--color-info);
+    display: inline-flex;
+    flex: none;
+    font-family: var(--font-body);
+    font-size: var(--fs-body-xs);
+    font-weight: var(--fw-semibold);
+    justify-content: center;
+    letter-spacing: 0;
+    line-height: var(--lh-snug);
+    margin: 0;
+    padding: var(--space-2xs) var(--space-sm);
+    text-transform: none;
+    white-space: nowrap;
+}
+
+.tag--sm {
+    font-size: var(--fs-decoration-sm);
+    padding: 1px var(--space-xs);
+}
+
+.tag--md {
+    font-size: var(--fs-body-xs);
+    padding: var(--space-2xs) var(--space-sm);
+}
+
+.tag--lg {
+    font-size: var(--fs-body-sm);
+    padding: var(--space-xs) var(--space-md);
+}
+
+.tag--purple {
+    background-color: var(--color-accent-bg, var(--color-info-bg));
+    border-color: color-mix(in srgb, var(--color-accent) 24%, transparent);
+    color: var(--color-accent);
+}
+
+.tag--gray {
+    background-color: var(--color-surface);
+    border-color: var(--color-border);
+    color: var(--color-text-muted);
+}
+
+.tag--black {
+    background-color: var(--color-black);
+    border-color: var(--color-black);
+    color: var(--color-white);
+}
+
+.tag--orange {
+    background-color: var(--color-warn-bg);
+    border-color: color-mix(in srgb, var(--color-warn) 24%, transparent);
+    color: var(--color-warn);
+}
+
+.tag--blue {
+    background-color: var(--color-info-bg);
+    border-color: color-mix(in srgb, var(--color-info) 24%, transparent);
+    color: var(--color-info);
+}
+
+.tag--green {
+    background-color: var(--color-good-bg);
+    border-color: color-mix(in srgb, var(--color-good) 24%, transparent);
+    color: var(--color-good);
+}

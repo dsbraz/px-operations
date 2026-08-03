@@ -1,0 +1,40 @@
+.brq-loading-state {
+    background: var(--brq-surface-raised);
+    border: 1px solid var(--brq-border);
+    border-radius: var(--brq-radius-lg);
+    display: grid;
+    gap: 0.75rem;
+    margin: 0 auto;
+    max-width: var(--brq-content-max);
+    padding: 1.25rem;
+}
+
+.brq-skeleton {
+    animation: brq-pulse 1.4s ease-in-out infinite;
+    background:
+        linear-gradient(
+            90deg,
+            var(--brq-surface) 0%,
+            var(--brq-hover) 50%,
+            var(--brq-surface) 100%);
+    background-size: 200% 100%;
+    border-radius: var(--brq-radius-md);
+    display: block;
+    height: 3.5rem;
+}
+
+@keyframes brq-pulse {
+    from {
+        background-position: 200% 0;
+    }
+
+    to {
+        background-position: -200% 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .brq-skeleton {
+        animation: none;
+    }
+}
