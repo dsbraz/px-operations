@@ -32,10 +32,23 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
-    location ~* ^/(?:_framework|css|images|lib)/ {
+    # Cache imutavel exige que a URL mude quando o conteudo muda. Hoje so o
+    # _framework atende: o pipeline do .NET grava o hash no nome do arquivo
+    # (blazor.webassembly.<hash>.js). Ali um ano de cache sem revalidacao e seguro.
+    location ^~ /_framework/ {
         include /etc/nginx/security-headers.conf;
-        expires 1y;
         add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
+    # Os demais estaticos tem nome estavel: app.css, foundation.css da RCL, o
+    # bundle de CSS isolation, imagens. Marca-los como immutable prendia o
+    # navegador na copia antiga por ate um ano, entao uma alteracao de CSS podia
+    # nunca chegar a quem ja tinha visitado. Aqui eles revalidam; o ETag do nginx
+    # responde 304 quando nada mudou, entao o custo e um round-trip, nao o corpo.
+    location ~* ^/(?:css|images|lib|_content)/|\.styles\.css$ {
+        include /etc/nginx/security-headers.conf;
+        add_header Cache-Control "no-cache, must-revalidate" always;
         try_files $uri =404;
     }
 }
