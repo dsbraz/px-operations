@@ -5,6 +5,9 @@ namespace PxOperations.Application.Features.Nps;
 public interface INpsRepository
 {
     Task<bool> ProjectExistsAsync(int projectId, CancellationToken ct);
+    Task<CollectionWaiver?> GetActiveWaiverAsync(int projectId, CancellationToken ct);
+    void AddWaiver(CollectionWaiver waiver);
+    bool IsDuplicateWaiverException(Exception exception);
     Task<bool> ContactBelongsToProjectAsync(int projectId, int contactId, CancellationToken ct);
     Task<NpsDashboardView> GetDashboardAsync(NpsFilter filter, CancellationToken ct);
     Task<IReadOnlyList<NpsProjectView>> ListProjectsAsync(NpsFilter filter, CancellationToken ct);

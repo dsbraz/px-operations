@@ -11,7 +11,7 @@ public sealed record NpsResponseView(
     string? ContactEmail,
     int Score,
     string Classification,
-    int? Scope,
+    int? BusinessValue,
     int? Schedule,
     int? Quality,
     int? Communication,

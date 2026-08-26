@@ -7,11 +7,11 @@ public sealed class SubmitNpsSurveyResponseRequestValidator : AbstractValidator<
 {
     public SubmitNpsSurveyResponseRequestValidator()
     {
-        RuleFor(r => r.Score).InclusiveBetween(0, 10);
-        RuleFor(r => r.Scope).InclusiveBetween(0, 10).When(r => r.Scope.HasValue);
-        RuleFor(r => r.Schedule).InclusiveBetween(0, 10).When(r => r.Schedule.HasValue);
-        RuleFor(r => r.Quality).InclusiveBetween(0, 10).When(r => r.Quality.HasValue);
-        RuleFor(r => r.Communication).InclusiveBetween(0, 10).When(r => r.Communication.HasValue);
+        RuleFor(r => r.Score).InclusiveBetween(1, 10);
+        RuleFor(r => r.BusinessValue).InclusiveBetween(1, 5).When(r => r.BusinessValue.HasValue);
+        RuleFor(r => r.Schedule).InclusiveBetween(1, 5).When(r => r.Schedule.HasValue);
+        RuleFor(r => r.Quality).InclusiveBetween(1, 5).When(r => r.Quality.HasValue);
+        RuleFor(r => r.Communication).InclusiveBetween(1, 5).When(r => r.Communication.HasValue);
         RuleFor(r => r.Tags).MaximumLength(500);
         RuleFor(r => r.Comment).MaximumLength(2000);
         RuleFor(r => r.RespondentName).MaximumLength(200);

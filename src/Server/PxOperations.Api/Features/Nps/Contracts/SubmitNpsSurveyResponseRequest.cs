@@ -2,7 +2,7 @@ namespace PxOperations.Api.Features.Nps.Contracts;
 
 public sealed record SubmitNpsSurveyResponseRequest(
     int Score,
-    int? Scope,
+    int? BusinessValue,
     int? Schedule,
     int? Quality,
     int? Communication,

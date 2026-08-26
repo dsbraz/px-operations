@@ -20,6 +20,16 @@ public sealed class Dispatch : AggregateRoot<int>
     public string CreatedBy { get; private set; } = string.Empty;
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset? ClosedAt { get; private set; }
+
+    /// <summary>
+    /// D7: todo link nasce com prazo. Fixo em 20 dias por decisão de produto —
+    /// se um dia virar parâmetro por projeto, é esta constante que vira coluna.
+    /// </summary>
+    public static readonly TimeSpan LinkValidity = TimeSpan.FromDays(20);
+
+    public DateTimeOffset ExpiresAt { get; private set; }
+
+    public bool IsExpired(DateTimeOffset now) => now >= ExpiresAt;
     public Project Project { get; private set; } = default!;
     public IReadOnlyCollection<DispatchTarget> Targets => _targets.AsReadOnly();
 
@@ -43,7 +53,8 @@ public sealed class Dispatch : AggregateRoot<int>
             Language = language,
             Status = NpsDispatchStatus.Open,
             CreatedBy = string.IsNullOrWhiteSpace(createdBy) ? "system" : createdBy.Trim(),
-            CreatedAt = now
+            CreatedAt = now,
+            ExpiresAt = now + LinkValidity
         };
     }
 

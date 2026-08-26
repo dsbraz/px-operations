@@ -14,7 +14,7 @@ public partial class NpsPublicPage : ComponentBase
     private string? loadError;
 
     private int score = 10;
-    private int? scope;
+    private int? businessValue;
     private int? schedule;
     private int? quality;
     private int? communication;
@@ -47,7 +47,7 @@ public partial class NpsPublicPage : ComponentBase
             await NpsClient.SubmitPublicAsync(Token, new SubmitNpsSurveyResponseRequest
             {
                 Score = score,
-                Scope = scope,
+                BusinessValue = businessValue,
                 Schedule = schedule,
                 Quality = quality,
                 Communication = communication,
@@ -73,7 +73,7 @@ public partial class NpsPublicPage : ComponentBase
         string NpsQuestion,
         string ScaleLow,
         string ScaleHigh,
-        string Scope,
+        string BusinessValue,
         string Schedule,
         string Quality,
         string Communication,
@@ -101,7 +101,7 @@ public partial class NpsPublicPage : ComponentBase
             "Qual a probabilidade de você recomendar a BRQ?",
             "Pouco provável",
             "Muito provável",
-            "Escopo",
+            "Valor para o negócio",
             "Prazo",
             "Qualidade",
             "Comunicação",
@@ -121,7 +121,7 @@ public partial class NpsPublicPage : ComponentBase
             "How likely are you to recommend BRQ?",
             "Not likely",
             "Very likely",
-            "Scope",
+            "Business value",
             "Schedule",
             "Quality",
             "Communication",
@@ -141,7 +141,7 @@ public partial class NpsPublicPage : ComponentBase
             "¿Qué probabilidad hay de que recomiendes BRQ?",
             "Poco probable",
             "Muy probable",
-            "Alcance",
+            "Valor para el negocio",
             "Plazo",
             "Calidad",
             "Comunicación",

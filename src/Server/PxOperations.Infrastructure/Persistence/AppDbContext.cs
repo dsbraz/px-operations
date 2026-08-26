@@ -16,6 +16,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Domain.ProjectHealth.ProjectHealth> ProjectHealth => Set<Domain.ProjectHealth.ProjectHealth>();
     public DbSet<Contact> NpsContacts => Set<Contact>();
     public DbSet<Dispatch> NpsDispatches => Set<Dispatch>();
+    public DbSet<CollectionWaiver> NpsCollectionWaivers => Set<CollectionWaiver>();
     public DbSet<DispatchTarget> NpsDispatchTargets => Set<DispatchTarget>();
     public DbSet<SurveyResponse> NpsSurveyResponses => Set<SurveyResponse>();
 

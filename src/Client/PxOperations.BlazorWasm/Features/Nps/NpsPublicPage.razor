@@ -47,12 +47,12 @@
                 {
                     <div class="nps-public-grid">
                         <div class="nps-scale-field compact">
-                            <div class="nps-scale-label">@Texts.Scope</div>
-                            <div class="nps-scale" role="radiogroup" aria-label="@Texts.Scope">
+                            <div class="nps-scale-label">@Texts.BusinessValue</div>
+                            <div class="nps-scale" role="radiogroup" aria-label="@Texts.BusinessValue">
                                 @for (var i = 0; i <= 10; i++)
                                 {
                                     var value = i;
-                                    <button type="button" class="nps-score @(scope == value ? "selected" : "")" aria-pressed="@(scope == value)" @onclick="() => scope = value">@value</button>
+                                    <button type="button" class="nps-score @(businessValue == value ? "selected" : "")" aria-pressed="@(businessValue == value)" @onclick="() => businessValue = value">@value</button>
                                 }
                             </div>
                         </div>

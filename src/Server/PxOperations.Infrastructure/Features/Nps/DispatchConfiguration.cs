@@ -21,6 +21,7 @@ public sealed class DispatchConfiguration : IEntityTypeConfiguration<Dispatch>
         builder.Property(d => d.CreatedBy).HasColumnName("created_by").HasMaxLength(200).IsRequired();
         builder.Property(d => d.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(d => d.ClosedAt).HasColumnName("closed_at");
+        builder.Property(d => d.ExpiresAt).HasColumnName("expires_at").IsRequired();
 
         builder.HasOne(d => d.Project)
             .WithMany()

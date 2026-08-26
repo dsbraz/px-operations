@@ -69,6 +69,8 @@ public static class DependencyInjection
         services.AddScoped<ListNpsResponsesUseCase>();
         services.AddScoped<GetNpsPublicSurveyUseCase>();
         services.AddScoped<SubmitNpsPublicResponseUseCase>();
+        services.AddScoped<DismissNpsCollectionUseCase>();
+        services.AddScoped<ReactivateNpsCollectionUseCase>();
 
         services.AddScoped<IReadinessService, DatabaseReadinessService>();
 

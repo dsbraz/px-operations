@@ -12,5 +12,7 @@ public sealed record NpsDispatchResponse(
     string CreatedBy,
     string CreatedAt,
     string? ClosedAt,
+    string ExpiresAt,
+    bool IsExpired,
     int TargetsCount,
     int ResponsesCount);

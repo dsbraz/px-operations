@@ -19,6 +19,7 @@ public sealed class SurveyResponseConfiguration : IEntityTypeConfiguration<Surve
         builder.Property(r => r.Score).HasColumnName("score").IsRequired();
         builder.Property(r => r.Classification).HasColumnName("classification").IsRequired();
         builder.Property(r => r.Scope).HasColumnName("scope");
+        builder.Property(r => r.BusinessValue).HasColumnName("business_value");
         builder.Property(r => r.Schedule).HasColumnName("schedule");
         builder.Property(r => r.Quality).HasColumnName("quality");
         builder.Property(r => r.Communication).HasColumnName("communication");
@@ -45,6 +46,12 @@ public sealed class SurveyResponseConfiguration : IEntityTypeConfiguration<Surve
 
         builder.HasIndex(r => new { r.ProjectId, r.SubmittedAt });
         builder.HasIndex(r => new { r.DispatchId, r.SubmittedAt });
-        builder.HasIndex(r => r.TargetId).IsUnique();
+        // B1: uma resposta por alvo continua valendo para link nominal, mas o
+        // link compartilhado existe justamente para receber várias. O índice
+        // vira parcial em vez de sair: sem ele, dois envios simultâneos pelo
+        // mesmo token nominal passariam.
+        builder.HasIndex(r => r.TargetId)
+            .IsUnique()
+            .HasFilter("contact_id IS NOT NULL");
     }
 }

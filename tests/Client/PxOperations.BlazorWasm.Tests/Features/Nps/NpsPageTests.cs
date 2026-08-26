@@ -98,7 +98,7 @@ public sealed class NpsPageTests : TestContext
         var token = Guid.NewGuid();
         var handler = new ProjectsTestHelpers.MultiStubHttpMessageHandler();
         handler.AddResponse(HttpMethod.Get, $$"""
-        {"token":"{{token}}","projectId":1,"projectName":"Projeto Público","dispatchId":2,"periodStart":"2026-06-01","periodEnd":"2026-06-30","format":"Completo","language":"Português","alreadyAnswered":false}
+        {"token":"{{token}}","projectId":1,"projectName":"Projeto Público","dispatchId":2,"periodStart":"2026-06-01","periodEnd":"2026-06-30","format":"Completo","language":"Português","expiresAt":"2026-06-21T00:00:00Z","isExpired":false,"alreadyAnswered":false}
         """, HttpStatusCode.OK);
         handler.AddResponse(HttpMethod.Post, SurveyResponseJson(), HttpStatusCode.Created);
 
@@ -112,7 +112,7 @@ public sealed class NpsPageTests : TestContext
         {
             Assert.Contains("Projeto Público", cut.Markup);
             Assert.Contains("Qual a probabilidade de você recomendar a BRQ?", cut.Markup);
-            Assert.Contains("Escopo", cut.Markup);
+            Assert.Contains("Valor para o negócio", cut.Markup);
             Assert.Contains("Identificação opcional", cut.Markup);
             Assert.Contains("nps-scale", cut.Markup);
             Assert.DoesNotContain("Tags", cut.Markup);
@@ -132,7 +132,7 @@ public sealed class NpsPageTests : TestContext
         var token = Guid.NewGuid();
         var handler = new ProjectsTestHelpers.MultiStubHttpMessageHandler();
         handler.AddResponse(HttpMethod.Get, $$"""
-        {"token":"{{token}}","projectId":1,"projectName":"Projeto Público","dispatchId":2,"periodStart":"2026-06-01","periodEnd":"2026-06-30","format":"Completo","language":"{{language}}","alreadyAnswered":false}
+        {"token":"{{token}}","projectId":1,"projectName":"Projeto Público","dispatchId":2,"periodStart":"2026-06-01","periodEnd":"2026-06-30","format":"Completo","language":"{{language}}","expiresAt":"2026-06-21T00:00:00Z","isExpired":false,"alreadyAnswered":false}
         """, HttpStatusCode.OK);
 
         var client = new HttpClient(handler) { BaseAddress = new Uri("http://localhost") };
@@ -178,10 +178,10 @@ public sealed class NpsPageTests : TestContext
             Assert.Contains("Promotor", cut.Markup);
             Assert.Contains("cliente@example.com", cut.Markup);
             Assert.Contains("Comentário", cut.Markup);
-            Assert.Contains("Escopo", cut.Markup);
-            Assert.Contains("8/10", cut.Markup);
+            Assert.Contains("Valor para o negócio", cut.Markup);
+            Assert.Contains("5/5", cut.Markup);
             Assert.Contains("Prazo", cut.Markup);
-            Assert.Contains("7/10", cut.Markup);
+            Assert.Contains("4/5", cut.Markup);
             Assert.Contains("Qualidade", cut.Markup);
             Assert.Contains("Comunicação", cut.Markup);
             Assert.Contains("Bom", cut.Markup);
@@ -198,7 +198,7 @@ public sealed class NpsPageTests : TestContext
             Assert.DoesNotContain("Copiar", cut.Find(".nps-share-panel").TextContent);
             Assert.Contains("Respostas deste link", cut.Markup);
             Assert.Contains("Respondente não identificado", cut.Markup);
-            Assert.Contains("10/10", cut.Markup);
+            Assert.Contains("5/5", cut.Markup);
         });
     }
 
@@ -267,34 +267,34 @@ public sealed class NpsPageTests : TestContext
     """;
 
     private static string ProjectsJson() => """
-    [{"id":1,"name":"Projeto NPS","client":"Cliente A","dc":"DC1","deliveryManager":"Maria","contactsCount":1,"activeDispatches":0,"linkTargetsCount":0,"answeredLinkTargetsCount":0,"responsesCount":0,"lastResponseAt":null,"lastNps":null,"isOverdue":true}]
+    [{"id":1,"name":"Projeto NPS","client":"Cliente A","dc":"DC1","deliveryManager":"Maria","contactsCount":1,"activeDispatches":0,"linkTargetsCount":0,"answeredLinkTargetsCount":0,"responsesCount":0,"lastResponseAt":null,"lastNps":null,"isOverdue":true,"isDismissed":false,"dismissalReason":null,"activeDispatchExpiresAt":null}]
     """;
 
     private static string ProjectDetailJson() => """
     {
-      "project":{"id":1,"name":"Projeto NPS","client":"Cliente A","dc":"DC1","deliveryManager":"Maria","contactsCount":1,"activeDispatches":1,"linkTargetsCount":1,"answeredLinkTargetsCount":1,"responsesCount":1,"lastResponseAt":null,"lastNps":50.0,"isOverdue":false},
+      "project":{"id":1,"name":"Projeto NPS","client":"Cliente A","dc":"DC1","deliveryManager":"Maria","contactsCount":1,"activeDispatches":1,"linkTargetsCount":1,"answeredLinkTargetsCount":1,"responsesCount":1,"lastResponseAt":null,"lastNps":50.0,"isOverdue":false,"isDismissed":false,"dismissalReason":null,"activeDispatchExpiresAt":null},
       "contacts":[],
-      "dispatches":[{"id":20,"projectId":1,"projectName":"Projeto NPS","periodStart":"2026-06-01","periodEnd":"2026-06-30","format":"Simplificado","language":"Português","status":"Aberto","createdBy":"ops","createdAt":"2026-06-01T00:00:00Z","closedAt":null,"targetsCount":1,"responsesCount":1}],
-      "recentResponses":[{"id":30,"projectId":1,"projectName":"Projeto NPS","dispatchId":20,"targetId":40,"contactId":null,"contactName":null,"contactEmail":null,"score":9,"classification":"Promotor","scope":8,"schedule":7,"quality":9,"communication":10,"tags":null,"comment":"Bom","respondentName":"Cliente","respondentEmail":"cliente@example.com","submittedAt":"2026-06-02T00:00:00Z"}]
+      "dispatches":[{"id":20,"projectId":1,"projectName":"Projeto NPS","periodStart":"2026-06-01","periodEnd":"2026-06-30","format":"Simplificado","language":"Português","status":"Aberto","createdBy":"ops","createdAt":"2026-06-01T00:00:00Z","closedAt":null,"expiresAt":"2026-06-21T00:00:00Z","isExpired":false,"targetsCount":1,"responsesCount":1}],
+      "recentResponses":[{"id":30,"projectId":1,"projectName":"Projeto NPS","dispatchId":20,"targetId":40,"contactId":null,"contactName":null,"contactEmail":null,"score":9,"classification":"Promotor","businessValue":5,"schedule":4,"quality":5,"communication":5,"tags":null,"comment":"Bom","respondentName":"Cliente","respondentEmail":"cliente@example.com","submittedAt":"2026-06-02T00:00:00Z"}]
     }
     """;
 
     private static string DispatchDetailJson() => """
     {
-      "dispatch":{"id":21,"projectId":1,"projectName":"Projeto NPS","periodStart":"2026-06-01","periodEnd":"2026-06-30","format":"Simplificado","language":"Português","status":"Aberto","createdBy":"ops","createdAt":"2026-06-01T00:00:00Z","closedAt":null,"targetsCount":1,"responsesCount":0},
+      "dispatch":{"id":21,"projectId":1,"projectName":"Projeto NPS","periodStart":"2026-06-01","periodEnd":"2026-06-30","format":"Simplificado","language":"Português","status":"Aberto","createdBy":"ops","createdAt":"2026-06-01T00:00:00Z","closedAt":null,"expiresAt":"2026-06-21T00:00:00Z","isExpired":false,"targetsCount":1,"responsesCount":0},
       "targets":[{"id":41,"dispatchId":21,"contactId":null,"contactName":null,"contactEmail":null,"token":"11111111-1111-1111-1111-111111111111","isGeneric":true,"responsesCount":1}]
     }
     """;
 
     private static string CreatedDispatchDetailJson() => """
     {
-      "dispatch":{"id":21,"projectId":1,"projectName":"Projeto NPS","periodStart":"2026-06-01","periodEnd":"2026-06-30","format":"Simplificado","language":"Português","status":"Aberto","createdBy":"ops","createdAt":"2026-06-01T00:00:00Z","closedAt":null,"targetsCount":1,"responsesCount":0},
+      "dispatch":{"id":21,"projectId":1,"projectName":"Projeto NPS","periodStart":"2026-06-01","periodEnd":"2026-06-30","format":"Simplificado","language":"Português","status":"Aberto","createdBy":"ops","createdAt":"2026-06-01T00:00:00Z","closedAt":null,"expiresAt":"2026-06-21T00:00:00Z","isExpired":false,"targetsCount":1,"responsesCount":0},
       "targets":[{"id":41,"dispatchId":21,"contactId":null,"contactName":null,"contactEmail":null,"token":"11111111-1111-1111-1111-111111111111","isGeneric":true,"responsesCount":0}]
     }
     """;
 
     private static string SurveyResponseJson() => """
-    {"id":30,"projectId":1,"projectName":"Projeto Público","dispatchId":2,"targetId":3,"contactId":null,"contactName":null,"contactEmail":null,"score":10,"classification":"Promotor","scope":10,"schedule":10,"quality":10,"communication":10,"tags":null,"comment":null,"respondentName":null,"respondentEmail":null,"submittedAt":"2026-06-02T00:00:00Z"}
+    {"id":30,"projectId":1,"projectName":"Projeto Público","dispatchId":2,"targetId":3,"contactId":null,"contactName":null,"contactEmail":null,"score":10,"classification":"Promotor","businessValue":5,"schedule":4,"quality":5,"communication":5,"tags":null,"comment":null,"respondentName":null,"respondentEmail":null,"submittedAt":"2026-06-02T00:00:00Z"}
     """;
 
     private static string SurveyResponsesJson()

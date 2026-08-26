@@ -13,4 +13,7 @@ public sealed record NpsProjectResponse(
     int ResponsesCount,
     string? LastResponseAt,
     decimal? LastNps,
-    bool IsOverdue);
+    bool IsOverdue,
+    bool IsDismissed,
+    string? DismissalReason,
+    string? ActiveDispatchExpiresAt);

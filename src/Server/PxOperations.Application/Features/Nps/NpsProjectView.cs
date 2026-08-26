@@ -13,4 +13,9 @@ public sealed record NpsProjectView(
     int ResponsesCount,
     string? LastResponseAt,
     decimal? LastNps,
-    bool IsOverdue);
+    bool IsOverdue,
+    bool IsDismissed,
+    string? DismissalReason,
+    // B12: o quadro mostra o prazo do link aberto no card; sem isto não há como
+    // trocar "expira em 3d" por "expirado há Xd".
+    string? ActiveDispatchExpiresAt);

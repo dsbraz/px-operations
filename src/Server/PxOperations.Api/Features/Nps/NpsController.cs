@@ -24,7 +24,9 @@ public sealed class NpsController(
     ListNpsResponsesUseCase listResponses,
     CloseNpsDispatchUseCase closeDispatch,
     GetNpsPublicSurveyUseCase getPublicSurvey,
-    SubmitNpsPublicResponseUseCase submitPublicResponse) : ControllerBase
+    SubmitNpsPublicResponseUseCase submitPublicResponse,
+    DismissNpsCollectionUseCase dismissCollection,
+    ReactivateNpsCollectionUseCase reactivateCollection) : ControllerBase
 {
     [HttpGet("dashboard")]
     public async Task<ActionResult<NpsDashboardResponse>> GetDashboard(
@@ -55,9 +57,12 @@ public sealed class NpsController(
         [FromQuery] string? dc,
         [FromQuery] string? deliveryManager,
         [FromQuery] string? projectType,
+        // F1: "coletas dispensadas" é toggle Ocultar/Mostrar, não faceta de lista.
+        [FromQuery] bool includeDismissed,
         CancellationToken ct)
     {
-        var projects = await listProjects.ExecuteAsync(new NpsFilter(search, dc, deliveryManager, projectType, null, null, null, null), ct);
+        var projects = await listProjects.ExecuteAsync(
+            new NpsFilter(search, dc, deliveryManager, projectType, null, null, null, null, includeDismissed), ct);
         return Ok(projects.Select(NpsMappings.ToResponse));
     }
 
@@ -195,6 +200,40 @@ public sealed class NpsController(
         return File(Encoding.UTF8.GetBytes(csv), "text/csv", "nps-responses.csv");
     }
 
+    /// <summary>
+    /// F6: dispensar a coleta de um projeto, com motivo. Idempotente — dispensar
+    /// duas vezes é ruído, não fato novo.
+    /// </summary>
+    [HttpPost("projects/{projectId:int}/collection-waiver")]
+    [ProducesResponseType<NpsProjectResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<NpsProjectResponse>> DismissCollection(
+        int projectId, [FromBody] DismissNpsCollectionRequest request, CancellationToken ct)
+    {
+        try
+        {
+            var project = await dismissCollection.ExecuteAsync(projectId, new DismissNpsCollectionCommand(request.Reason), ct);
+            return project is null ? NotFound() : Ok(NpsMappings.ToResponse(project));
+        }
+        catch (BusinessRuleValidationException ex)
+        {
+            return BadRequest(new ProblemDetails { Detail = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// F6: a volta atrás é parte do fluxo — reativar devolve o projeto à coluna
+    /// que a regra indicar, sem perder histórico de respostas.
+    /// </summary>
+    [HttpDelete("projects/{projectId:int}/collection-waiver")]
+    [ProducesResponseType<NpsProjectResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<NpsProjectResponse>> ReactivateCollection(int projectId, CancellationToken ct)
+    {
+        var project = await reactivateCollection.ExecuteAsync(projectId, ct);
+        return project is null ? NotFound() : Ok(NpsMappings.ToResponse(project));
+    }
+
     [HttpGet("public/{token:guid}")]
     [ProducesResponseType<NpsPublicSurveyResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -215,7 +254,7 @@ public sealed class NpsController(
         {
             var response = await submitPublicResponse.ExecuteAsync(token, new SubmitNpsPublicResponseCommand(
                 request.Score,
-                request.Scope,
+                request.BusinessValue,
                 request.Schedule,
                 request.Quality,
                 request.Communication,

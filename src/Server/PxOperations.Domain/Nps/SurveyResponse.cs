@@ -16,7 +16,15 @@ public sealed class SurveyResponse : AggregateRoot<int>
     public int? ContactId { get; private set; }
     public int Score { get; private set; }
     public NpsClassification Classification { get; private set; }
+    /// <summary>
+    /// B13: aposentado. Nunca mais é gravado — existe só para o histórico
+    /// anterior à virada, quando o quarto aspecto media "escopo" e não "valor
+    /// gerado para o negócio". É o discriminador das duas séries: linha com
+    /// Scope preenchido está na escala e no assunto antigos.
+    /// </summary>
     public int? Scope { get; private set; }
+
+    public int? BusinessValue { get; private set; }
     public int? Schedule { get; private set; }
     public int? Quality { get; private set; }
     public int? Communication { get; private set; }
@@ -36,7 +44,7 @@ public sealed class SurveyResponse : AggregateRoot<int>
         int targetId,
         int? contactId,
         int score,
-        int? scope,
+        int? businessValue,
         int? schedule,
         int? quality,
         int? communication,
@@ -47,6 +55,10 @@ public sealed class SurveyResponse : AggregateRoot<int>
         DateTimeOffset now)
     {
         RuleChecker.Check(new NpsScoreMustBeInRangeRule(score));
+        RuleChecker.Check(new NpsAspectMustBeInRangeRule(businessValue));
+        RuleChecker.Check(new NpsAspectMustBeInRangeRule(schedule));
+        RuleChecker.Check(new NpsAspectMustBeInRangeRule(quality));
+        RuleChecker.Check(new NpsAspectMustBeInRangeRule(communication));
 
         return new SurveyResponse
         {
@@ -56,7 +68,7 @@ public sealed class SurveyResponse : AggregateRoot<int>
             ContactId = contactId,
             Score = score,
             Classification = NpsCalculator.Classify(score),
-            Scope = scope,
+            BusinessValue = businessValue,
             Schedule = schedule,
             Quality = quality,
             Communication = communication,

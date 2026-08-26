@@ -955,6 +955,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "includeDismissed",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -1683,6 +1690,148 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/nps/projects/{projectId}/collection-waiver": {
+      "post": {
+        "tags": [
+          "Nps"
+        ],
+        "operationId": "DismissCollection",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DismissNpsCollectionRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DismissNpsCollectionRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DismissNpsCollectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/NpsProjectResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NpsProjectResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NpsProjectResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Nps"
+        ],
+        "operationId": "ReactivateCollection",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/NpsProjectResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NpsProjectResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NpsProjectResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -2569,6 +2718,17 @@
           }
         }
       },
+      "DismissNpsCollectionRequest": {
+        "required": [
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
       "HealthStatusResponse": {
         "required": [
           "status"
@@ -2820,6 +2980,8 @@
           "createdBy",
           "createdAt",
           "closedAt",
+          "expiresAt",
+          "isExpired",
           "targetsCount",
           "responsesCount"
         ],
@@ -2870,6 +3032,12 @@
               "null",
               "string"
             ]
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "isExpired": {
+            "type": "boolean"
           },
           "targetsCount": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -3002,7 +3170,10 @@
           "responsesCount",
           "lastResponseAt",
           "lastNps",
-          "isOverdue"
+          "isOverdue",
+          "isDismissed",
+          "dismissalReason",
+          "activeDispatchExpiresAt"
         ],
         "type": "object",
         "properties": {
@@ -3089,6 +3260,21 @@
           },
           "isOverdue": {
             "type": "boolean"
+          },
+          "isDismissed": {
+            "type": "boolean"
+          },
+          "dismissalReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "activeDispatchExpiresAt": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -3102,6 +3288,8 @@
           "periodEnd",
           "format",
           "language",
+          "expiresAt",
+          "isExpired",
           "alreadyAnswered"
         ],
         "type": "object",
@@ -3141,6 +3329,12 @@
           "language": {
             "type": "string"
           },
+          "expiresAt": {
+            "type": "string"
+          },
+          "isExpired": {
+            "type": "boolean"
+          },
           "alreadyAnswered": {
             "type": "boolean"
           }
@@ -3158,7 +3352,7 @@
           "contactEmail",
           "score",
           "classification",
-          "scope",
+          "businessValue",
           "schedule",
           "quality",
           "communication",
@@ -3237,7 +3431,7 @@
           "classification": {
             "type": "string"
           },
-          "scope": {
+          "businessValue": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "null",
@@ -3706,7 +3900,7 @@
       "SubmitNpsSurveyResponseRequest": {
         "required": [
           "score",
-          "scope",
+          "businessValue",
           "schedule",
           "quality",
           "communication",
@@ -3725,7 +3919,7 @@
             ],
             "format": "int32"
           },
-          "scope": {
+          "businessValue": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "null",

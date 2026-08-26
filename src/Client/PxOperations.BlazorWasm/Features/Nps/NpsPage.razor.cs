@@ -158,7 +158,7 @@ public partial class NpsPage : ComponentBase
         var projectTypeFilter = string.IsNullOrWhiteSpace(filterProjectType) ? null : filterProjectType;
 
         dashboard = await NpsClient.GetDashboardAsync(null, dcFilter, null, projectTypeFilter, null, null, null, null);
-        projects = (await NpsClient.ListProjectsAsync(null, dcFilter, null, projectTypeFilter)).ToList();
+        projects = (await NpsClient.ListProjectsAsync(null, dcFilter, null, projectTypeFilter, false)).ToList();
     }
 
     private void OpenCreateLinkModal()
@@ -232,7 +232,7 @@ public partial class NpsPage : ComponentBase
             : ResponseIdentity(response);
 
     private static bool HasDimensionAnswers(NpsSurveyResponse response)
-        => response.Scope is not null
+        => response.BusinessValue is not null
             || response.Schedule is not null
             || response.Quality is not null
             || response.Communication is not null;

@@ -29,9 +29,12 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
               and indexname = 'IX_nps_survey_responses_target_id'
             """;
 
+        // B1: o índice segue único, mas agora é PARCIAL. Link nominal continua
+        // de uso único; o compartilhado existe para receber N respostas, e sem
+        // o filtro ele barraria a segunda. A asserção inverte de propósito.
         var indexDefinition = Assert.IsType<string>(await command.ExecuteScalarAsync());
         Assert.Contains("UNIQUE", indexDefinition);
-        Assert.DoesNotContain("WHERE", indexDefinition);
+        Assert.Contains("WHERE (contact_id IS NOT NULL)", indexDefinition);
     }
 
     [Fact]
@@ -80,7 +83,7 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
 
         var submit = await client.PostAsJsonAsync($"/api/nps/public/{token}/responses", new SubmitNpsSurveyResponseRequest(
             Score: 9,
-            Scope: 1,
+            BusinessValue: 1,
             Schedule: 2,
             Quality: 3,
             Communication: 4,
@@ -92,7 +95,7 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
 
         Assert.Equal(HttpStatusCode.Created, submit.StatusCode);
         Assert.Equal("Promotor", response!.Classification);
-        Assert.Null(response.Scope);
+        Assert.Null(response.BusinessValue);
         Assert.Null(response.Tags);
 
         var projectsWithAnsweredLink = await client.GetFromJsonAsync<List<NpsProjectResponse>>($"/api/nps/projects?search={Uri.EscapeDataString(project.Name)}");
@@ -100,11 +103,106 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
         Assert.Equal(1, answeredLinkProject.LinkTargetsCount);
         Assert.Equal(1, answeredLinkProject.AnsweredLinkTargetsCount);
 
+        // B3/D1: link compartilhado nunca exibe "já respondido" — ele existe
+        // para receber uma resposta por pessoa do grupo do cliente.
         var answeredSurvey = await client.GetFromJsonAsync<NpsPublicSurveyResponse>($"/api/nps/public/{token}");
-        Assert.True(answeredSurvey!.AlreadyAnswered);
+        Assert.False(answeredSurvey!.AlreadyAnswered);
 
-        var duplicate = await client.PostAsJsonAsync($"/api/nps/public/{token}/responses", new SubmitNpsSurveyResponseRequest(10, null, null, null, null, null, null, null, null));
-        Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
+        // Critério de aceite do F4: duas pessoas diferentes respondem o mesmo
+        // link com sucesso.
+        var segunda = await client.PostAsJsonAsync($"/api/nps/public/{token}/responses", new SubmitNpsSurveyResponseRequest(10, null, null, null, null, null, "Outra pessoa", null, null));
+        Assert.Equal(HttpStatusCode.Created, segunda.StatusCode);
+
+        var comDuas = await client.GetFromJsonAsync<List<NpsProjectResponse>>($"/api/nps/projects?search={Uri.EscapeDataString(project.Name)}");
+        Assert.Equal(2, Assert.Single(comDuas!).ResponsesCount);
+        // Duas respostas, um alvo respondido: são grandezas diferentes.
+        Assert.Equal(1, comDuas!.Single().AnsweredLinkTargetsCount);
+    }
+
+    /// <summary>
+    /// B12/D7: critério de aceite do F4 — link expirado não aceita resposta.
+    /// </summary>
+    [Fact]
+    public async Task Expired_link_should_reject_the_public_response()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+        var project = await CreateProjectAsync(client, $"Prazo {Guid.NewGuid():N}");
+        var dispatch = await CreateDispatchAsync(client, project.Id, [], createGeneric: true);
+        var token = dispatch.Targets.Single().Token;
+
+        // Envelhece o link no banco: não há como esperar 20 dias num teste.
+        using (var scope = factory.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await dbContext.Database.ExecuteSqlRawAsync(
+                "UPDATE nps_dispatches SET expires_at = now() - interval '1 day' WHERE id = {0}",
+                dispatch.Dispatch.Id);
+        }
+
+        var survey = await client.GetFromJsonAsync<NpsPublicSurveyResponse>($"/api/nps/public/{token}");
+        Assert.True(survey!.IsExpired);
+
+        var rejeitada = await client.PostAsJsonAsync(
+            $"/api/nps/public/{token}/responses",
+            new SubmitNpsSurveyResponseRequest(9, null, null, null, null, null, null, null, null));
+        Assert.Equal(HttpStatusCode.Conflict, rejeitada.StatusCode);
+    }
+
+    /// <summary>
+    /// F6: dispensar tira o card do quadro e da conta de vencidos; o toggle
+    /// traz de volta; reativar desfaz por completo.
+    /// </summary>
+    [Fact]
+    public async Task Dismissing_collection_should_hide_the_project_and_be_reversible()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+
+        var marker = $"Dispensa {Guid.NewGuid():N}";
+        var project = await CreateProjectAsync(client, marker);
+        var search = Uri.EscapeDataString(marker);
+
+        // Sem coleta nem resposta, o projeto nasce vencido.
+        var antes = await client.GetFromJsonAsync<List<NpsProjectResponse>>($"/api/nps/projects?search={search}");
+        Assert.True(Assert.Single(antes!).IsOverdue);
+
+        var dispensado = await client.PostAsJsonAsync(
+            $"/api/nps/projects/{project.Id}/collection-waiver",
+            new DismissNpsCollectionRequest("Cliente pediu pausa"));
+        Assert.Equal(HttpStatusCode.OK, dispensado.StatusCode);
+
+        var dispensadoProjeto = await dispensado.Content.ReadFromJsonAsync<NpsProjectResponse>();
+        Assert.True(dispensadoProjeto!.IsDismissed);
+        Assert.Equal("Cliente pediu pausa", dispensadoProjeto.DismissalReason);
+        Assert.False(dispensadoProjeto.IsOverdue);
+
+        // Sai do quadro por padrão; o toggle "Mostrar dispensados" traz de volta.
+        var quadro = await client.GetFromJsonAsync<List<NpsProjectResponse>>($"/api/nps/projects?search={search}");
+        Assert.Empty(quadro!);
+
+        var comDispensados = await client.GetFromJsonAsync<List<NpsProjectResponse>>(
+            $"/api/nps/projects?search={search}&includeDismissed=true");
+        Assert.True(Assert.Single(comDispensados!).IsDismissed);
+
+        var reativado = await client.DeleteAsync($"/api/nps/projects/{project.Id}/collection-waiver");
+        var reativadoProjeto = await reativado.Content.ReadFromJsonAsync<NpsProjectResponse>();
+        Assert.False(reativadoProjeto!.IsDismissed);
+        Assert.True(reativadoProjeto.IsOverdue);
+    }
+
+    [Fact]
+    public async Task Dismissing_collection_should_require_a_reason()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+        var project = await CreateProjectAsync(client, $"Sem motivo {Guid.NewGuid():N}");
+
+        var resposta = await client.PostAsJsonAsync(
+            $"/api/nps/projects/{project.Id}/collection-waiver",
+            new DismissNpsCollectionRequest("   "));
+
+        Assert.Equal(HttpStatusCode.BadRequest, resposta.StatusCode);
     }
 
     [Fact]

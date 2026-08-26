@@ -10,7 +10,7 @@ public static class NpsMappings
         => new(view.TotalProjects, view.OverdueProjects, view.ActiveDispatches, view.TotalResponses, view.OfficialNps, view.AverageScore, view.Detractors, view.Passives, view.Promoters);
 
     public static NpsProjectResponse ToResponse(NpsProjectView view)
-        => new(view.Id, view.Name, view.Client, view.Dc, view.DeliveryManager, view.ContactsCount, view.ActiveDispatches, view.LinkTargetsCount, view.AnsweredLinkTargetsCount, view.ResponsesCount, view.LastResponseAt, view.LastNps, view.IsOverdue);
+        => new(view.Id, view.Name, view.Client, view.Dc, view.DeliveryManager, view.ContactsCount, view.ActiveDispatches, view.LinkTargetsCount, view.AnsweredLinkTargetsCount, view.ResponsesCount, view.LastResponseAt, view.LastNps, view.IsOverdue, view.IsDismissed, view.DismissalReason, view.ActiveDispatchExpiresAt);
 
     public static NpsProjectDetailResponse ToResponse(NpsProjectDetailView view)
         => new(ToResponse(view.Project), view.Contacts.Select(ToResponse).ToList(), view.Dispatches.Select(ToResponse).ToList(), view.RecentResponses.Select(ToResponse).ToList());
@@ -19,7 +19,7 @@ public static class NpsMappings
         => new(view.Id, view.ProjectId, view.Name, view.Email, view.Role, view.IsArchived, view.CreatedAt, view.ArchivedAt);
 
     public static NpsDispatchResponse ToResponse(NpsDispatchView view)
-        => new(view.Id, view.ProjectId, view.ProjectName, view.PeriodStart, view.PeriodEnd, view.Format, view.Language, view.Status, view.CreatedBy, view.CreatedAt, view.ClosedAt, view.TargetsCount, view.ResponsesCount);
+        => new(view.Id, view.ProjectId, view.ProjectName, view.PeriodStart, view.PeriodEnd, view.Format, view.Language, view.Status, view.CreatedBy, view.CreatedAt, view.ClosedAt, view.ExpiresAt, view.IsExpired, view.TargetsCount, view.ResponsesCount);
 
     public static NpsDispatchDetailResponse ToResponse(NpsDispatchDetailView view)
         => new(ToResponse(view.Dispatch), view.Targets.Select(ToResponse).ToList());
@@ -28,10 +28,10 @@ public static class NpsMappings
         => new(view.Id, view.DispatchId, view.ContactId, view.ContactName, view.ContactEmail, view.Token, view.IsGeneric, view.ResponsesCount);
 
     public static NpsSurveyResponse ToResponse(NpsResponseView view)
-        => new(view.Id, view.ProjectId, view.ProjectName, view.DispatchId, view.TargetId, view.ContactId, view.ContactName, view.ContactEmail, view.Score, view.Classification, view.Scope, view.Schedule, view.Quality, view.Communication, view.Tags, view.Comment, view.RespondentName, view.RespondentEmail, view.SubmittedAt);
+        => new(view.Id, view.ProjectId, view.ProjectName, view.DispatchId, view.TargetId, view.ContactId, view.ContactName, view.ContactEmail, view.Score, view.Classification, view.BusinessValue, view.Schedule, view.Quality, view.Communication, view.Tags, view.Comment, view.RespondentName, view.RespondentEmail, view.SubmittedAt);
 
     public static NpsPublicSurveyResponse ToResponse(NpsPublicSurveyView view)
-        => new(view.Token, view.ProjectId, view.ProjectName, view.DispatchId, view.PeriodStart, view.PeriodEnd, view.Format, view.Language, view.AlreadyAnswered);
+        => new(view.Token, view.ProjectId, view.ProjectName, view.DispatchId, view.PeriodStart, view.PeriodEnd, view.Format, view.Language, view.ExpiresAt, view.IsExpired, view.AlreadyAnswered);
 
     public static NpsFormFormat ParseFormFormat(string value) => value.Trim().ToLowerInvariant() switch
     {

@@ -5,7 +5,7 @@ namespace PxOperations.Application.Features.Nps.UseCases;
 
 public sealed record SubmitNpsPublicResponseCommand(
     int Score,
-    int? Scope,
+    int? BusinessValue,
     int? Schedule,
     int? Quality,
     int? Communication,
@@ -29,7 +29,16 @@ public sealed class SubmitNpsPublicResponseUseCase(INpsRepository repository, IU
             throw new InvalidOperationException("Dispatch is closed.");
         }
 
-        if (await repository.TargetHasResponseAsync(target.Id, ct))
+        // B12/D7: passado o prazo o link não coleta mais. O formulário já avisa
+        // antes de perguntar, mas a regra tem de valer no servidor também.
+        if (target.Dispatch.IsExpired(DateTimeOffset.UtcNow))
+        {
+            throw new InvalidOperationException("This NPS link has expired.");
+        }
+
+        // B2/D1: o link compartilhado existe para receber N respostas — uma por
+        // pessoa do grupo do cliente. Só o link nominal segue de uso único.
+        if (!target.IsGeneric && await repository.TargetHasResponseAsync(target.Id, ct))
         {
             throw new InvalidOperationException("This NPS link has already been answered.");
         }
@@ -41,7 +50,7 @@ public sealed class SubmitNpsPublicResponseUseCase(INpsRepository repository, IU
             target.Id,
             target.ContactId,
             command.Score,
-            isComplete ? command.Scope : null,
+            isComplete ? command.BusinessValue : null,
             isComplete ? command.Schedule : null,
             isComplete ? command.Quality : null,
             isComplete ? command.Communication : null,

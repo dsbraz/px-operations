@@ -9,4 +9,6 @@ public sealed record NpsPublicSurveyResponse(
     string PeriodEnd,
     string Format,
     string Language,
+    string ExpiresAt,
+    bool IsExpired,
     bool AlreadyAnswered);

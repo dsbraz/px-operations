@@ -16,6 +16,22 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
     public Task<bool> ContactBelongsToProjectAsync(int projectId, int contactId, CancellationToken ct)
         => dbContext.Set<Contact>().AnyAsync(c => c.Id == contactId && c.ProjectId == projectId && !c.IsArchived, ct);
 
+    public Task<CollectionWaiver?> GetActiveWaiverAsync(int projectId, CancellationToken ct)
+        => dbContext.Set<CollectionWaiver>()
+            .FirstOrDefaultAsync(w => w.ProjectId == projectId && w.ReactivatedAt == null, ct);
+
+    public void AddWaiver(CollectionWaiver waiver) => dbContext.Set<CollectionWaiver>().Add(waiver);
+
+    public bool IsDuplicateWaiverException(Exception exception)
+        => exception is DbUpdateException
+        {
+            InnerException: PostgresException
+            {
+                SqlState: PostgresErrorCodes.UniqueViolation,
+                ConstraintName: "IX_nps_collection_waivers_project_id"
+            }
+        };
+
     public void AddContact(Contact contact) => dbContext.Set<Contact>().Add(contact);
 
     public Task<Contact?> GetContactAsync(int id, CancellationToken ct)
@@ -74,11 +90,16 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             .Select(g => new { ProjectId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.ProjectId, x => x.Count, ct);
 
-        var activeDispatches = await dbContext.Set<Dispatch>()
+        // Contagem e prazo saem agregados no banco. Quando há mais de um link
+        // aberto vale o que vence por último: é o que ainda dá para responder.
+        var openDispatches = await dbContext.Set<Dispatch>()
             .Where(d => projectIds.Contains(d.ProjectId) && d.Status == NpsDispatchStatus.Open)
             .GroupBy(d => d.ProjectId)
-            .Select(g => new { ProjectId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.ProjectId, x => x.Count, ct);
+            .Select(g => new { ProjectId = g.Key, Count = g.Count(), LastExpiry = g.Max(d => d.ExpiresAt) })
+            .ToDictionaryAsync(x => x.ProjectId, x => x, ct);
+
+        var activeDispatches = openDispatches.ToDictionary(kv => kv.Key, kv => kv.Value.Count);
+        var dispatchExpiry = openDispatches.ToDictionary(kv => kv.Key, kv => kv.Value.LastExpiry);
 
         var linkTargets = await dbContext.Set<DispatchTarget>()
             .Where(t => projectIds.Contains(t.ProjectId))
@@ -108,6 +129,18 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
 
         var overdue = await GetOverdueProjectIdsAsync(projectIds, ct);
 
+        var waivers = await dbContext.Set<CollectionWaiver>()
+            .Where(w => projectIds.Contains(w.ProjectId) && w.ReactivatedAt == null)
+            .ToDictionaryAsync(w => w.ProjectId, w => w, ct);
+
+        // F6: dispensado sai do quadro por padrão; o toggle "Mostrar
+        // dispensados" é quem os traz de volta.
+        if (!filter.IncludeDismissed)
+        {
+            projects = projects.Where(p => !waivers.ContainsKey(p.Id)).ToList();
+            projectIds = projects.Select(p => p.Id).ToList();
+        }
+
         return projects.Select(project => ToProjectView(
             project,
             contacts.GetValueOrDefault(project.Id),
@@ -117,12 +150,14 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             responseCounts.GetValueOrDefault(project.Id),
             lastResponses.GetValueOrDefault(project.Id),
             npsByProject.GetValueOrDefault(project.Id),
-            overdue.Contains(project.Id))).ToList();
+            overdue.Contains(project.Id),
+            waivers.GetValueOrDefault(project.Id),
+            dispatchExpiry.TryGetValue(project.Id, out var expiry) ? expiry : null)).ToList();
     }
 
     public async Task<NpsProjectDetailView?> GetProjectAsync(int projectId, CancellationToken ct)
     {
-        var project = (await ListProjectsAsync(new NpsFilter(null, null, null, null, projectId, null, null, null), ct)).SingleOrDefault();
+        var project = (await ListProjectsAsync(NpsFilter.ForProject(projectId) with { IncludeDismissed = true }, ct)).SingleOrDefault();
         if (project is null)
         {
             return null;
@@ -130,7 +165,7 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
 
         var contacts = await ListContactsAsync(projectId, includeArchived: true, ct);
         var dispatches = await ListDispatchesAsync(projectId, ct);
-        var responses = await ListResponsesAsync(null, new NpsFilter(null, null, null, null, projectId, null, null, null), ct);
+        var responses = await ListResponsesAsync(null, NpsFilter.ForProject(projectId) with { IncludeDismissed = true }, ct);
 
         return new NpsProjectDetailView(project, contacts, dispatches, responses.Take(20).ToList());
     }
@@ -203,7 +238,11 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             target.Dispatch.PeriodEnd.ToString("yyyy-MM-dd"),
             FormatFormFormat(target.Dispatch.Format),
             FormatLanguage(target.Dispatch.Language),
-            target.Responses.Count != 0);
+            target.Dispatch.ExpiresAt.ToString("O"),
+            target.Dispatch.IsExpired(DateTimeOffset.UtcNow),
+            // B3/D1: link compartilhado nunca está "já respondido" — ele existe
+            // justamente para receber várias respostas.
+            !target.IsGeneric && target.Responses.Count != 0);
     }
 
     public async Task<IReadOnlyList<NpsResponseView>> ListResponsesAsync(int? dispatchId, NpsFilter filter, CancellationToken ct)
@@ -268,6 +307,8 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             d.CreatedBy,
             d.CreatedAt.ToString("O"),
             d.ClosedAt?.ToString("O"),
+            d.ExpiresAt.ToString("O"),
+            d.IsExpired(DateTimeOffset.UtcNow),
             targets.GetValueOrDefault(d.Id),
             responses.GetValueOrDefault(d.Id))).ToList();
     }
@@ -277,9 +318,16 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
 
     private async Task<HashSet<int>> GetOverdueProjectIdsAsync(IReadOnlyCollection<int> projectIds, CancellationToken ct)
     {
-        var cutoff = DateTimeOffset.UtcNow.AddDays(-90);
+        var now = DateTimeOffset.UtcNow;
+        var cutoff = now.AddDays(-90);
+
+        // Aberto não basta: o link vale 20 dias e nada o fecha sozinho. Disparo
+        // vencido não é coleta viva — ninguém consegue mais responder por ele,
+        // que é a definição de vencido.
         var activeDispatchProjectIds = await dbContext.Set<Dispatch>()
-            .Where(d => projectIds.Contains(d.ProjectId) && d.Status == NpsDispatchStatus.Open)
+            .Where(d => projectIds.Contains(d.ProjectId)
+                && d.Status == NpsDispatchStatus.Open
+                && d.ExpiresAt > now)
             .Select(d => d.ProjectId)
             .Distinct()
             .ToListAsync(ct);
@@ -290,8 +338,17 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             .Distinct()
             .ToListAsync(ct);
 
+        // F6: projeto com coleta dispensada não está vencido — ninguém está
+        // esperando resposta dele. É o critério de aceite do requisito.
+        var dismissedProjectIds = await dbContext.Set<CollectionWaiver>()
+            .Where(w => projectIds.Contains(w.ProjectId) && w.ReactivatedAt == null)
+            .Select(w => w.ProjectId)
+            .ToListAsync(ct);
+
         return projectIds
-            .Where(id => !activeDispatchProjectIds.Contains(id) && !recentResponseProjectIds.Contains(id))
+            .Where(id => !activeDispatchProjectIds.Contains(id)
+                && !recentResponseProjectIds.Contains(id)
+                && !dismissedProjectIds.Contains(id))
             .ToHashSet();
     }
 
@@ -406,7 +463,9 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
         int responsesCount,
         SurveyResponse? lastResponse,
         decimal? lastNps,
-        bool isOverdue)
+        bool isOverdue,
+        CollectionWaiver? waiver,
+        DateTimeOffset? activeDispatchExpiresAt)
         => new(
             project.Id,
             project.Name,
@@ -420,7 +479,10 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             responsesCount,
             lastResponse?.SubmittedAt.ToString("O"),
             lastNps,
-            isOverdue);
+            isOverdue,
+            waiver is not null,
+            waiver?.Reason,
+            activeDispatchExpiresAt?.ToString("O"));
 
     private static NpsDispatchTargetView ToTargetView(DispatchTarget target)
         => new(

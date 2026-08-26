@@ -222,31 +222,31 @@ else
                                     @if (HasDimensionAnswers(response))
                                     {
                                         <div class="nps-metrics-grid">
-                                            @if (response.Scope is not null)
+                                            @if (response.BusinessValue is not null)
                                             {
                                                 <div class="nps-metric">
-                                                    <div><span>Escopo</span><strong>@response.Scope/10</strong></div>
-                                                    <div class="nps-metric-bar"><span style="@($"width: {ScorePercent(response.Scope)}")"></span></div>
+                                                    <div><span>Valor para o negócio</span><strong>@response.BusinessValue/5</strong></div>
+                                                    <div class="nps-metric-bar"><span style="@($"width: {ScorePercent(response.BusinessValue)}")"></span></div>
                                                 </div>
                                             }
                                             @if (response.Schedule is not null)
                                             {
                                                 <div class="nps-metric">
-                                                    <div><span>Prazo</span><strong>@response.Schedule/10</strong></div>
+                                                    <div><span>Prazo</span><strong>@response.Schedule/5</strong></div>
                                                     <div class="nps-metric-bar"><span style="@($"width: {ScorePercent(response.Schedule)}")"></span></div>
                                                 </div>
                                             }
                                             @if (response.Quality is not null)
                                             {
                                                 <div class="nps-metric">
-                                                    <div><span>Qualidade</span><strong>@response.Quality/10</strong></div>
+                                                    <div><span>Qualidade</span><strong>@response.Quality/5</strong></div>
                                                     <div class="nps-metric-bar"><span style="@($"width: {ScorePercent(response.Quality)}")"></span></div>
                                                 </div>
                                             }
                                             @if (response.Communication is not null)
                                             {
                                                 <div class="nps-metric">
-                                                    <div><span>Comunicação</span><strong>@response.Communication/10</strong></div>
+                                                    <div><span>Comunicação</span><strong>@response.Communication/5</strong></div>
                                                     <div class="nps-metric-bar"><span style="@($"width: {ScorePercent(response.Communication)}")"></span></div>
                                                 </div>
                                             }
