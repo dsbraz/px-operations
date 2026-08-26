@@ -84,6 +84,31 @@ public sealed class NpsCollectionBoardTests : TestContext
         Assert.Contains("Cliente pediu pausa", card.TextContent);
     }
 
+    /// <summary>
+    /// F6: dispensar mora no menu "⋯" do card, como no protótipo. Reativar não
+    /// fica lá — é ação do próprio card, para a volta atrás não ficar escondida.
+    /// </summary>
+    [Fact]
+    public void Dismiss_should_live_in_the_card_menu_and_reactivate_should_not()
+    {
+        var cut = Render([
+            Project(1, "Ativo", activeDispatches: 1, expiresInDays: 10),
+            Project(2, "Pausado", activeDispatches: 0, dismissed: "Cliente pediu pausa")
+        ]);
+
+        var ativo = cut.FindAll(".kcard").Single(c => c.TextContent.Contains("Ativo"));
+        var kebab = ativo.QuerySelector(".kcard__kebab");
+        Assert.NotNull(kebab);
+        kebab!.Click();
+        Assert.Contains("Dispensar coleta", cut.Find(".kcard__menu").TextContent);
+
+        // O card dispensado não oferece "dispensar" de novo, e traz a reativação
+        // visível em vez de escondida no menu.
+        var pausado = cut.FindAll(".kcard").Single(c => c.TextContent.Contains("Pausado"));
+        Assert.Null(pausado.QuerySelector(".kcard__kebab"));
+        Assert.Contains("Reativar coleta", pausado.TextContent);
+    }
+
     private IRenderedComponent<NpsCollectionBoard> Render(IReadOnlyList<NpsProjectResponse> projects)
         => RenderComponent<NpsCollectionBoard>(p => p.Add(c => c.Projects, projects));
 

@@ -164,7 +164,8 @@ else
 
             <NpsCollectionBoard Projects="@projects"
                                 OnGenerateLink="OpenCreateLinkModal"
-                                OnReactivate="ReactivateCollectionAsync" />
+                                OnReactivate="ReactivateCollectionAsync"
+                                OnDismiss="StartDismissAsync" />
         }
 
         @if (ActiveTab == TabResponses)
@@ -178,6 +179,39 @@ else
 @if (operationError is not null)
 {
     <div class="toast show"><span style="color:var(--red);font-size:14px">!</span><span>@operationError</span></div>
+}
+
+@if (dismissTarget is not null)
+{
+    @* F6 exige motivo: sem ele o card some do quadro sem que ninguém saiba
+       por quê, e a reativação vira adivinhação. *@
+    <div class="overlay open" @onclick="CancelDismiss">
+        <div class="modal" @onclick:stopPropagation="true">
+            <div class="modal-top">
+                <div>
+                    <div class="modal-ttl">Dispensar coleta</div>
+                    <div class="modal-sub">@dismissTarget.Name · @dismissTarget.Client</div>
+                </div>
+                <button class="mcls" @onclick="CancelDismiss" aria-label="Fechar">×</button>
+            </div>
+
+            <div class="nps-inline-form nps-inline-form--stacked">
+                <label for="dismiss-reason">Por que a coleta não se aplica?</label>
+                <textarea id="dismiss-reason" rows="3" @bind="dismissReason"
+                          placeholder="Ex.: cliente pediu pausa nas pesquisas"></textarea>
+
+                @if (dismissError is not null)
+                {
+                    <p class="nps-error-text" role="alert">@dismissError</p>
+                }
+
+                <div class="nps-inline-form__actions">
+                    <button type="button" class="brq-button brq-button--secondary" @onclick="CancelDismiss">Cancelar</button>
+                    <button type="button" class="brq-button brq-button--primary" @onclick="ConfirmDismissAsync">Dispensar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 
 @if (showCreateLinkModal)

@@ -76,6 +76,10 @@ public partial class NpsPage : ComponentBase
     /// </summary>
     private NpsDispatchDetailResponse? createdDispatch;
 
+    private NpsProjectResponse? dismissTarget;
+    private string dismissReason = "";
+    private string? dismissError;
+
     private string dispatchFormat = "Simplificado";
     private string dispatchLanguage = "Português";
 
@@ -143,6 +147,48 @@ public partial class NpsPage : ComponentBase
         }
 
         await SelectProjectAsync(projectId);
+    }
+
+    private Task StartDismissAsync(NpsProjectResponse project)
+    {
+        dismissTarget = project;
+        dismissReason = string.Empty;
+        dismissError = null;
+        return Task.CompletedTask;
+    }
+
+    private void CancelDismiss()
+    {
+        dismissTarget = null;
+        dismissError = null;
+    }
+
+    private async Task ConfirmDismissAsync()
+    {
+        if (dismissTarget is null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(dismissReason))
+        {
+            dismissError = "Informe o motivo da dispensa.";
+            return;
+        }
+
+        try
+        {
+            await NpsClient.DismissCollectionAsync(dismissTarget.Id, new DismissNpsCollectionRequest
+            {
+                Reason = dismissReason.Trim()
+            });
+            dismissTarget = null;
+            await RefreshAsync();
+        }
+        catch (Exception)
+        {
+            dismissError = "Não foi possível dispensar a coleta.";
+        }
     }
 
     /// <summary>F6: reativar devolve o projeto à coluna que a regra indicar.</summary>

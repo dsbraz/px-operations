@@ -23,6 +23,26 @@
                 {
                     var expired = IsExpired(project);
                     <article class="kcard @(expired ? "is-expired" : "") @(project.IsDismissed ? "is-dismissed" : "")">
+                        @if (!project.IsDismissed)
+                        {
+                            @* F6: dispensar mora no menu "⋯" do card, como no
+                               protótipo. Reativar NÃO fica aqui — é ação do card. *@
+                            <div class="kcard__menu-wrap">
+                                <button type="button"
+                                        class="kcard__kebab"
+                                        aria-haspopup="menu"
+                                        aria-expanded="@(openMenuProjectId == project.Id ? "true" : "false")"
+                                        aria-label="@($"Ações da coleta de {project.Name}")"
+                                        @onclick="() => ToggleMenu(project.Id)">⋯</button>
+                                @if (openMenuProjectId == project.Id)
+                                {
+                                    <div class="kcard__menu" role="menu">
+                                        <button type="button" class="kcard__menu-item" role="menuitem"
+                                                @onclick="() => StartDismiss(project)">Dispensar coleta</button>
+                                    </div>
+                                }
+                            </div>
+                        }
                         <p class="kcard__title">@project.Name</p>
                         <p class="kcard__client">@project.Client · @project.Dc</p>
 
@@ -65,6 +85,18 @@
     [Parameter, EditorRequired] public IReadOnlyList<NpsProjectResponse> Projects { get; set; } = [];
     [Parameter] public EventCallback<int> OnGenerateLink { get; set; }
     [Parameter] public EventCallback<NpsProjectResponse> OnReactivate { get; set; }
+    [Parameter] public EventCallback<NpsProjectResponse> OnDismiss { get; set; }
+
+    private int? openMenuProjectId;
+
+    private void ToggleMenu(int projectId)
+        => openMenuProjectId = openMenuProjectId == projectId ? null : projectId;
+
+    private Task StartDismiss(NpsProjectResponse project)
+    {
+        openMenuProjectId = null;
+        return OnDismiss.InvokeAsync(project);
+    }
 
     /// <summary>Régua da recoleta, definida na tabela do F2.</summary>
     private const int RecollectionAfterDays = 45;
