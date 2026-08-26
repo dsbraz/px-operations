@@ -70,6 +70,12 @@ public partial class NpsPage : ComponentBase
             return chips;
         }
     }
+    /// <summary>
+    /// Passo 2 do F3: quando existe, o modal deixa de perguntar e passa a
+    /// entregar — URL, validade em destaque e mensagem pronta para colar.
+    /// </summary>
+    private NpsDispatchDetailResponse? createdDispatch;
+
     private string dispatchFormat = "Simplificado";
     private string dispatchLanguage = "Português";
 
@@ -154,6 +160,81 @@ public partial class NpsPage : ComponentBase
         }
     }
 
+    private string CreateLinkSubtitle
+    {
+        get
+        {
+            if (createdDispatch is not null)
+            {
+                return $"{createdDispatch.Dispatch.ProjectName} · {createdDispatch.Dispatch.Format} · {createdDispatch.Dispatch.Language}";
+            }
+
+            return selectedDetail is null
+                ? "Selecione o projeto que receberá o link"
+                : $"{selectedDetail.Project.Name} · {selectedDetail.Project.Dc}";
+        }
+    }
+
+    private string CreatedLinkUrl
+        => createdDispatch is null ? string.Empty : BuildPublicFormUrl(createdDispatch.Targets.First().Token);
+
+    /// <summary>F3: a validade vai em destaque, com a data por extenso.</summary>
+    private string CreatedLinkExpiry
+        => createdDispatch is not null && DateTimeOffset.TryParse(createdDispatch.Dispatch.ExpiresAt, out var expires)
+            ? $"Este link vale por 20 dias: expira em {expires.ToLocalTime():dd/MM/yyyy}"
+            : string.Empty;
+
+    /// <summary>
+    /// F3: mensagem pronta para colar, com o link e o prazo dentro. Montada no
+    /// cliente — persistir template no backend é não-objetivo declarado.
+    /// </summary>
+    private string CreatedMessage
+    {
+        get
+        {
+            if (createdDispatch is null)
+            {
+                return string.Empty;
+            }
+
+            var project = createdDispatch.Dispatch.ProjectName;
+            var url = CreatedLinkUrl;
+            var prazo = DateTimeOffset.TryParse(createdDispatch.Dispatch.ExpiresAt, out var expires)
+                ? expires.ToLocalTime().ToString("dd/MM")
+                : "";
+
+            if (string.Equals(createdDispatch.Dispatch.Language, "Inglês", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"Hi! We're collecting NPS for the {project} project and your feedback really matters. "
+                    + $"It takes under a minute and your answer is anonymous:\n{url}"
+                    + $"\nThe survey is open until {prazo}. Thank you!";
+            }
+
+            return $"Olá! Estamos coletando o NPS do projeto {project} e a sua opinião faz diferença. "
+                + $"Leva menos de 1 minuto e a resposta é anônima:\n{url}"
+                + $"\nA pesquisa fica aberta até {prazo}. Obrigado!";
+        }
+    }
+
+    private Task CopyCreatedLinkAsync() => CopyAsync(CreatedLinkUrl, "Não foi possível copiar o link.");
+
+    private Task CopyCreatedMessageAsync() => CopyAsync(CreatedMessage, "Não foi possível copiar a mensagem.");
+
+    private async Task CopyAsync(string text, string errorMessage)
+    {
+        operationError = null;
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+        }
+        catch (Exception)
+        {
+            // navigator.clipboard rejeita fora de contexto seguro; sem captura a
+            // rejeição sobe pelo EventCallback e derruba a aplicação no WASM.
+            operationError = errorMessage;
+        }
+    }
+
     private async Task RefreshAsync()
     {
         isLoading = true;
@@ -225,11 +306,10 @@ public partial class NpsPage : ComponentBase
                 CreateGenericToken = true
             });
 
-            await SelectProjectAsync(selectedProjectId.Value);
-            selectedDispatchDetail = createdDispatch;
-            responses = [];
-            showCreateLinkModal = false;
-            showDetailModal = true;
+            // O modal NÃO fecha: passa ao passo 2, que entrega a URL, a
+            // validade e a mensagem. Fechar aqui esconderia o que o usuário
+            // pediu para gerar.
+            this.createdDispatch = createdDispatch;
             await LoadDashboardAndProjectsAsync();
         }
         catch (Exception)
@@ -257,6 +337,7 @@ public partial class NpsPage : ComponentBase
     private void OpenCreateLinkModal()
     {
         operationError = null;
+        createdDispatch = null;
         showCreateLinkModal = true;
     }
 
@@ -271,7 +352,10 @@ public partial class NpsPage : ComponentBase
     }
 
     private void CloseCreateLinkModal()
-        => showCreateLinkModal = false;
+    {
+        showCreateLinkModal = false;
+        createdDispatch = null;
+    }
 
     private void CloseDetailModal()
         => showDetailModal = false;

@@ -182,28 +182,55 @@ else
 
 @if (showCreateLinkModal)
 {
+    @* F3: gerar link em 2 passos. Passo 1 escolhe projeto, formato e idioma;
+       passo 2 entrega a URL com a validade em DESTAQUE e a mensagem pronta
+       para colar, já com o link e o prazo dentro. *@
     <div class="overlay open" @onclick="CloseCreateLinkModal">
         <div class="modal" @onclick:stopPropagation="true">
             <div class="modal-top">
                 <div>
-                    <div class="modal-ttl">Novo link NPS</div>
-                    <div class="modal-sub">@(selectedDetail is null ? "Selecione o projeto que receberá o link" : $"{selectedDetail.Project.Name} · {selectedDetail.Project.Dc}")</div>
+                    <div class="modal-ttl">@(createdDispatch is null ? "Novo link NPS" : "Link gerado")</div>
+                    <div class="modal-sub">@CreateLinkSubtitle</div>
                 </div>
                 <button class="mcls" @onclick="CloseCreateLinkModal" aria-label="Fechar">×</button>
             </div>
 
-            <div class="nps-inline-form">
-                <select value="@(selectedProjectId?.ToString() ?? string.Empty)" @onchange="OnCreateLinkProjectChanged">
-                    <option value="">Selecione o projeto</option>
-                    @foreach (var project in projects)
-                    {
-                        <option value="@project.Id">@project.Name · @project.Client</option>
-                    }
-                </select>
-                <select @bind="dispatchFormat"><option>Simplificado</option><option>Completo</option></select>
-                <select @bind="dispatchLanguage"><option>Português</option><option>Inglês</option><option>Espanhol</option></select>
-                <button class="btn btn-purple" disabled="@(!CanCreateLink)" @onclick="CreateDispatchAsync">Gerar link</button>
-            </div>
+            @if (createdDispatch is null)
+            {
+                <div class="nps-inline-form">
+                    <select value="@(selectedProjectId?.ToString() ?? string.Empty)" @onchange="OnCreateLinkProjectChanged">
+                        <option value="">Selecione o projeto</option>
+                        @foreach (var project in projects)
+                        {
+                            <option value="@project.Id">@project.Name · @project.Client</option>
+                        }
+                    </select>
+                    <select @bind="dispatchFormat"><option>Simplificado</option><option>Completo</option></select>
+                    <select @bind="dispatchLanguage"><option>Português</option><option>Inglês</option></select>
+                    <button class="brq-button brq-button--primary" disabled="@(!CanCreateLink)" @onclick="CreateDispatchAsync">Gerar link</button>
+                </div>
+            }
+            else
+            {
+                <div class="link-result">
+                    <div class="link-result__link">
+                        <span class="link-result__url">@CreatedLinkUrl</span>
+                        <button type="button" class="brq-button brq-button--secondary brq-button--sm"
+                                @onclick="CopyCreatedLinkAsync">Copiar link</button>
+                    </div>
+
+                    <p class="link-expiry">@CreatedLinkExpiry</p>
+
+                    <div class="msg">
+                        <div class="msg__head">
+                            <span class="msg__label">Mensagem sugerida</span>
+                            <button type="button" class="brq-button brq-button--secondary brq-button--sm"
+                                    @onclick="CopyCreatedMessageAsync">Copiar mensagem</button>
+                        </div>
+                        <p class="msg__text">@CreatedMessage</p>
+                    </div>
+                </div>
+            }
         </div>
     </div>
 }

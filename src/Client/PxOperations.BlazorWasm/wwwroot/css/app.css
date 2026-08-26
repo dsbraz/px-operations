@@ -1310,3 +1310,51 @@ textarea.fi { resize: vertical; min-height: 90px; line-height: 1.65; }
     .ph-exp-cols { grid-template-columns: 1fr; }
     .ph-proj-row-head, .ph-proj-head { grid-template-columns: 1fr 70px 32px; }
 }
+
+/* ── F3: passo 2 do gerar link ────────────────────────────────────────── */
+.link-result { display: flex; flex-direction: column; gap: 14px; }
+
+.link-result__link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+
+.link-result__url {
+    flex: 1;
+    overflow: hidden;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* A validade em destaque é pedido literal do F3. */
+.link-expiry {
+    margin: 0;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--purple);
+    background: var(--pl);
+    border-radius: 10px;
+}
+
+.msg { border: 1px solid var(--border); border-radius: 10px; }
+
+.msg__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.msg__label { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+
+.msg__text { margin: 0; padding: 12px; font-size: 13px; white-space: pre-line; }

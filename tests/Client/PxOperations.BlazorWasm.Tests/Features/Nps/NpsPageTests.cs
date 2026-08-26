@@ -259,13 +259,19 @@ public sealed class NpsPageTests : TestContext
                 && uri.AbsolutePath == "/api/nps/dashboard"
                 && uri.Query.Contains("dc=DC1")
                 && uri.Query.Contains("projectType=Squad"));
-            Assert.Contains("11111111-1111-1111-1111-111111111111", cut.Markup);
-            Assert.Contains("Copiar", cut.Markup);
-            Assert.DoesNotContain("Abrir", cut.Markup);
+            // F3: o modal não fecha — passa ao passo 2, que entrega a URL, a
+            // validade em destaque e a mensagem pronta para colar.
+            Assert.Contains("11111111-1111-1111-1111-111111111111", cut.Find(".link-result__url").TextContent);
+            Assert.Contains("Este link vale por 20 dias", cut.Find(".link-expiry").TextContent);
+
+            var mensagem = cut.Find(".msg__text").TextContent;
+            Assert.Contains("Estamos coletando o NPS do projeto", mensagem);
+            Assert.Contains("11111111-1111-1111-1111-111111111111", mensagem);
+            Assert.Contains("A pesquisa fica aberta até", mensagem);
         });
 
-        JSInterop.SetupVoid("navigator.clipboard.writeText", "http://localhost/nps/11111111-1111-1111-1111-111111111111");
-        cut.FindAll(".nps-share-panel button").Single(button => button.TextContent.Contains("Copiar")).Click();
+        JSInterop.SetupVoid("navigator.clipboard.writeText", _ => true);
+        cut.FindAll(".msg__head button").Single(b => b.TextContent.Contains("Copiar mensagem")).Click();
         JSInterop.VerifyInvoke("navigator.clipboard.writeText");
     }
 
