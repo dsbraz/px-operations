@@ -12,6 +12,13 @@
 - `tests/Client` contains Blazor component tests.
 - `specs/openapi` is reserved for exported API contracts.
 
+## Engineering Principles
+
+1. **Think Before Coding.** No silent assumptions. State what you're assuming. Surface tradeoffs. Ask before guessing. Push back when a simpler approach exists.
+2. **Simplicity First.** Write the minimum code that solves the problem. Do not add speculative features or abstractions for single-use code. If a senior engineer would call it overcomplicated, simplify it.
+3. **Surgical Changes.** Touch only what you must. Do not improve adjacent code, comments, or formatting. Do not refactor what is not broken. Match the existing style.
+4. **Goal-Driven Execution.** Define success criteria and iterate until they are verified. Describe what success looks like rather than prescribing steps, and let the agent determine how to achieve it.
+
 ## Build, Test, and Development Commands
 
 - `dotnet build px-operations.sln`: build the full solution.
