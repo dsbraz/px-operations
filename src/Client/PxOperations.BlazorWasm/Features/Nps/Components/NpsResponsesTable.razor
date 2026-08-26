@@ -1,0 +1,97 @@
+@using PxOperations.BlazorWasm.Api
+
+@* F10/D12: a visão deixa de ser lista solta e vira tabela escaneável. O
+   comentário aparece só como prévia de uma linha; o texto inteiro fica no
+   detalhe, senão um retorno longo estoura a linha e some com as demais. *@
+@if (Responses.Count == 0)
+{
+    <div class="nps-panel">
+        <div class="nps-empty-state">
+            <p class="nps-empty-state__title">Nenhuma resposta encontrada</p>
+            <p class="nps-empty-state__text">Ajuste a busca ou os filtros de formato, classificação e data.</p>
+        </div>
+    </div>
+}
+else
+{
+    <section class="nps-panel">
+        <div class="nps-panel-head">
+            <h1>Respostas</h1>
+            <span>@Responses.Count @(Responses.Count == 1 ? "resposta" : "respostas")</span>
+        </div>
+        <div class="nps-table-wrap">
+            <table class="nps-table nps-responses-table">
+                <thead>
+                    <tr>
+                        <th>Projeto</th>
+                        <th>Nota</th>
+                        <th>Classificação</th>
+                        <th>Formato</th>
+                        <th>Autor</th>
+                        <th>Comentário</th>
+                        <th>Recebida</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var response in Responses)
+                    {
+                        @* A linha inteira abre o detalhe; o botão existe para o
+                           teclado alcançar o mesmo destino que o clique. *@
+                        <tr @onclick="() => OnOpen.InvokeAsync(response)">
+                            <td>
+                                <button type="button" class="btn-link"
+                                        @onclick="() => OnOpen.InvokeAsync(response)"
+                                        @onclick:stopPropagation="true">@response.ProjectName</button>
+                            </td>
+                            <td><span class="resp-score @ScoreTone(response)">@response.Score</span></td>
+                            <td>@response.Classification</td>
+                            <td><span class="resp-format">@response.Format</span></td>
+                            <td>@Author(response)</td>
+                            <td class="resp-comment">@Preview(response.Comment)</td>
+                            <td>@Received(response)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<NpsSurveyResponse> Responses { get; set; } = [];
+    [Parameter] public EventCallback<NpsSurveyResponse> OnOpen { get; set; }
+
+    /// <summary>D4: sem identificação, a resposta é anônima — e diz isso.</summary>
+    internal static string Author(NpsSurveyResponse response)
+    {
+        if (!string.IsNullOrWhiteSpace(response.RespondentName)) return response.RespondentName;
+        if (!string.IsNullOrWhiteSpace(response.ContactName)) return response.ContactName;
+        if (!string.IsNullOrWhiteSpace(response.RespondentEmail)) return response.RespondentEmail;
+        return "Resposta anônima";
+    }
+
+    /// <summary>
+    /// Prévia de uma linha. O corte é por caracteres porque a tabela não sabe a
+    /// largura da coluna; o detalhe mostra o texto inteiro.
+    /// </summary>
+    private static string Preview(string? comment)
+    {
+        if (string.IsNullOrWhiteSpace(comment)) return "—";
+        var single = comment.ReplaceLineEndings(" ").Trim();
+        return single.Length <= PreviewLength ? single : single[..PreviewLength] + "…";
+    }
+
+    private const int PreviewLength = 80;
+
+    private static string ScoreTone(NpsSurveyResponse response) => response.Classification switch
+    {
+        "Promotor" => "ok",
+        "Neutro" => "late",
+        _ => "danger"
+    };
+
+    private static string Received(NpsSurveyResponse response)
+        => DateTimeOffset.TryParse(response.SubmittedAt, out var at)
+            ? at.ToLocalTime().ToString("dd/MM/yyyy")
+            : "—";
+}

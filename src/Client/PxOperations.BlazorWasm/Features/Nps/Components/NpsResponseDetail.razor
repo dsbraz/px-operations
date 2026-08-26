@@ -1,0 +1,182 @@
+@using PxOperations.BlazorWasm.Api
+@using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Components.Web
+@implements IAsyncDisposable
+@inject IJSRuntime JsRuntime
+
+@* F10: o detalhe de uma resposta. Todos os campos respondidos, o comentário
+   inteiro e a atribuição. A tabela mostra o que dá para escanear; aqui fica o
+   que precisa ser lido. *@
+<div class="overlay open" @onclick="OnClose">
+    <div class="modal" @onclick:stopPropagation="true" @onkeydown="OnKeyDown"
+         @ref="dialog" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="resposta-titulo">
+        <div class="modal-top">
+            <div>
+                <div class="modal-ttl" id="resposta-titulo">@Response.ProjectName</div>
+                <div class="modal-sub">@Author · @Received</div>
+            </div>
+            <button class="mcls" @onclick="OnClose" aria-label="Fechar">×</button>
+        </div>
+
+        <div class="resp-detail__score">
+            <strong>@Response.Score</strong>
+            <span class="nps-status @Tone">@Response.Classification</span>
+            <span class="resp-format">@Response.Format</span>
+        </div>
+
+        @if (Aspects.Count > 0)
+        {
+            @* D10: os aspectos vão de 1 a 5 e só existem no formato Completo.
+               A média fica ao lado porque é leitura da ENTREGA, distinta da
+               nota de recomendação — juntá-las confundiria as duas escalas. *@
+            <section class="resp-detail__aspects">
+                <div class="resp-detail__aspects-head">
+                    <h2>Aspectos da entrega</h2>
+                    <span>Média @AspectAverage.ToString("0.0") de 5</span>
+                </div>
+                <dl>
+                    @foreach (var aspect in Aspects)
+                    {
+                        <div>
+                            <dt>@aspect.Label</dt>
+                            <dd>@aspect.Value</dd>
+                        </div>
+                    }
+                </dl>
+            </section>
+        }
+
+        <section class="resp-detail__comment">
+            <h2>Comentário</h2>
+            @if (string.IsNullOrWhiteSpace(Response.Comment))
+            {
+                <p class="resp-detail__empty">Sem comentário.</p>
+            }
+            else
+            {
+                <p>@Response.Comment</p>
+            }
+        </section>
+
+        <section class="resp-detail__who">
+            <h2>Atribuição</h2>
+            @if (IsAnonymous)
+            {
+                <p class="resp-detail__empty">Resposta anônima.</p>
+            }
+            else
+            {
+                <p>@Author</p>
+                @if (Email is not null)
+                {
+                    <p class="resp-detail__empty">@Email</p>
+                }
+            }
+        </section>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public NpsSurveyResponse Response { get; set; } = default!;
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private string Author => NpsResponsesTable.Author(Response);
+
+    private bool IsAnonymous
+        => string.IsNullOrWhiteSpace(Response.RespondentName)
+            && string.IsNullOrWhiteSpace(Response.ContactName)
+            && string.IsNullOrWhiteSpace(Response.RespondentEmail)
+            && string.IsNullOrWhiteSpace(Response.ContactEmail);
+
+    private string? Email
+        => string.IsNullOrWhiteSpace(Response.RespondentEmail)
+            ? (string.IsNullOrWhiteSpace(Response.ContactEmail) ? null : Response.ContactEmail)
+            : Response.RespondentEmail;
+
+    private string Received
+        => DateTimeOffset.TryParse(Response.SubmittedAt, out var at)
+            ? at.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+            : "—";
+
+    private string Tone => Response.Classification switch
+    {
+        "Promotor" => "ok",
+        "Neutro" => "late",
+        _ => "danger"
+    };
+
+    /// <summary>
+    /// Só os aspectos REALMENTE respondidos. O formato Simplificado não tem
+    /// nenhum, e no Completo cada um é opcional — mostrar "—" para um aspecto
+    /// pulado sugeriria nota baixa.
+    /// </summary>
+    private IReadOnlyList<Aspect> Aspects
+    {
+        get
+        {
+            var aspects = new List<Aspect>();
+            Add(aspects, "Qualidade técnica da entrega", Response.Quality);
+            Add(aspects, "Aderência aos prazos acordados", Response.Schedule);
+            Add(aspects, "Comunicação, clareza e transparência", Response.Communication);
+            Add(aspects, "Valor gerado para o negócio", Response.BusinessValue);
+            return aspects;
+        }
+    }
+
+    private static void Add(List<Aspect> aspects, string label, int? value)
+    {
+        if (value is not null)
+        {
+            aspects.Add(new(label, value.Value));
+        }
+    }
+
+    private double AspectAverage => Aspects.Average(a => a.Value);
+
+    private Task OnKeyDown(KeyboardEventArgs args)
+        => args.Key == "Escape" ? OnClose.InvokeAsync() : Task.CompletedTask;
+
+    private ElementReference dialog;
+    private IJSObjectReference? focusModule;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            focusModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/nps-dialog-focus.js");
+            await focusModule.InvokeVoidAsync("capture");
+        }
+        catch (Exception)
+        {
+            // Sem o módulo o diálogo segue utilizável: perde-se a devolução do
+            // foco, não o diálogo.
+        }
+
+        await dialog.FocusAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (focusModule is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await focusModule.InvokeVoidAsync("restore");
+            await focusModule.DisposeAsync();
+        }
+        catch (Exception)
+        {
+            // Descarte durante a navegação: o runtime JS já pode ter ido.
+        }
+    }
+
+    private sealed record Aspect(string Label, int Value);
+}

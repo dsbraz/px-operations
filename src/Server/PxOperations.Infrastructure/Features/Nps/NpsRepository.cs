@@ -517,11 +517,19 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
 
         if (!string.IsNullOrWhiteSpace(filter.Search))
         {
+            // F10: a busca cobre projeto, PESSOA e comentário. Pessoa é tanto
+            // quem se identificou ao responder quanto o contato do link
+            // nominal — procurar por alguém não pode depender de saber por
+            // qual dos dois caminhos a resposta chegou.
             var term = filter.Search.Trim().ToLower();
             query = query.Where(r =>
                 r.Project.Name.ToLower().Contains(term) ||
                 (r.Project.Client != null && r.Project.Client.ToLower().Contains(term)) ||
-                (r.Comment != null && r.Comment.ToLower().Contains(term)));
+                (r.Comment != null && r.Comment.ToLower().Contains(term)) ||
+                (r.RespondentName != null && r.RespondentName.ToLower().Contains(term)) ||
+                (r.RespondentEmail != null && r.RespondentEmail.ToLower().Contains(term)) ||
+                (r.Contact != null && r.Contact.Name.ToLower().Contains(term)) ||
+                (r.Contact != null && r.Contact.Email.ToLower().Contains(term)));
         }
 
         return query;

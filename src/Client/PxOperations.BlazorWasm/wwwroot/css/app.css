@@ -1122,3 +1122,116 @@ textarea.fi { resize: vertical; min-height: 90px; line-height: 1.65; }
 @media (max-width: 1100px) {
     [data-brq-ui] .nps-layout { grid-template-columns: 1fr; padding: 0 16px 32px; }
 }
+
+/* ── F10: tabela de auditoria e detalhe da resposta ─────────────── */
+
+[data-brq-ui] .nps-empty-state {
+    padding: 48px 24px;
+    text-align: center;
+}
+[data-brq-ui] .nps-empty-state__title { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+[data-brq-ui] .nps-empty-state__text { margin: 0; font-size: 13px; color: var(--color-text-muted); }
+
+[data-brq-ui] .nps-responses-table tr { cursor: pointer; }
+
+/* Prévia de UMA linha: o comentário inteiro fica no detalhe. Sem o max-width
+   uma resposta longa empurra as demais colunas para fora da tela. */
+[data-brq-ui] .nps-responses-table .resp-comment {
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+[data-brq-ui] .resp-score {
+    display: inline-grid;
+    place-items: center;
+    min-width: 28px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+[data-brq-ui] .resp-score.ok { background: var(--color-good-bg); color: var(--color-good); }
+[data-brq-ui] .resp-score.late { background: var(--color-warn-bg); color: var(--color-warn); }
+[data-brq-ui] .resp-score.danger { background: var(--color-danger-bg); color: var(--color-danger); }
+
+[data-brq-ui] .resp-format {
+    padding: 1px 6px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    font-size: 11px;
+    color: var(--color-text-muted);
+}
+
+[data-brq-ui] .resp-detail__score {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+[data-brq-ui] .resp-detail__score strong {
+    font-size: 32px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+[data-brq-ui] .resp-detail__aspects,
+[data-brq-ui] .resp-detail__comment,
+[data-brq-ui] .resp-detail__who {
+    padding-top: 16px;
+    border-top: 1px solid var(--color-border);
+}
+[data-brq-ui] .resp-detail__aspects + *,
+[data-brq-ui] .resp-detail__comment + * { margin-top: 16px; }
+
+[data-brq-ui] .resp-detail__aspects h2,
+[data-brq-ui] .resp-detail__comment h2,
+[data-brq-ui] .resp-detail__who h2 {
+    margin: 0 0 8px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
+[data-brq-ui] .resp-detail__aspects-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+[data-brq-ui] .resp-detail__aspects-head span {
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+[data-brq-ui] .resp-detail__aspects dl { margin: 0; display: grid; gap: 6px; }
+[data-brq-ui] .resp-detail__aspects dl > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+}
+[data-brq-ui] .resp-detail__aspects dt { color: var(--color-text-muted); }
+[data-brq-ui] .resp-detail__aspects dd {
+    margin: 0;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* O comentário pode ser longo; ele rola dentro do próprio modal em vez de
+   empurrar a atribuição para fora da vista. */
+[data-brq-ui] .resp-detail__comment p {
+    margin: 0;
+    max-height: 40vh;
+    overflow-y: auto;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-line;
+}
+
+[data-brq-ui] .resp-detail__who p { margin: 0; font-size: 14px; }
+[data-brq-ui] .resp-detail__empty { color: var(--color-text-muted); }

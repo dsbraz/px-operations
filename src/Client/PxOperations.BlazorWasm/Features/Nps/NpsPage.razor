@@ -89,6 +89,31 @@
                 }
             </fieldset>
         }
+        @if (OffersResponseFacets)
+        {
+            @* F10: formato e classificação são facetas de RESPOSTA — nas outras
+               abas, que listam projetos, não teriam o que recortar. *@
+            <fieldset>
+                <legend>Formato</legend>
+                @foreach (var format in FormatOptions)
+                {
+                    <label>
+                        <input type="checkbox" checked="@filterFormats.Contains(format)" @onchange="@(args => ToggleFormat(format, args))" />
+                        <span>@format</span>
+                    </label>
+                }
+            </fieldset>
+            <fieldset>
+                <legend>Classificação</legend>
+                @foreach (var classification in ClassificationOptions)
+                {
+                    <label>
+                        <input type="checkbox" checked="@filterClassifications.Contains(classification)" @onchange="@(args => ToggleClassification(classification, args))" />
+                        <span>@classification</span>
+                    </label>
+                }
+            </fieldset>
+        }
         @if (OffersDateFacet)
         {
             @* F1: a régua é a data da RESPOSTA, então a faceta não aparece na
@@ -227,8 +252,7 @@ else
 
         @if (ActiveTab == TabResponses)
         {
-            <BrqEmptyState Title="Respostas"
-                           Description="A tabela de auditoria chega numa entrega seguinte." />
+            <NpsResponsesTable Responses="@responses" OnOpen="OpenResponseDetail" />
         }
     </main>
 }
@@ -256,6 +280,11 @@ else
                         OnClose="CloseCreateLinkModal"
                         OnCopyFailed="@(message => operationError = message)"
                         PublicFormUrl="@BuildPublicFormUrl" />
+}
+
+@if (selectedResponse is not null)
+{
+    <NpsResponseDetail Response="@selectedResponse" OnClose="CloseResponseDetail" />
 }
 
 @if (showDetailModal && selectedDetail is not null)

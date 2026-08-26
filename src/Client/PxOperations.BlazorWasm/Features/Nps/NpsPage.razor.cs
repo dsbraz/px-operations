@@ -14,6 +14,8 @@ public partial class NpsPage : ComponentBase, IDisposable
 
     private NpsDashboardResponse? dashboard;
     private List<NpsProjectResponse> projects = [];
+    private List<NpsSurveyResponse> responses = [];
+    private NpsSurveyResponse? selectedResponse;
     private NpsProjectDetailResponse? selectedDetail;
     private bool isLoading = true;
     private string? loadError;
@@ -30,6 +32,10 @@ public partial class NpsPage : ComponentBase, IDisposable
     private readonly HashSet<string> filterDeliveryManagers = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> filterProjectTypes = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> filterStatuses = new(StringComparer.OrdinalIgnoreCase);
+    // F10: facetas da aba Respostas. Formato e classificação são por RESPOSTA,
+    // então não fazem sentido nas outras abas, que listam projetos.
+    private readonly HashSet<string> filterFormats = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> filterClassifications = new(StringComparer.OrdinalIgnoreCase);
     private string filterSearch = "";
     private bool includeDismissed;
 
@@ -68,6 +74,8 @@ public partial class NpsPage : ComponentBase, IDisposable
     private static readonly string[] DcOptions = ["DC1", "DC2", "DC3", "DC4", "DC5", "DC6"];
     private static readonly string[] ProjectTypeOptions = ["Squad", "Escopo Fechado", "Alocação"];
     private static readonly string[] StatusOptions = ["Respondido", "Link gerado", "Pendente"];
+    private static readonly string[] FormatOptions = ["Completo", "Simplificado"];
+    private static readonly string[] ClassificationOptions = ["Promotor", "Neutro", "Detrator"];
 
     /// <summary>
     /// F1: períodos prontos mais intervalo livre. A régua é a data da RESPOSTA,
@@ -84,6 +92,7 @@ public partial class NpsPage : ComponentBase, IDisposable
 
     private bool OffersDateFacet => ActiveTab != TabCollection;
     private bool OffersStatusFacet => ActiveTab == TabResults;
+    private bool OffersResponseFacets => ActiveTab == TabResponses;
 
     // O protótipo abre em Coleta: é a tela de trabalho do operador.
     private string ActiveTab => Tab switch
@@ -93,7 +102,9 @@ public partial class NpsPage : ComponentBase, IDisposable
         _ => TabCollection
     };
 
-    private string PortfolioCount => $"{projects.Count} projetos";
+    private string PortfolioCount => ActiveTab == TabResponses
+        ? $"{responses.Count} {(responses.Count == 1 ? "resposta" : "respostas")}"
+        : $"{projects.Count} projetos";
 
     private IReadOnlyList<NpsFilterBar.NpsFilterChip> FilterChips
     {
@@ -107,6 +118,11 @@ public partial class NpsPage : ComponentBase, IDisposable
             AddFacetChip(chips, "Tipo", filterProjectTypes);
             AddFacetChip(chips, "DM", filterDeliveryManagers);
             if (OffersStatusFacet) AddFacetChip(chips, "Status", filterStatuses);
+            if (OffersResponseFacets)
+            {
+                AddFacetChip(chips, "Formato", filterFormats);
+                AddFacetChip(chips, "Classificação", filterClassifications);
+            }
             if (OffersDateFacet && PeriodLabel is { } period) chips.Add(new("Período", period, "period"));
             if (includeDismissed) chips.Add(new("Dispensados", "Mostrando", "dismissed"));
             return chips;
@@ -186,6 +202,10 @@ public partial class NpsPage : ComponentBase, IDisposable
 
     private Task ToggleStatus(string value, ChangeEventArgs args) => ToggleFacet(filterStatuses, value, args);
 
+    private Task ToggleFormat(string value, ChangeEventArgs args) => ToggleFacet(filterFormats, value, args);
+
+    private Task ToggleClassification(string value, ChangeEventArgs args) => ToggleFacet(filterClassifications, value, args);
+
     private async Task ToggleFacet(HashSet<string> facet, string value, ChangeEventArgs args)
     {
         if (IsChecked(args))
@@ -227,6 +247,8 @@ public partial class NpsPage : ComponentBase, IDisposable
             case "Tipo": filterProjectTypes.Clear(); break;
             case "DM": filterDeliveryManagers.Clear(); break;
             case "Status": filterStatuses.Clear(); break;
+            case "Formato": filterFormats.Clear(); break;
+            case "Classificação": filterClassifications.Clear(); break;
         }
 
         await RefreshAsync();
@@ -245,6 +267,8 @@ public partial class NpsPage : ComponentBase, IDisposable
         filterProjectTypes.Clear();
         filterDeliveryManagers.Clear();
         filterStatuses.Clear();
+        filterFormats.Clear();
+        filterClassifications.Clear();
         includeDismissed = false;
         await RefreshAsync();
     }
@@ -436,17 +460,31 @@ public partial class NpsPage : ComponentBase, IDisposable
         // Status e período só valem onde a faceta é oferecida; carregados de
         // outra aba, filtrariam por algo que não está na tela.
         var statuses = OffersStatusFacet ? Facet(filterStatuses) : null;
+        var formats = OffersResponseFacets ? Facet(filterFormats) : null;
+        var classifications = OffersResponseFacets ? Facet(filterClassifications) : null;
 
-        // A faceta de formato existe no contrato desde B6, mas só é oferecida na
-        // aba Respostas (F10) — daí o null aqui até a aba entrar.
         dashboard = await NpsClient.GetDashboardAsync(
             search, Facet(filterCompanies), Facet(filterDcs), Facet(filterDeliveryManagers),
-            Facet(filterProjectTypes), statuses, null, from, to, null, null);
+            Facet(filterProjectTypes), statuses, null, from, to, classifications, formats);
 
         projects = (await NpsClient.ListProjectsAsync(
             search, Facet(filterCompanies), Facet(filterDcs), Facet(filterDeliveryManagers),
             Facet(filterProjectTypes), statuses, from, to, includeDismissed)).ToList();
+
+        // F10: só a aba Respostas consome a listagem. Carregá-la nas outras
+        // seria uma requisição por troca de aba sem ninguém para ler o
+        // resultado.
+        if (ActiveTab == TabResponses)
+        {
+            responses = (await NpsClient.ListResponsesAsync(
+                search, Facet(filterCompanies), Facet(filterDcs), Facet(filterDeliveryManagers),
+                Facet(filterProjectTypes), null, null, from, to, classifications, formats)).ToList();
+        }
     }
+
+    private void OpenResponseDetail(NpsSurveyResponse response) => selectedResponse = response;
+
+    private void CloseResponseDetail() => selectedResponse = null;
 
     /// <summary>Conjunto vazio é ausência de filtro, não filtro que não casa.</summary>
     private static IEnumerable<string>? Facet(IReadOnlyCollection<string> values)

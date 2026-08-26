@@ -73,6 +73,30 @@ public sealed class NpsResponsesEndpointTests(PostgreSqlFixture fixture)
         Assert.DoesNotContain(responses, r => r.Comment == "neutro");
     }
 
+    /// <summary>
+    /// F10: "a busca global cobre projeto, pessoa e comentário". Pessoa é quem
+    /// se identificou ao responder — sem isso, procurar por alguém que deixou
+    /// um retorno duro não acha nada.
+    /// </summary>
+    [Fact]
+    public async Task ListResponses_should_search_by_respondent()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+        var marker = $"Pessoa{Guid.NewGuid():N}";
+        var token = await CreateTokenAsync(client, marker, "Simplificado");
+
+        await SubmitAsync(client, token, score: 4, comment: "com autor", name: "Joana Ribeiro", email: "joana@cliente.com");
+        await SubmitAsync(client, token, score: 9, comment: "anônima");
+
+        var byName = await ListAsync(client, "search=Joana Ribeiro");
+        var byEmail = await ListAsync(client, "search=joana@cliente.com");
+
+        Assert.Single(byName);
+        Assert.Equal("com autor", byName[0].Comment);
+        Assert.Single(byEmail);
+    }
+
     [Fact]
     public async Task ListResponses_should_reject_an_unknown_format()
     {
@@ -91,7 +115,7 @@ public sealed class NpsResponsesEndpointTests(PostgreSqlFixture fixture)
         return (await response.Content.ReadFromJsonAsync<List<NpsSurveyResponse>>())!;
     }
 
-    private static async Task SubmitAsync(HttpClient client, Guid token, int score, string comment)
+    private static async Task SubmitAsync(HttpClient client, Guid token, int score, string comment, string? name = null, string? email = null)
     {
         var response = await client.PostAsJsonAsync($"/api/nps/public/{token}/responses", new SubmitNpsSurveyResponseRequest(
             Score: score,
@@ -101,8 +125,8 @@ public sealed class NpsResponsesEndpointTests(PostgreSqlFixture fixture)
             Communication: null,
             Tags: null,
             Comment: comment,
-            RespondentName: null,
-            RespondentEmail: null));
+            RespondentName: name,
+            RespondentEmail: email));
         response.EnsureSuccessStatusCode();
     }
 
