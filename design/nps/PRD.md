@@ -87,7 +87,7 @@ para o modelo "um link por rodada".
 | D8 | **Link expirado não se reaproveita**: gera-se um novo, e o card volta para *Aguardando resposta* | Reabrir um link vencido confunde o histórico da rodada; cada rodada tem o seu link | O card expirado troca a ação de "Cobrar" para "Gerar novo link"; gerar recoloca o card em *Aguardando resposta* com o prazo zerado |
 | D9 | **O NPS não tem o conceito de "projeto encerrado"**. Existe um estado só, **coleta dispensada**, marcado à mão e **reversível** a qualquer momento | Ocultar por status ou data de projeto some com projeto cujo NPS ainda precisa de acompanhamento, e quem decide se a coleta se aplica é a pessoa, não uma regra de calendário | O quadro mostra a carteira inteira; a dispensa é a única coisa que tira card da vista, e o card dispensado traz a ação de reativar (F6) |
 | D10 | **Escalas distintas por tipo de pergunta**: NPS de **1 a 10**, aspectos da entrega de **1 a 5** | A nota de recomendação e a avaliação de aspecto são perguntas de natureza diferente; escala curta reduz o esforço nos quatro aspectos | Muda a régua de classificação (detrator passa a ser 1 a 6) e a agregação por aspecto |
-| D11 | **Barra de filtros = busca + um botão "Filtro"** (não fileira de dropdowns), com **multi-seleção** por faceta | Seis dropdowns sempre à vista poluem a tela e não informam nada quando estão em "Todos"; o padrão de dashboards maduros (Linear, Vercel, Shopify) é esconder no menu e mostrar só o que está ligado, como chip | Facetas de lista aceitam vários valores; as consultas de backend (B15) precisam receber listas, não valor único; período e dispensa seguem single |
+| D11 | **Barra de filtros = busca + um botão "Filtro"** (não fileira de dropdowns), com **multi-seleção** por faceta | Seis dropdowns sempre à vista poluem a tela e não informam nada quando estão em "Todos"; o padrão de dashboards maduros (Linear, Vercel, Shopify) é esconder no menu e mostrar só o que está ligado, como chip | Facetas de lista aceitam vários valores; as consultas de backend (B15) precisam receber listas, não valor único; período e dispensa seguem single. Na API a faceta vai como **parâmetro repetido** (`?dc=DC1&dc=DC2`), e valor desconhecido é recusado com 400 em vez de filtrar calado |
 | D12 | **Respostas é uma tabela, não uma lista solta**, com abertura de cada resposta para o detalhe completo | Em lista corrida era difícil ler rápido e saber de qual projeto era cada resposta; comentário longo estourava o layout | Tabela com colunas fixas + comentário só em prévia; modal de detalhe com nota, aspectos (Completo), comentário inteiro e atribuição; filtro por data nessa visão |
 
 **Regras de negócio de referência.** Nota de NPS de **1 a 10** (D10): Promotor = 9 ou 10 ·
@@ -123,6 +123,14 @@ proposta) · **Could** (por demanda). Dependências de backend referenciam a §7
   aba (status em Resultados; formato e classificação em Respostas; coletas dispensadas em
   Coleta), todas no mesmo menu, oferecidas conforme a aba ativa, sem poluir a barra quando não
   estão em uso.
+  - **Status da coleta:** são **três** — Respondido, Link gerado, Pendente —, os mesmos do CSV
+    de F11. A implementação chegou a derivar um quarto, "Sem link", que é inalcançável: projeto
+    sem disparo vivo e sem resposta recente é vencido pela própria definição de vencimento, e o
+    ramo nunca executava. A derivação vive no domínio e o valor vem pronto do servidor, para não
+    haver duas cópias da regra.
+  - **Empresa e DM** são texto livre, então o menu busca os valores existentes no servidor
+    (B15). Derivá-los da lista exibida não serve: ela já vem filtrada, e as opções encolheriam
+    conforme o usuário filtra.
   - **Multi-seleção (D11):** empresa, DC, tipo, DM, status, formato e classificação aceitam
     **vários valores** (ex.: empresa = Santander + Itaú); o chip junta os valores e o menu mantém
     o painel aberto para marcar vários de uma vez. **Data de coleta** é single (é um intervalo) e
@@ -277,7 +285,7 @@ O modelo de dados atual (projeto → disparo → link → resposta, com formato,
 | B12 | **Validade de 20 dias no disparo**: data de expiração gravada/calculada, estado "expirado" exposto na API e link vencido recusando resposta | F2, F3, F4, F5 | **Obrigatória** | **Sim**, definir o que fazer com disparos abertos antigos na virada | P a M |
 | B13 | **Quarto aspecto "Valor gerado para o negócio"**: campo novo ou renomeação do atual `Scope` | F9, formulário Completo | **Obrigatória** | **Sim** | P a M |
 | B14 | **Faixa das notas**: NPS passa a aceitar 1 a 10 e os aspectos 1 a 5 (validação de domínio, classificação e agregações) | Formulário, F7, F8, F9 | **Obrigatória** | **Sim**, dados antigos estão em 0 a 10 | M |
-| B15 | Filtros de **empresa** e de **data de coleta** nas consultas de projeto e de resposta, aceitando **múltiplos valores** por faceta (empresa, DC, tipo, DM, status, formato, classificação), ver D11 | F1 | Recomendada | Não | P |
+| B15 | Filtros de **empresa**, **status da coleta** e **data de coleta** nas consultas de projeto e de resposta, aceitando **múltiplos valores** por faceta (empresa, DC, tipo, DM, status, formato, classificação), mais `GET /api/nps/filter-options` com os valores existentes de empresa e DM, ver D11 | F1 | **Obrigatória** | Não | P a M |
 
 Esforço: P = pequeno (horas), M = médio (dias). Estimativas de quem mapeou o código; validar no
 refinamento.
@@ -298,13 +306,18 @@ aspectos também; decidir se são convertidos, segregados por data ou descartado
 
 | Fase | Entrega | Requisitos | Backend |
 |---|---|---|---|
-| **1, Coleta destravada** (MVP) | O fluxo completo do operador: quadro com validade de link, gerar link, mensagem, link multi-resposta, dispensa de coleta, leitura básica | F1, F2, F3, F4, F5, F6, F7, F11 | B1 a B4, B7, B12, B13, B14 |
-| **2, Profundidade** | Drill-down de notas, feed de auditoria, filtros no servidor | F8, F10 | B5, B6, B15 |
+| **1, Coleta destravada** (MVP) | O fluxo completo do operador: quadro com validade de link, gerar link, mensagem, link multi-resposta, dispensa de coleta, leitura básica | F1, F2, F3, F4, F5, F6, F7, F11 | B1 a B4, B7, B12 a B15 |
+| **2, Profundidade** | Drill-down de notas, feed de auditoria | F8, F10 | B5, B6 |
 | **3, Por demanda** | Médias por aspecto e opcionais de gestão | F9 (+ B8 a B10 se priorizados) | B11 (+ B8 a B10) |
 
 A fase 1 engordou em relação ao corte original: **B7** entrou porque a dispensa virou a única
 forma de tirar item do quadro (D9), e **B12 a B14** entraram porque validade de link e faixa de
 notas são regra de domínio, não acabamento de tela. Não dá para entregar o quadro novo sem elas.
+
+**B15 também.** A primeira versão deste PRD a marcava Recomendada e a punha na fase 2, mas F1 é
+Must da fase 1 e um dos seus critérios de aceite é "marcar dois valores da mesma faceta filtra
+pela união deles" — que D11 define como consulta recebendo lista, isto é, B15. Um critério de
+aceite obrigatório não pode depender de capacidade opcional de outra fase; venceu o F1.
 
 ## 9. Métricas de sucesso
 
@@ -336,8 +349,10 @@ definir na revisão deste PRD; baseline = leitura do dashboard atual na ativaç�
    simples ou entra B8?
 3. **Permissões**: quem pode gerar link e quem pode dispensar coleta? O motivo da dispensa é
    auditado?
-4. Filtros na querystring das rotas (compartilhar visão filtrada)? Natural com D5, mas com
-   multi-seleção (D11) cada faceta vira uma lista na URL; definir o formato (`?empresa=Santander,Itaú`).
+4. Filtros na querystring das **rotas do app** (compartilhar visão filtrada)? Natural com D5,
+   mas com multi-seleção (D11) cada faceta vira uma lista na URL; definir o formato
+   (`?empresa=Santander,Itaú`). **Segue em aberto** — a API já usa parâmetro repetido
+   (`?company=Santander&company=Itaú`), mas a rota do app não carrega filtro nenhum ainda.
 5. **Fase futura**: links por contato para nudge individual ("quem não respondeu"), mantém no
    radar?
 6. **B13/B14**: converter, segregar ou descartar o histórico na virada de escala e do quarto
