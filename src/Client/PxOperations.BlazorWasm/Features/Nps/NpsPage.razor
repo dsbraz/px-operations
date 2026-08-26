@@ -82,12 +82,28 @@ else
            seguintes; até lá anunciam o que serão em vez de renderizar nada. *@
         @if (ActiveTab == TabResults)
         {
-        <div class="stats-bar">
-            <div class="stat p"><div class="sico p">N</div><div><div class="sval">@dashboard?.OfficialNps.ToString("0.0")</div><div class="slbl">NPS oficial</div></div></div>
-            <div class="stat b"><div class="sico b">#</div><div><div class="sval">@dashboard?.TotalResponses</div><div class="slbl">Respostas</div></div></div>
-            <div class="stat o"><div class="sico o">!</div><div><div class="sval">@dashboard?.OverdueProjects</div><div class="slbl">Projetos vencidos</div></div></div>
-            <div class="stat g"><div class="sico g">+</div><div><div class="sval">@dashboard?.Promoters</div><div class="slbl">Promotores</div></div></div>
-        </div>
+        @* F7: leitura executiva. Os quatro KPIs do PRD, com a fórmula do NPS à
+           vista na distribuição. Sem subtexto de taxa de resposta: D2 aposentou
+           o "% de enviados" porque link compartilhado não tem denominador. *@
+        <BrqKpiBar>
+            <BrqKpiCard Label="NPS oficial"
+                        Value="@(dashboard?.OfficialNps.ToString("0.0") ?? "—")"
+                        Context="% promotores − % detratores"
+                        DataTestId="nps-official" />
+            <BrqKpiCard Label="Respostas"
+                        Value="@(dashboard?.TotalResponses.ToString() ?? "—")" />
+            <BrqKpiCard Label="Score médio"
+                        Value="@(dashboard?.AverageScore.ToString("0.0") ?? "—")"
+                        Context="média das notas (1 a 10)" />
+            <BrqKpiCard Label="Projetos vencidos"
+                        Value="@(dashboard?.OverdueProjects.ToString() ?? "—")"
+                        Context="sem resposta há 90+ dias" />
+        </BrqKpiBar>
+
+        <NpsDistribution Detractors="@(dashboard?.Detractors ?? 0)"
+                         Passives="@(dashboard?.Passives ?? 0)"
+                         Promoters="@(dashboard?.Promoters ?? 0)"
+                         OfficialNps="@(dashboard?.OfficialNps ?? 0)" />
 
         <section class="nps-panel">
             <div class="nps-panel-head">

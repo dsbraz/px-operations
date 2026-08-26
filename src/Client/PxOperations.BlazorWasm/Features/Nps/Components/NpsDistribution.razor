@@ -1,0 +1,70 @@
+@* F7/D6: distribuição na ordem detrator → neutro → promotor, com contagem e
+   percentual. A ordem é a da régua da nota, não a do tamanho das fatias. *@
+<section class="dist" aria-labelledby="dist-title">
+    <div class="dist__head">
+        <h2 id="dist-title">Distribuição das respostas</h2>
+        <p class="dist__sub">@Total @(Total == 1 ? "resposta classificada" : "respostas classificadas")</p>
+    </div>
+
+    @if (Total == 0)
+    {
+        <p class="dist__empty">Sem respostas no recorte atual.</p>
+    }
+    else
+    {
+        <div class="dist__bar" role="img" aria-label="@BarLabel">
+            <span class="dist__seg dist__seg--danger" style="@Width(Detractors)"></span>
+            <span class="dist__seg dist__seg--warn" style="@Width(Passives)"></span>
+            <span class="dist__seg dist__seg--good" style="@Width(Promoters)"></span>
+        </div>
+
+        <ul class="dist__legend" role="list">
+            @foreach (var slice in Slices)
+            {
+                <li class="dist__item">
+                    <span class="dist__dot @slice.Tone" aria-hidden="true"></span>
+                    <span class="dist__name">@slice.Name</span>
+                    <span class="dist__count">@slice.Count</span>
+                    <span class="dist__pct">@Percent(slice.Count)</span>
+                </li>
+            }
+        </ul>
+
+        @* A fórmula à vista é pedido literal do F7. *@
+        <p class="dist__formula">
+            NPS = @Percent(Promoters) − @Percent(Detractors) = <strong>@OfficialNps.ToString("0.0")</strong>
+        </p>
+    }
+</section>
+
+@code {
+    [Parameter] public int Detractors { get; set; }
+    [Parameter] public int Passives { get; set; }
+    [Parameter] public int Promoters { get; set; }
+    [Parameter] public double OfficialNps { get; set; }
+
+    private int Total => Detractors + Passives + Promoters;
+
+    private IEnumerable<(string Name, int Count, string Tone)> Slices =>
+    [
+        ("Detrator (1 a 6)", Detractors, "dist__dot--danger"),
+        ("Neutro (7 a 8)", Passives, "dist__dot--warn"),
+        ("Promotor (9 a 10)", Promoters, "dist__dot--good")
+    ];
+
+    private string BarLabel
+        => $"Distribuição das respostas: {Percent(Detractors)} detratores, "
+            + $"{Percent(Passives)} neutros e {Percent(Promoters)} promotores.";
+
+    private string Percent(int count)
+        => Total == 0 ? "0,0%" : $"{(double)count * 100 / Total:0.0}%";
+
+    /// <summary>
+    /// A largura vai em cultura invariante de propósito: o app roda em pt-BR e
+    /// "width: 33,3%" é CSS inválido — a barra some sem erro nenhum no console.
+    /// </summary>
+    private string Width(int count)
+        => Total == 0
+            ? "inline-size: 0"
+            : FormattableString.Invariant($"inline-size: {(double)count * 100 / Total:0.0}%");
+}

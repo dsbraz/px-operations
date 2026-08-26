@@ -7,6 +7,9 @@
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
     <AssemblyName>PxOperations.BlazorWasm</AssemblyName>
     <RootNamespace>PxOperations.BlazorWasm</RootNamespace>
+    <!-- O shard EFIGS não traz português: sem isto, meses e números caem no
+       invariante mesmo com a cultura fixada. -->
+    <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
   </PropertyGroup>
 
   <ItemGroup>
