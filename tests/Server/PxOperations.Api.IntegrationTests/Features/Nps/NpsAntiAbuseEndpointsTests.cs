@@ -51,6 +51,28 @@ public sealed class NpsAntiAbuseEndpointsTests(PostgreSqlFixture fixture)
         Assert.Equal(HttpStatusCode.Created, second.StatusCode);
     }
 
+    /// <summary>
+    /// O link de um projeto dispensado continua válido — a dispensa é decisão
+    /// interna, e quem recebeu o link não sabe dela. Responder tem de funcionar;
+    /// falhar DEPOIS de gravar faria a pessoa tentar de novo e duplicar.
+    /// </summary>
+    [Fact]
+    public async Task Submitting_on_a_dismissed_project_should_still_succeed()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+        var token = await CreateGenericTokenAsync(client);
+        var projectId = (await client.GetFromJsonAsync<List<NpsProjectResponse>>("/api/nps/projects"))!
+            .Max(p => p.Id);
+
+        (await client.PostAsJsonAsync($"/api/nps/projects/{projectId}/collection-waiver",
+            new DismissNpsCollectionRequest("dispensado antes de responder"))).EnsureSuccessStatusCode();
+
+        var response = await SubmitAsync(client, token, email: null);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
     [Fact]
     public async Task Submitting_beyond_the_ip_limit_should_return_too_many_requests()
     {

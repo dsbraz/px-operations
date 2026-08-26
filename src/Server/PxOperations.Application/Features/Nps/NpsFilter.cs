@@ -26,7 +26,13 @@ public sealed record NpsFilter(
     // Padrão oculto: o quadro existe para mostrar o que precisa de ação.
     bool IncludeDismissed = false)
 {
-    public static NpsFilter None => new(null, null, null, null, null, null, null, null, null, null, null);
+    /// <summary>
+    /// Nenhum recorte, e isso inclui a dispensa: quem pede "sem filtro" quer
+    /// tudo. Deixá-la ligada aqui fazia o envio público falhar com 409 DEPOIS
+    /// de gravar a resposta, quando o projeto estava dispensado — a pessoa via
+    /// erro, tentava de novo e duplicava.
+    /// </summary>
+    public static NpsFilter None => new(null, null, null, null, null, null, null, null, null, null, null, IncludeDismissed: true);
 
     public static NpsFilter ForProject(int projectId)
         => new(null, null, null, null, null, null, projectId, null, null, null, null);
