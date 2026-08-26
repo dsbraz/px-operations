@@ -150,8 +150,21 @@ else
 
         @if (ActiveTab == TabCollection)
         {
-            <BrqEmptyState Title="Quadro de coleta"
-                           Description="O quadro por estágio chega na próxima entrega." />
+            @* F2: faixa de KPIs no topo do quadro, para contexto. *@
+            <BrqKpiBar>
+                <BrqKpiCard Label="Projetos" Value="@projects.Count.ToString()" />
+                <BrqKpiCard Label="Projetos vencidos"
+                            Value="@(dashboard?.OverdueProjects.ToString() ?? "—")"
+                            Context="sem resposta há 90+ dias" />
+                <BrqKpiCard Label="Links ativos"
+                            Value="@(dashboard?.ActiveDispatches.ToString() ?? "—")" />
+                <BrqKpiCard Label="Respostas"
+                            Value="@(dashboard?.TotalResponses.ToString() ?? "—")" />
+            </BrqKpiBar>
+
+            <NpsCollectionBoard Projects="@projects"
+                                OnGenerateLink="OpenCreateLinkModal"
+                                OnReactivate="ReactivateCollectionAsync" />
         }
 
         @if (ActiveTab == TabResponses)

@@ -1,0 +1,162 @@
+@using PxOperations.BlazorWasm.Api
+
+@* F2: quadro por estágio de coleta, com colunas de regra objetiva sobre dados
+   que a API já entrega. Link expirado NÃO é coluna (D7/D8): é estado dentro de
+   "Aguardando resposta", no topo da coluna, com a ação trocada. *@
+<div class="kanban">
+    @foreach (var column in Columns)
+    {
+        <section class="kanban__col" aria-label="@column.Title">
+            <div class="kanban__col-head">
+                <span class="kanban__dot @column.Tone" aria-hidden="true"></span>
+                <span class="kanban__col-title">@column.Title</span>
+                <span class="kanban__count">@column.Projects.Count</span>
+            </div>
+            <p class="kanban__tip">@column.Rule</p>
+
+            <div class="kanban__cards">
+                @if (column.Projects.Count == 0)
+                {
+                    <p class="kanban__empty">Nenhum projeto</p>
+                }
+                @foreach (var project in column.Projects)
+                {
+                    var expired = IsExpired(project);
+                    <article class="kcard @(expired ? "is-expired" : "") @(project.IsDismissed ? "is-dismissed" : "")">
+                        <p class="kcard__title">@project.Name</p>
+                        <p class="kcard__client">@project.Client · @project.Dc</p>
+
+                        <div class="kcard__meta">
+                            <span>@project.ResponsesCount @(project.ResponsesCount == 1 ? "resposta" : "respostas")</span>
+                            @if (Timing(project, column.Slug) is { } timing)
+                            {
+                                <span class="kcard__timing @timing.Modifier">@timing.Label</span>
+                            }
+                        </div>
+
+                        <div class="kcard__foot">
+                            <span class="kcard__dm">@(string.IsNullOrWhiteSpace(project.DeliveryManager) ? "Sem DM" : project.DeliveryManager)</span>
+                            @if (project.IsDismissed)
+                            {
+                                @* F6: a volta atrás não fica escondida no menu — o card
+                                   dispensado traz a ação de reativar nele mesmo. *@
+                                <button type="button" class="brq-button brq-button--secondary brq-button--sm"
+                                        @onclick="() => OnReactivate.InvokeAsync(project)">Reativar coleta</button>
+                            }
+                            else if (column.Action is { } action)
+                            {
+                                <button type="button" class="brq-button brq-button--secondary brq-button--sm"
+                                        @onclick="() => OnGenerateLink.InvokeAsync(project.Id)">@(expired ? "Gerar novo link" : action)</button>
+                            }
+                        </div>
+
+                        @if (project.IsDismissed)
+                        {
+                            <p class="kcard__dismissed">Dispensada · @project.DismissalReason</p>
+                        }
+                    </article>
+                }
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<NpsProjectResponse> Projects { get; set; } = [];
+    [Parameter] public EventCallback<int> OnGenerateLink { get; set; }
+    [Parameter] public EventCallback<NpsProjectResponse> OnReactivate { get; set; }
+
+    /// <summary>Régua da recoleta, definida na tabela do F2.</summary>
+    private const int RecollectionAfterDays = 45;
+
+    /// <summary>F5: prazo entra em atenção quando faltam 5 dias ou menos.</summary>
+    private const int DeadlineWarningDays = 5;
+
+    private DateTimeOffset Now => DateTimeOffset.UtcNow;
+
+    private IEnumerable<Column> Columns
+    {
+        get
+        {
+            var semLink = new List<NpsProjectResponse>();
+            var aguardando = new List<NpsProjectResponse>();
+            var recoleta = new List<NpsProjectResponse>();
+            var emDia = new List<NpsProjectResponse>();
+
+            foreach (var project in Projects)
+            {
+                if (project.ActiveDispatches == 0) semLink.Add(project);
+                else if (project.ResponsesCount == 0) aguardando.Add(project);
+                else if (DaysSinceLastResponse(project) > RecollectionAfterDays) recoleta.Add(project);
+                else emDia.Add(project);
+            }
+
+            // D8: o vencido sobe ao topo da própria coluna — a história é a mesma
+            // ("mandei e ninguém respondeu"), só o desfecho mudou.
+            aguardando = [.. aguardando.OrderByDescending(IsExpired).ThenBy(p => p.Name)];
+
+            return
+            [
+                new("sem-link", "Sem link", "Sem disparo aberto.", "kanban__dot--neutral", semLink, "Gerar link"),
+                new("aguardando", "Aguardando resposta", "Disparo aberto e nenhuma resposta.", "kanban__dot--info", aguardando, "Cobrar"),
+                new("recoleta", "Recoleta", $"Última resposta há mais de {RecollectionAfterDays} dias.", "kanban__dot--danger", recoleta, "Nova rodada"),
+                new("em-dia", "Em dia", $"Última resposta há {RecollectionAfterDays} dias ou menos.", "kanban__dot--good", emDia, null)
+            ];
+        }
+    }
+
+    private bool IsExpired(NpsProjectResponse project)
+        => DateTimeOffset.TryParse(project.ActiveDispatchExpiresAt, out var expires) && Now >= expires;
+
+    private double DaysSinceLastResponse(NpsProjectResponse project)
+        => DateTimeOffset.TryParse(project.LastResponseAt, out var last)
+            ? (Now - last).TotalDays
+            : double.MaxValue;
+
+    /// <summary>
+    /// F2: os dois temporais são deliberadamente diferentes. O PRAZO do link é
+    /// alerta acionável olhando para frente e pode virar badge de alarme; a
+    /// RECÊNCIA da última coleta é contexto olhando para trás e é sempre neutra,
+    /// porque a coluna já carrega a urgência.
+    /// </summary>
+    private TimingChip? Timing(NpsProjectResponse project, string column)
+    {
+        if (column == "aguardando")
+        {
+            if (!DateTimeOffset.TryParse(project.ActiveDispatchExpiresAt, out var expires))
+            {
+                return null;
+            }
+
+            var left = expires - Now;
+            if (left <= TimeSpan.Zero)
+            {
+                var days = (int)(-left).TotalDays;
+                return new(days >= 1 ? $"Link expirado há {days}d" : "Link expirado", "is-danger");
+            }
+
+            var remaining = (int)Math.Ceiling(left.TotalDays);
+            return new($"Expira em {remaining}d", remaining <= DeadlineWarningDays ? "is-warn" : "");
+        }
+
+        if (column is "recoleta" or "em-dia")
+        {
+            var days = DaysSinceLastResponse(project);
+            return days == double.MaxValue ? null : new($"há {(int)days}d", "");
+        }
+
+        // "Sem link há Xd" precisaria da data de criação do projeto, que a API não
+        // expõe. Inventar a idade seria mostrar dado que o servidor não tem.
+        return null;
+    }
+
+    private sealed record Column(
+        string Slug,
+        string Title,
+        string Rule,
+        string Tone,
+        IReadOnlyList<NpsProjectResponse> Projects,
+        string? Action);
+
+    private sealed record TimingChip(string Label, string Modifier);
+}

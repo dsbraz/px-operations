@@ -139,6 +139,21 @@ public partial class NpsPage : ComponentBase
         await SelectProjectAsync(projectId);
     }
 
+    /// <summary>F6: reativar devolve o projeto à coluna que a regra indicar.</summary>
+    private async Task ReactivateCollectionAsync(NpsProjectResponse project)
+    {
+        try
+        {
+            operationError = null;
+            await NpsClient.ReactivateCollectionAsync(project.Id);
+            await RefreshAsync();
+        }
+        catch (Exception)
+        {
+            operationError = "Não foi possível reativar a coleta.";
+        }
+    }
+
     private async Task RefreshAsync()
     {
         isLoading = true;

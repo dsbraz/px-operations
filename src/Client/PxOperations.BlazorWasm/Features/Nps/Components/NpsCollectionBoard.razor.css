@@ -1,0 +1,96 @@
+.kanban {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
+}
+
+.kanban__col {
+    padding: 16px;
+    background: var(--brq-color-surface-muted, #fafafa);
+    border: 1px solid var(--brq-color-border, #d9d9d9);
+    border-radius: 16px;
+}
+
+.kanban__col-head { display: flex; align-items: center; gap: 8px; }
+
+.kanban__dot { width: 8px; height: 8px; border-radius: 50%; }
+.kanban__dot--neutral { background: var(--brq-color-text-muted, #4a4a4a); }
+.kanban__dot--info { background: var(--brq-color-accent, #4b148c); }
+.kanban__dot--danger { background: var(--brq-color-danger, #dc2626); }
+.kanban__dot--good { background: var(--brq-color-success, #2ba66a); }
+
+.kanban__col-title { font-weight: 600; font-size: 14px; }
+
+.kanban__count { margin-left: auto; font-size: 13px; color: var(--brq-color-text-muted, #4a4a4a); }
+
+.kanban__tip { margin: 6px 0 14px; font-size: 12px; color: var(--brq-color-text-muted, #4a4a4a); }
+
+.kanban__cards { display: flex; flex-direction: column; gap: 10px; }
+
+.kanban__empty { margin: 0; padding: 12px 0; font-size: 13px; color: var(--brq-color-text-muted, #4a4a4a); }
+
+.kcard {
+    padding: 14px;
+    background: var(--brq-color-surface, #fff);
+    border: 1px solid var(--brq-color-border, #d9d9d9);
+    border-radius: 12px;
+}
+
+/* D8: vencido é estado dentro da coluna, sinalizado na borda. */
+.kcard.is-expired { border-color: var(--brq-color-danger, #dc2626); }
+
+.kcard.is-dismissed { opacity: 0.72; }
+
+.kcard__title { margin: 0; font-weight: 600; font-size: 14px; }
+
+.kcard__client { margin: 2px 0 10px; font-size: 12px; color: var(--brq-color-text-muted, #4a4a4a); }
+
+.kcard__meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--brq-color-text-muted, #4a4a4a);
+}
+
+/* Só o prazo pode virar badge de alarme; a recência é sempre texto discreto. */
+.kcard__timing.is-warn,
+.kcard__timing.is-danger {
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-weight: 600;
+}
+
+.kcard__timing.is-warn {
+    color: var(--brq-color-warn, #b45309);
+    background: var(--brq-color-warn-surface, rgba(180, 83, 9, 0.1));
+}
+
+.kcard__timing.is-danger {
+    color: var(--brq-color-danger, #dc2626);
+    background: var(--brq-color-danger-surface, rgba(220, 38, 38, 0.08));
+}
+
+.kcard__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--brq-color-border-subtle, #ededed);
+}
+
+.kcard__dm { font-size: 12px; color: var(--brq-color-text-muted, #4a4a4a); }
+
+.kcard__dismissed {
+    margin: 10px 0 0;
+    font-size: 12px;
+    color: var(--brq-color-warn, #b45309);
+}
+
+@media (max-width: 1100px) {
+    .kanban { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
