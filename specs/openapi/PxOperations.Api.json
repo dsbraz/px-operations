@@ -3290,6 +3290,7 @@
           "language",
           "expiresAt",
           "isExpired",
+          "isClosed",
           "alreadyAnswered"
         ],
         "type": "object",
@@ -3333,6 +3334,9 @@
             "type": "string"
           },
           "isExpired": {
+            "type": "boolean"
+          },
+          "isClosed": {
             "type": "boolean"
           },
           "alreadyAnswered": {

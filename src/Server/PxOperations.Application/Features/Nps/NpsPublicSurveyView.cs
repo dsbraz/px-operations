@@ -11,4 +11,5 @@ public sealed record NpsPublicSurveyView(
     string Language,
     string ExpiresAt,
     bool IsExpired,
+    bool IsClosed,
     bool AlreadyAnswered);

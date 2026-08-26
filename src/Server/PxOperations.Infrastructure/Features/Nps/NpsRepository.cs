@@ -240,6 +240,10 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             FormatLanguage(target.Dispatch.Language),
             target.Dispatch.ExpiresAt.ToString("O"),
             target.Dispatch.IsExpired(DateTimeOffset.UtcNow),
+            // F4: o envio já rejeita disparo fechado, mas sem expor o estado o
+            // respondente preencheria o formulário inteiro para descobrir só ao
+            // clicar em enviar. Link expirado avisa antes; fechado também deve.
+            target.Dispatch.Status == NpsDispatchStatus.Closed,
             // B3/D1: link compartilhado nunca está "já respondido" — ele existe
             // justamente para receber várias respostas.
             !target.IsGeneric && target.Responses.Count != 0);

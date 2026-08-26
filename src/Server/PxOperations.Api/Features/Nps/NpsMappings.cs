@@ -31,7 +31,7 @@ public static class NpsMappings
         => new(view.Id, view.ProjectId, view.ProjectName, view.DispatchId, view.TargetId, view.ContactId, view.ContactName, view.ContactEmail, view.Score, view.Classification, view.BusinessValue, view.Schedule, view.Quality, view.Communication, view.Tags, view.Comment, view.RespondentName, view.RespondentEmail, view.SubmittedAt);
 
     public static NpsPublicSurveyResponse ToResponse(NpsPublicSurveyView view)
-        => new(view.Token, view.ProjectId, view.ProjectName, view.DispatchId, view.PeriodStart, view.PeriodEnd, view.Format, view.Language, view.ExpiresAt, view.IsExpired, view.AlreadyAnswered);
+        => new(view.Token, view.ProjectId, view.ProjectName, view.DispatchId, view.PeriodStart, view.PeriodEnd, view.Format, view.Language, view.ExpiresAt, view.IsExpired, view.IsClosed, view.AlreadyAnswered);
 
     public static NpsFormFormat ParseFormFormat(string value) => value.Trim().ToLowerInvariant() switch
     {

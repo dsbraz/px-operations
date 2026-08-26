@@ -2,104 +2,152 @@
 @layout PublicLayout
 @using PxOperations.BlazorWasm.Api
 
-<PageTitle>NPS · Operations PX</PageTitle>
+<PageTitle>Pesquisa de NPS · BRQ</PageTitle>
 
-<main class="nps-public">
+<article class="card-survey">
     @if (isLoading)
     {
-        <div class="nps-public-box">@Texts.Loading</div>
+        <p class="state">@T.Loading</p>
     }
     else if (loadError is not null)
     {
-        <div class="nps-public-box">@loadError</div>
+        <h1 class="heading-xl">@T.ErrorTitle</h1>
+        <p class="state">@T.ErrorText</p>
     }
-    else if (survey is not null && submitted)
+    else if (survey is null)
     {
-        <div class="nps-public-box">
-            <h1>@Texts.ThankYouTitle</h1>
-            <p>@Texts.ThankYouMessage</p>
-        </div>
+        <h1 class="heading-xl">@T.ErrorTitle</h1>
+        <p class="state">@T.ErrorText</p>
     }
-    else if (survey is not null)
+    else if (submitted)
     {
-        <div class="nps-public-box">
-            <div class="nps-survey-context">@Texts.ProjectContext</div>
-            <h1>@survey.ProjectName</h1>
-
-            @if (survey.AlreadyAnswered)
+        @* O recibo fecha o fluxo: quem respondeu precisa saber que chegou, e
+           saber que o link segue valendo para o resto do time (D1). *@
+        <h1 class="heading-xl">@T.SentTitle</h1>
+        <p class="state">@T.SentText</p>
+        <p class="state">@(Identified ? T.SentPrivacyNamed : T.SentPrivacyAnon)</p>
+        <p class="state">@T.SentShare</p>
+        <p class="state">@T.SentClose</p>
+    }
+    else if (survey.IsExpired)
+    {
+        @* D7: passado o prazo, o questionário dá lugar ao aviso. Não adianta
+           deixar responder para rejeitar no envio. *@
+        <h1 class="heading-xl">@T.ClosedTitle</h1>
+        <p class="state">@T.ClosedText</p>
+    }
+    else if (survey.IsClosed)
+    {
+        <h1 class="heading-xl">@T.ClosedTitle</h1>
+        <p class="state">@T.ClosedText</p>
+    }
+    else if (survey.AlreadyAnswered)
+    {
+        <p class="state">@T.AlreadyAnswered</p>
+    }
+    else
+    {
+        <header class="intro">
+            <p class="intro__meta">@T.Eyebrow</p>
+            <h1 class="intro__project heading-xl">@T.Title</h1>
+            <p class="intro__meta">@survey.ProjectName · @T.MetaTime · @T.MetaAnon</p>
+            @if (Deadline is not null)
             {
-                <div class="nps-empty">@Texts.AlreadyAnswered</div>
+                @* D7: o respondente vê até quando a pesquisa fica aberta. *@
+                <p class="intro__meta intro__deadline">@Deadline</p>
             }
-            else
-            {
-                <div class="nps-scale-field">
-                    <div class="nps-question">@Texts.NpsQuestion</div>
-                    <div class="nps-scale" role="radiogroup" aria-label="@Texts.NpsQuestion">
-                        @for (var i = 0; i <= 10; i++)
-                        {
-                            var value = i;
-                            <button type="button" class="nps-score @(score == value ? "selected" : "")" aria-pressed="@(score == value)" @onclick="() => score = value">@value</button>
-                        }
-                    </div>
-                    <div class="nps-scale-help"><span>@Texts.ScaleLow</span><span>@Texts.ScaleHigh</span></div>
-                </div>
+        </header>
 
-                @if (survey.Format == "Completo")
+        <section class="q">
+            <div class="q__head">
+                <h2>@T.Q1</h2>
+                <p class="q__hint">@T.Q1Hint</p>
+            </div>
+            <div class="scale" role="radiogroup" aria-label="@T.Q1">
+                @for (var i = 1; i <= 10; i++)
                 {
-                    <div class="nps-public-grid">
-                        <div class="nps-scale-field compact">
-                            <div class="nps-scale-label">@Texts.BusinessValue</div>
-                            <div class="nps-scale" role="radiogroup" aria-label="@Texts.BusinessValue">
-                                @for (var i = 0; i <= 10; i++)
-                                {
-                                    var value = i;
-                                    <button type="button" class="nps-score @(businessValue == value ? "selected" : "")" aria-pressed="@(businessValue == value)" @onclick="() => businessValue = value">@value</button>
-                                }
-                            </div>
-                        </div>
-                        <div class="nps-scale-field compact">
-                            <div class="nps-scale-label">@Texts.Schedule</div>
-                            <div class="nps-scale" role="radiogroup" aria-label="@Texts.Schedule">
-                                @for (var i = 0; i <= 10; i++)
-                                {
-                                    var value = i;
-                                    <button type="button" class="nps-score @(schedule == value ? "selected" : "")" aria-pressed="@(schedule == value)" @onclick="() => schedule = value">@value</button>
-                                }
-                            </div>
-                        </div>
-                        <div class="nps-scale-field compact">
-                            <div class="nps-scale-label">@Texts.Quality</div>
-                            <div class="nps-scale" role="radiogroup" aria-label="@Texts.Quality">
-                                @for (var i = 0; i <= 10; i++)
-                                {
-                                    var value = i;
-                                    <button type="button" class="nps-score @(quality == value ? "selected" : "")" aria-pressed="@(quality == value)" @onclick="() => quality = value">@value</button>
-                                }
-                            </div>
-                        </div>
-                        <div class="nps-scale-field compact">
-                            <div class="nps-scale-label">@Texts.Communication</div>
-                            <div class="nps-scale" role="radiogroup" aria-label="@Texts.Communication">
-                                @for (var i = 0; i <= 10; i++)
-                                {
-                                    var value = i;
-                                    <button type="button" class="nps-score @(communication == value ? "selected" : "")" aria-pressed="@(communication == value)" @onclick="() => communication = value">@value</button>
-                                }
-                            </div>
+                    var value = i;
+                    <button type="button"
+                            class="scale__opt @(score == value ? "is-selected" : "")"
+                            role="radio"
+                            aria-checked="@((score == value).ToString().ToLowerInvariant())"
+                            aria-label="@T.ScoreOption(value, 10)"
+                            @onclick="() => ChooseScore(value)">@value</button>
+                }
+            </div>
+            <p class="scale__ends"><span>@T.ScaleLow</span><span>@T.ScaleHigh</span></p>
+        </section>
+
+        @if (survey.Format == "Completo")
+        {
+            <section class="q dims">
+                <div class="q__head">
+                    <h2>@T.Q2</h2>
+                    <p class="q__hint">@T.Q2Hint</p>
+                </div>
+                <p class="dims__legend">@T.DimsLegend</p>
+
+                @foreach (var dim in Dimensions)
+                {
+                    <div class="dim">
+                        <p class="dim__label">@dim.Label</p>
+                        <p class="dim__hint">@dim.Hint</p>
+                        <div class="scale scale--sm" role="radiogroup" aria-label="@dim.Label">
+                            @for (var i = 1; i <= 5; i++)
+                            {
+                                var value = i;
+                                <button type="button"
+                                        class="scale__opt @(dim.Value() == value ? "is-selected" : "")"
+                                        role="radio"
+                                        aria-checked="@((dim.Value() == value).ToString().ToLowerInvariant())"
+                                        aria-label="@T.ScoreOption(value, 5)"
+                                        @onclick="() => dim.Set(value)">@value</button>
+                            }
                         </div>
                     </div>
                 }
+            </section>
+        }
 
-                <textarea placeholder="@Texts.CommentPlaceholder" @bind="comment"></textarea>
+        <section class="q">
+            <div class="q__head">
+                <h2>@T.Q3</h2>
+                <p class="q__hint">@T.Q3Hint</p>
+            </div>
+            <div class="field">
+                <label class="field__label" for="nps-comment">@T.CommentLabel</label>
+                <textarea id="nps-comment" class="field__control" rows="4"
+                          placeholder="@T.CommentPlaceholder" @bind="comment"></textarea>
+            </div>
+        </section>
 
-                <div class="nps-identity">
-                    <div class="nps-scale-label">@Texts.OptionalIdentity</div>
-                    <input placeholder="@Texts.NamePlaceholder" @bind="respondentName" />
-                    <input placeholder="@Texts.EmailPlaceholder" @bind="respondentEmail" />
+        <section class="q ident">
+            <div class="q__head">
+                <p class="q__eyebrow">@T.OptionalEyebrow</p>
+                <h2>@T.IdentTitle</h2>
+                <p class="q__hint">@T.IdentHint</p>
+            </div>
+            <div class="ident__fields">
+                <div class="field">
+                    <label class="field__label" for="nps-name">@T.NameLabel</label>
+                    <input id="nps-name" class="field__control" placeholder="@T.NamePlaceholder" @bind="respondentName" />
                 </div>
+                <div class="field">
+                    <label class="field__label" for="nps-email">@T.EmailLabel</label>
+                    <input id="nps-email" class="field__control" type="email" @bind="respondentEmail" />
+                </div>
+            </div>
+        </section>
 
-                <button class="btn btn-purple" @onclick="SubmitAsync">@Texts.Submit</button>
-            }
+        @if (submitError is not null)
+        {
+            <p class="q__error" role="alert">@submitError</p>
+        }
+
+        <div class="next">
+            <button type="button" class="brq-button brq-button--primary" @onclick="SubmitAsync">@T.Submit</button>
         </div>
+
+        <p class="foot">@T.FootPrivacy</p>
     }
-</main>
+</article>

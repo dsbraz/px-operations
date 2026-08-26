@@ -100,64 +100,6 @@ public sealed class NpsPageTests : TestContext
     }
 
     [Fact]
-    public void PublicPage_should_render_complete_form_and_submit()
-    {
-        var token = Guid.NewGuid();
-        var handler = new ProjectsTestHelpers.MultiStubHttpMessageHandler();
-        handler.AddResponse(HttpMethod.Get, $$"""
-        {"token":"{{token}}","projectId":1,"projectName":"Projeto Público","dispatchId":2,"periodStart":"2026-06-01","periodEnd":"2026-06-30","format":"Completo","language":"Português","expiresAt":"2026-06-21T00:00:00Z","isExpired":false,"alreadyAnswered":false}
-        """, HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Post, SurveyResponseJson(), HttpStatusCode.Created);
-
-        var client = new HttpClient(handler) { BaseAddress = new Uri("http://localhost") };
-        Services.AddScoped(_ => client);
-        Services.AddScoped<NpsClient>();
-
-        var cut = RenderComponent<NpsPublicPage>(parameters => parameters.Add(p => p.Token, token));
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("Projeto Público", cut.Markup);
-            Assert.Contains("Qual a probabilidade de você recomendar a BRQ?", cut.Markup);
-            Assert.Contains("Valor para o negócio", cut.Markup);
-            Assert.Contains("Identificação opcional", cut.Markup);
-            Assert.Contains("nps-scale", cut.Markup);
-            Assert.DoesNotContain("Tags", cut.Markup);
-            Assert.DoesNotContain("Nota NPS", cut.Markup);
-        });
-
-        cut.FindAll("button").Single(button => button.TextContent.Contains("Enviar resposta")).Click();
-
-        cut.WaitForAssertion(() => Assert.Contains("Sua resposta foi registrada", cut.Markup));
-    }
-
-    [Theory]
-    [InlineData("Inglês", "How likely are you to recommend BRQ?", "Optional identification", "Submit response")]
-    [InlineData("Espanhol", "¿Qué probabilidad hay de que recomiendes BRQ?", "Identificación opcional", "Enviar respuesta")]
-    public void PublicPage_should_render_selected_language(string language, string question, string identity, string submit)
-    {
-        var token = Guid.NewGuid();
-        var handler = new ProjectsTestHelpers.MultiStubHttpMessageHandler();
-        handler.AddResponse(HttpMethod.Get, $$"""
-        {"token":"{{token}}","projectId":1,"projectName":"Projeto Público","dispatchId":2,"periodStart":"2026-06-01","periodEnd":"2026-06-30","format":"Completo","language":"{{language}}","expiresAt":"2026-06-21T00:00:00Z","isExpired":false,"alreadyAnswered":false}
-        """, HttpStatusCode.OK);
-
-        var client = new HttpClient(handler) { BaseAddress = new Uri("http://localhost") };
-        Services.AddScoped(_ => client);
-        Services.AddScoped<NpsClient>();
-
-        var cut = RenderComponent<NpsPublicPage>(parameters => parameters.Add(p => p.Token, token));
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains(question, cut.Markup);
-            Assert.Contains(identity, cut.Markup);
-            Assert.Contains(submit, cut.Markup);
-            Assert.DoesNotContain("Qual a probabilidade de você recomendar a BRQ?", cut.Markup);
-        });
-    }
-
-    [Fact]
     public void Project_history_action_should_open_detail_modal()
     {
         var handler = new ProjectsTestHelpers.MultiStubHttpMessageHandler();

@@ -3,6 +3,13 @@
     background: var(--brq-color-surface, #fff);
 }
 
+/* O SVG do logo não traz width/height próprios: sem limite ele ocupa a
+   largura toda da página. */
+.public-shell__head .logo-brq {
+    width: 72px;
+    height: auto;
+}
+
 .public-shell__head {
     display: flex;
     align-items: center;
