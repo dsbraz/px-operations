@@ -5,7 +5,7 @@ using PxOperations.BlazorWasm.Features.Nps.Components;
 
 namespace PxOperations.BlazorWasm.Features.Nps;
 
-public partial class NpsPage : ComponentBase
+public partial class NpsPage : ComponentBase, IDisposable
 {
     [Inject] private NpsClient NpsClient { get; set; } = default!;
     [Inject] private HttpClient HttpClient { get; set; } = default!;
@@ -15,8 +15,6 @@ public partial class NpsPage : ComponentBase
     private NpsDashboardResponse? dashboard;
     private List<NpsProjectResponse> projects = [];
     private NpsProjectDetailResponse? selectedDetail;
-    private NpsDispatchDetailResponse? selectedDispatchDetail;
-    private List<NpsSurveyResponse> responses = [];
     private bool isLoading = true;
     private string? loadError;
     private string? operationError;
@@ -28,6 +26,11 @@ public partial class NpsPage : ComponentBase
     private string filterProjectType = "";
     private string filterSearch = "";
     private bool includeDismissed;
+
+    private CancellationTokenSource? searchDebounce;
+
+    /// <summary>Espera entre a última tecla e a busca no servidor.</summary>
+    private static readonly TimeSpan SearchDebounce = TimeSpan.FromMilliseconds(300);
 
     /// <summary>
     /// F1/D5: a subpágina vem da rota. Abrir /nps/resultados direto carrega a
@@ -77,8 +80,6 @@ public partial class NpsPage : ComponentBase
     private NpsDispatchDetailResponse? createdDispatch;
 
     private NpsProjectResponse? dismissTarget;
-    private string dismissReason = "";
-    private string? dismissError;
 
 
     private string ExportHref => BuildExportUrl();
@@ -88,9 +89,29 @@ public partial class NpsPage : ComponentBase
         await RefreshAsync();
     }
 
+    /// <summary>
+    /// A busca é por tecla. Sem espera, digitar "acme" lança quatro rodadas de
+    /// 2 a 3 requisições e vale a que voltar por último — a lista podia ficar
+    /// com o resultado de "acm" e a caixa mostrando "acme".
+    /// </summary>
     private async Task OnSearchChanged(string value)
     {
         filterSearch = value;
+
+        searchDebounce?.Cancel();
+        searchDebounce?.Dispose();
+        var pending = new CancellationTokenSource();
+        searchDebounce = pending;
+
+        try
+        {
+            await Task.Delay(SearchDebounce, pending.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
         await RefreshAsync();
     }
 
@@ -121,8 +142,13 @@ public partial class NpsPage : ComponentBase
         await RefreshAsync();
     }
 
+    /// <summary>
+    /// "Limpar tudo" limpa a BUSCA também. Deixá-la de fora escondia a linha de
+    /// chips e mantinha a lista filtrada, sem nada na tela indicando por quê.
+    /// </summary>
     private async Task ClearFilters()
     {
+        filterSearch = string.Empty;
         filterDc = string.Empty;
         filterProjectType = string.Empty;
         includeDismissed = false;
@@ -147,27 +173,19 @@ public partial class NpsPage : ComponentBase
     private Task StartDismissAsync(NpsProjectResponse project)
     {
         dismissTarget = project;
-        dismissReason = string.Empty;
-        dismissError = null;
         return Task.CompletedTask;
     }
 
-    private void CancelDismiss()
-    {
-        dismissTarget = null;
-        dismissError = null;
-    }
+    private void CancelDismiss() => dismissTarget = null;
 
-    private async Task ConfirmDismissAsync()
+    /// <summary>
+    /// O motivo vem do diálogo, que também é quem valida e mostra o erro. A
+    /// página não guarda cópia do texto: era assim que o valor se perdia.
+    /// </summary>
+    private async Task ConfirmDismissAsync(string reason)
     {
         if (dismissTarget is null)
         {
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(dismissReason))
-        {
-            dismissError = "Informe o motivo da dispensa.";
             return;
         }
 
@@ -175,14 +193,14 @@ public partial class NpsPage : ComponentBase
         {
             await NpsClient.DismissCollectionAsync(dismissTarget.Id, new DismissNpsCollectionRequest
             {
-                Reason = dismissReason.Trim()
+                Reason = reason
             });
             dismissTarget = null;
             await RefreshAsync();
         }
         catch (Exception)
         {
-            dismissError = "Não foi possível dispensar a coleta.";
+            operationError = "Não foi possível dispensar a coleta.";
         }
     }
 
@@ -207,7 +225,10 @@ public partial class NpsPage : ComponentBase
         try
         {
             var detail = await NpsClient.GetDispatchAsync(dispatchId);
-            var target = detail.Targets.FirstOrDefault();
+            // Prefere o alvo genérico: token nominal é de uso único e atribui
+            // a resposta àquele contato. Colado numa mensagem de grupo, só a
+            // primeira pessoa conseguiria responder.
+            var target = detail.Targets.FirstOrDefault(t => t.IsGeneric) ?? detail.Targets.FirstOrDefault();
             if (target is not null)
             {
                 await CopyAsync(BuildPublicFormUrl(target.Token), "Não foi possível copiar o link.");
@@ -252,7 +273,6 @@ public partial class NpsPage : ComponentBase
             {
                 selectedProjectId = null;
                 selectedDetail = null;
-                responses = [];
                 showCreateLinkModal = false;
                 showDetailModal = false;
             }
@@ -271,8 +291,6 @@ public partial class NpsPage : ComponentBase
     {
         selectedProjectId = projectId;
         selectedDetail = await NpsClient.GetProjectAsync(projectId);
-        responses = selectedDetail?.RecentResponses.ToList() ?? [];
-        selectedDispatchDetail = null;
     }
 
     private async Task OpenProjectDetailAsync(int projectId)
@@ -357,9 +375,14 @@ public partial class NpsPage : ComponentBase
     {
         var query = new Dictionary<string, string?>
         {
+            // O CSV tem de corresponder ao que está na tela: sem a busca e o
+            // toggle, exportar de uma lista filtrada baixava a carteira inteira.
+            // selectedProjectId fica de fora de propósito — ele sobrevive ao
+            // fechar o modal e não aparece na barra de filtros, então
+            // recortaria o arquivo sem nada indicando isso.
+            ["search"] = string.IsNullOrWhiteSpace(filterSearch) ? null : filterSearch.Trim(),
             ["dc"] = string.IsNullOrWhiteSpace(filterDc) ? null : filterDc,
-            ["projectType"] = string.IsNullOrWhiteSpace(filterProjectType) ? null : filterProjectType,
-            ["projectId"] = selectedProjectId?.ToString()
+            ["projectType"] = string.IsNullOrWhiteSpace(filterProjectType) ? null : filterProjectType
         };
 
         var values = query
@@ -483,4 +506,16 @@ public partial class NpsPage : ComponentBase
 
     private static string TargetLabel(NpsDispatchTargetResponse target)
         => target.IsGeneric ? "Link de resposta" : target.ContactName ?? target.ContactEmail ?? "Contato";
+    /// <summary>
+    /// Sem isto a busca pendente dispara depois do componente morrer: quem
+    /// digita e navega para outra rota dentro dos 300ms deixa requisições em
+    /// voo para uma tela que não existe mais.
+    /// </summary>
+    public void Dispose()
+    {
+        searchDebounce?.Cancel();
+        searchDebounce?.Dispose();
+        searchDebounce = null;
+    }
+
 }

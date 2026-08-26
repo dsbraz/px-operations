@@ -19,6 +19,10 @@
 </head>
 <body>
 <div id="app">Loading...</div>
+<!-- Antes do Blazor e sem defer: carimba data-theme antes da primeira
+     pintura. Sem ele o dark-mode salvo em localStorage nunca volta, porque o
+     CSS escuro depende só de :root[data-theme="dark"]. -->
+<script src="_content/PxOperations.Ui/js/theme-init.js"></script>
 <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
 </body>
 </html>

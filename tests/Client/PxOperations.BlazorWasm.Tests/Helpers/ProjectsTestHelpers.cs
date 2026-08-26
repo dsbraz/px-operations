@@ -44,6 +44,13 @@ internal static class ProjectsTestHelpers
         private readonly Queue<(HttpMethod Method, string Content, HttpStatusCode Status)> _responses = new();
         public List<Uri?> RequestUris { get; } = [];
 
+        /// <summary>
+        /// Corpo enviado em cada requisição. Sem isto só dá para afirmar que
+        /// houve chamada, não que ela levou o dado certo — e um teste que só
+        /// conta requisições passa com o payload errado.
+        /// </summary>
+        public List<string> RequestBodies { get; } = [];
+
         public void AddResponse(HttpMethod method, string content, HttpStatusCode status)
             => _responses.Enqueue((method, content, status));
 
@@ -52,6 +59,7 @@ internal static class ProjectsTestHelpers
             CancellationToken cancellationToken)
         {
             RequestUris.Add(request.RequestUri);
+            RequestBodies.Add(request.Content?.ReadAsStringAsync(cancellationToken).GetAwaiter().GetResult() ?? "");
 
             if (_responses.TryDequeue(out var r))
             {

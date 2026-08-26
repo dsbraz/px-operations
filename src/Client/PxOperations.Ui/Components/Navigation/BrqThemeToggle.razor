@@ -50,13 +50,33 @@
         if (!firstRender)
             return;
 
-        await ThemeService.InitializeAsync();
+        try
+            {
+                await ThemeService.InitializeAsync();
+            }
+            catch (Exception)
+            {
+                // O toggle vive no layout: uma falha ao importar o módulo JS
+                // subiria pelo ciclo de render em TODA rota e derrubaria a
+                // aplicação. Sem tema é degradação; sem app é queda.
+            }
         await InvokeAsync(StateHasChanged);
     }
 
     public void Dispose() => ThemeService.Changed -= HandleThemeChanged;
 
-    private async Task ToggleAsync() => await ThemeService.ToggleAsync();
+    private async Task ToggleAsync()
+    {
+        try
+        {
+            await ThemeService.ToggleAsync();
+        }
+        catch (Exception)
+        {
+            // Mesma razão do Initialize: clique que falha não pode derrubar a
+            // aplicação inteira.
+        }
+    }
 
     private void HandleThemeChanged() => _ = InvokeAsync(StateHasChanged);
 }
