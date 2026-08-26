@@ -1,15 +1,17 @@
 @using PxOperations.BlazorWasm.Api
 @using Microsoft.JSInterop
 @inject IJSRuntime JsRuntime
+@implements IAsyncDisposable
 
 @* F3: gerar link em 2 passos. Passo 1 escolhe projeto, formato e idioma; passo
    2 entrega a URL com a validade em DESTAQUE e a mensagem pronta para colar,
    já com o link e o prazo dentro. *@
 <div class="overlay open" @onclick="OnClose">
-    <div class="modal" @onclick:stopPropagation="true">
+    <div class="modal" @onclick:stopPropagation="true" @onkeydown="OnKeyDown"
+         @ref="dialog" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="novo-link-titulo">
         <div class="modal-top">
             <div>
-                <div class="modal-ttl">@(Created is null ? "Novo link NPS" : "Link gerado")</div>
+                <div class="modal-ttl" id="novo-link-titulo">@(Created is null ? "Novo link NPS" : "Link gerado")</div>
                 <div class="modal-sub">@Subtitle</div>
             </div>
             <button class="mcls" @onclick="OnClose" aria-label="Fechar">×</button>
@@ -59,6 +61,55 @@
 </div>
 
 @code {
+    private Task OnKeyDown(KeyboardEventArgs args)
+        => args.Key == "Escape" ? OnClose.InvokeAsync() : Task.CompletedTask;
+
+    // Acessibilidade do diálogo. Os quatro pedaços andam juntos: sem role e
+    // aria-modal o leitor de tela anuncia o modal como conteúdo comum; sem
+    // tabindex o foco não tem onde pousar; sem Esc só o mouse fecha; sem
+    // devolver o foco, quem usa teclado volta para o topo da página.
+    private ElementReference dialog;
+    private IJSObjectReference? focusModule;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            focusModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/nps-dialog-focus.js");
+            await focusModule.InvokeVoidAsync("capture");
+        }
+        catch (Exception)
+        {
+            // Sem o módulo o diálogo segue utilizável: perde-se a devolução do
+            // foco, não o diálogo.
+        }
+
+        await dialog.FocusAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (focusModule is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await focusModule.InvokeVoidAsync("restore");
+            await focusModule.DisposeAsync();
+        }
+        catch (Exception)
+        {
+            // Descarte durante a navegação: o runtime JS já pode ter ido.
+        }
+    }
+
     [Parameter, EditorRequired] public IReadOnlyList<NpsProjectResponse> Projects { get; set; } = [];
     [Parameter] public int? SelectedProjectId { get; set; }
     [Parameter] public NpsProjectDetailResponse? SelectedDetail { get; set; }

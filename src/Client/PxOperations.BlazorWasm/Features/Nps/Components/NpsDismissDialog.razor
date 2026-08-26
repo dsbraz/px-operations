@@ -1,12 +1,16 @@
 @using PxOperations.BlazorWasm.Api
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JsRuntime
 
 @* F6 exige motivo: sem ele o card some do quadro sem que ninguém saiba por quê,
    e a reativação vira adivinhação. *@
 <div class="overlay open" @onclick="OnCancel">
-    <div class="modal" @onclick:stopPropagation="true">
+    <div class="modal" @onclick:stopPropagation="true" @onkeydown="OnKeyDown"
+         @ref="dialog" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="dispensar-coleta-titulo">
         <div class="modal-top">
             <div>
-                <div class="modal-ttl">Dispensar coleta</div>
+                <div class="modal-ttl" id="dispensar-coleta-titulo">Dispensar coleta</div>
                 <div class="modal-sub">@Project.Name · @Project.Client</div>
             </div>
             <button class="mcls" @onclick="OnCancel" aria-label="Fechar">×</button>
@@ -34,6 +38,54 @@
     [Parameter, EditorRequired] public NpsProjectResponse Project { get; set; } = default!;
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public EventCallback<string> OnConfirm { get; set; }
+
+    private Task OnKeyDown(KeyboardEventArgs args)
+        => args.Key == "Escape" ? OnCancel.InvokeAsync() : Task.CompletedTask;
+
+    // Acessibilidade do diálogo. Os quatro pedaços andam juntos: sem role e
+    // aria-modal o leitor de tela anuncia o modal como conteúdo comum; sem
+    // tabindex o foco não tem onde pousar; sem Esc só o mouse fecha; sem
+    // devolver o foco, quem usa teclado volta para o topo da página.
+    private ElementReference dialog;
+    private IJSObjectReference? focusModule;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            focusModule = await JsRuntime.InvokeAsync<IJSObjectReference>(
+                "import", "./js/nps-dialog-focus.js");
+            await focusModule.InvokeVoidAsync("capture");
+        }
+        catch (Exception)
+        {
+            // Sem o módulo o diálogo segue utilizável: perde-se a devolução do
+            // foco, não o diálogo.
+        }
+
+        await dialog.FocusAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (focusModule is not null)
+        {
+            try
+            {
+                await focusModule.InvokeVoidAsync("restore");
+                await focusModule.DisposeAsync();
+            }
+            catch (Exception)
+            {
+                // Descarte durante a navegação: o circuito já pode ter ido.
+            }
+        }
+    }
 
     private string reason = "";
     private string? error;
