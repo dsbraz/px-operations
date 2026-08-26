@@ -168,15 +168,30 @@
 
         try
         {
-            drill = await LoadResponses(project.Id);
+            var loaded = await LoadResponses(project.Id);
+
+            // Expandir A e clicar em B antes de A voltar punha as notas de A
+            // sob a linha de B, atribuídas ao projeto errado.
+            if (expandedProjectId != project.Id)
+            {
+                return;
+            }
+
+            drill = loaded;
         }
         catch (Exception)
         {
-            drillError = "Não foi possível carregar as notas deste projeto.";
+            if (expandedProjectId == project.Id)
+            {
+                drillError = "Não foi possível carregar as notas deste projeto.";
+            }
         }
         finally
         {
-            isLoadingDrill = false;
+            if (expandedProjectId == project.Id)
+            {
+                isLoadingDrill = false;
+            }
         }
     }
 

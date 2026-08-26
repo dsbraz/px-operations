@@ -16,7 +16,7 @@ public sealed class NpsProjectsTableTests : TestContext
         var cut = Render([Project(1, "Alfa", responses: 2, nps: 50)], _ =>
             [Response(9, "Promotor", "muito bom"), Response(4, "Detrator", "atrasou")]);
 
-        cut.Find("tbody .btn-link").Click();
+        ProjectButtons(cut)[0].Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -34,10 +34,10 @@ public sealed class NpsProjectsTableTests : TestContext
             [Project(1, "Alfa", responses: 1, nps: 100), Project(2, "Beta", responses: 1, nps: 0)],
             _ => [Response(10, "Promotor", "nota")]);
 
-        cut.FindAll("tbody .btn-link")[0].Click();
+        ProjectButtons(cut)[0].Click();
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".nps-drill")));
 
-        cut.FindAll("tbody .btn-link")[1].Click();
+        ProjectButtons(cut)[1].Click();
 
         // Duas abertas transformariam a tabela numa lista de listas.
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".nps-drill")));
@@ -48,10 +48,10 @@ public sealed class NpsProjectsTableTests : TestContext
     {
         var cut = Render([Project(1, "Alfa", responses: 1, nps: 100)], _ => [Response(10, "Promotor", "nota")]);
 
-        cut.Find("tbody .btn-link").Click();
+        ProjectButtons(cut)[0].Click();
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".nps-drill")));
 
-        cut.Find("tbody .btn-link").Click();
+        ProjectButtons(cut)[0].Click();
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".nps-drill")));
     }
@@ -63,7 +63,7 @@ public sealed class NpsProjectsTableTests : TestContext
         // abriria um painel vazio.
         var cut = Render([Project(1, "Alfa", responses: 0, nps: null)], _ => []);
 
-        Assert.Empty(cut.FindAll("tbody .btn-link").Where(b => b.TextContent.Contains("Alfa")));
+        Assert.Empty(ProjectButtons(cut));
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public sealed class NpsProjectsTableTests : TestContext
     {
         var cut = Render([Project(1, "Alfa", responses: 1, nps: 100)], _ => [Response(10, "Promotor", "nota")]);
 
-        cut.Find("tbody .btn-link").Click();
+        ProjectButtons(cut)[0].Click();
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".nps-drill")));
 
         // O projeto expandido sai do recorte. Manter as notas abertas ao lado
@@ -81,6 +81,35 @@ public sealed class NpsProjectsTableTests : TestContext
             .Add(x => x.LoadResponses, _ => Task.FromResult<IReadOnlyList<NpsSurveyResponse>>([])));
 
         Assert.Empty(cut.FindAll(".nps-drill"));
+    }
+
+    /// <summary>
+    /// Expandir A e clicar em B antes de A voltar punha as notas de A sob a
+    /// linha de B, atribuídas ao projeto errado — e nada na tela avisaria.
+    /// </summary>
+    [Fact]
+    public async Task A_slow_expansion_should_not_land_under_another_project()
+    {
+        var alfa = new TaskCompletionSource<IReadOnlyList<NpsSurveyResponse>>();
+        var cut = RenderComponent<NpsProjectsTable>(p => p
+            .Add(x => x.Projects, [Project(1, "Alfa", responses: 1, nps: 100), Project(2, "Beta", responses: 1, nps: 0)])
+            .Add(x => x.LoadResponses, id => id == 1
+                ? alfa.Task
+                : Task.FromResult<IReadOnlyList<NpsSurveyResponse>>([Response(2, "Detrator", "de beta")])));
+
+        ProjectButtons(cut)[0].Click();
+        ProjectButtons(cut)[1].Click();
+        cut.WaitForAssertion(() => Assert.Contains("de beta", cut.Markup));
+
+        // Alfa volta atrasada, quando Beta já está aberta.
+        alfa.SetResult([Response(10, "Promotor", "de alfa")]);
+        await Task.Yield();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("de beta", cut.Markup);
+            Assert.DoesNotContain("de alfa", cut.Markup);
+        });
     }
 
     [Fact]
@@ -105,6 +134,14 @@ public sealed class NpsProjectsTableTests : TestContext
             Assert.Contains("Alfa", cut.FindAll("tbody tr")[0].TextContent);
         });
     }
+
+    /// <summary>
+    /// Só o botão do NOME do projeto. "tbody .btn-link" pegava junto os de
+    /// Gerar link e Ver histórico, e o índice [1] caía na ação da PRIMEIRA
+    /// linha em vez do nome da segunda.
+    /// </summary>
+    private static IReadOnlyList<AngleSharp.Dom.IElement> ProjectButtons(IRenderedComponent<NpsProjectsTable> cut)
+        => cut.FindAll("tbody td:first-child .btn-link");
 
     private static AngleSharp.Dom.IElement NpsHeader(IRenderedComponent<NpsProjectsTable> cut)
         => cut.FindAll("th").Single(h => h.TextContent.Trim().StartsWith("NPS"));

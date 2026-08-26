@@ -937,6 +937,13 @@
                 "type": "string"
               }
             }
+          },
+          {
+            "name": "includeDismissed",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {

@@ -119,7 +119,7 @@ public partial class NpsPublicPage : ComponentBase
             // diferentes de quem está do outro lado.
             submitError = apiException.StatusCode switch
             {
-                409 => T.DuplicateEmail,
+                409 => await ConflictMessageAsync(),
                 429 => T.TooManyRequests,
                 _ => T.SubmitError
             };
@@ -128,6 +128,36 @@ public partial class NpsPublicPage : ComponentBase
         {
             submitError = T.SubmitError;
         }
+    }
+
+    /// <summary>
+    /// O servidor devolve 409 para tudo que impede o envio: prazo vencido,
+    /// disparo fechado e e-mail repetido. Adivinhar pelo código dizia "este
+    /// e-mail já respondeu" a quem só pegou o link tarde demais — e apagar o
+    /// e-mail não resolvia, deixando a pessoa sem saída.
+    ///
+    /// Em vez de inventar contrato, relê o estado do link: se ele fechou
+    /// enquanto o formulário estava aberto, a tela troca para o aviso de prazo,
+    /// que já existe. Sobrando, é o dedupe de e-mail.
+    /// </summary>
+    private async Task<string> ConflictMessageAsync()
+    {
+        try
+        {
+            var current = await NpsClient.GetPublicAsync(Token);
+            if (current.IsExpired || current.IsClosed)
+            {
+                survey = current;
+                return T.ClosedText;
+            }
+        }
+        catch (Exception)
+        {
+            // Sem conseguir reler, a mensagem mais provável é a do dedupe: as
+            // outras duas o formulário já teria barrado antes de perguntar.
+        }
+
+        return T.DuplicateEmail;
     }
 
     /// <summary>

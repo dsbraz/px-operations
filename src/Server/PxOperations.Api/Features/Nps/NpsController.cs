@@ -43,15 +43,20 @@ public sealed class NpsController(
         [FromQuery] string? to,
         [FromQuery] string[]? classification,
         [FromQuery] string[]? format,
+        // F6: os KPIs têm de ver a MESMA carteira que a tabela logo abaixo. Sem
+        // isto o projeto dispensado sumia da lista e continuava somando no NPS.
+        [FromQuery] bool includeDismissed,
         CancellationToken ct)
     {
         try
         {
-            var dashboard = await getDashboard.ExecuteAsync(BuildFilter(search, company, dc, deliveryManager, projectType, status, projectId, from, to, classification, format), ct);
+            var dashboard = await getDashboard.ExecuteAsync(BuildFilter(search, company, dc, deliveryManager, projectType, status, projectId, from, to, classification, format, includeDismissed), ct);
             return Ok(NpsMappings.ToResponse(dashboard));
         }
-        catch (ArgumentOutOfRangeException ex)
+        catch (Exception ex) when (ex is ArgumentOutOfRangeException or FormatException)
         {
+            // FormatException vem de DateOnly.Parse em from/to. Sem ela na lista,
+            // ?from=abc devolvia 500 — erro do cliente contado como falha nossa.
             return BadRequest(new ProblemDetails { Detail = ex.Message });
         }
     }
@@ -76,8 +81,10 @@ public sealed class NpsController(
                 BuildFilter(search, company, dc, deliveryManager, projectType, status, null, from, to, null, null, includeDismissed), ct);
             return Ok(projects.Select(NpsMappings.ToResponse));
         }
-        catch (ArgumentOutOfRangeException ex)
+        catch (Exception ex) when (ex is ArgumentOutOfRangeException or FormatException)
         {
+            // FormatException vem de DateOnly.Parse em from/to. Sem ela na lista,
+            // ?from=abc devolvia 500 — erro do cliente contado como falha nossa.
             return BadRequest(new ProblemDetails { Detail = ex.Message });
         }
     }
@@ -241,8 +248,10 @@ public sealed class NpsController(
                 null, BuildFilter(search, company, dc, deliveryManager, projectType, status, projectId, from, to, classification, format), ct);
             return Ok(responses.Select(NpsMappings.ToResponse));
         }
-        catch (ArgumentOutOfRangeException ex)
+        catch (Exception ex) when (ex is ArgumentOutOfRangeException or FormatException)
         {
+            // FormatException vem de DateOnly.Parse em from/to. Sem ela na lista,
+            // ?from=abc devolvia 500 — erro do cliente contado como falha nossa.
             return BadRequest(new ProblemDetails { Detail = ex.Message });
         }
     }
@@ -268,8 +277,10 @@ public sealed class NpsController(
             var csv = BuildCsv(responses);
             return File(Encoding.UTF8.GetBytes(csv), "text/csv", "nps-responses.csv");
         }
-        catch (ArgumentOutOfRangeException ex)
+        catch (Exception ex) when (ex is ArgumentOutOfRangeException or FormatException)
         {
+            // FormatException vem de DateOnly.Parse em from/to. Sem ela na lista,
+            // ?from=abc devolvia 500 — erro do cliente contado como falha nossa.
             return BadRequest(new ProblemDetails { Detail = ex.Message });
         }
     }

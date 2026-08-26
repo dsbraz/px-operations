@@ -465,7 +465,7 @@ public partial class NpsPage : ComponentBase, IDisposable
 
         dashboard = await NpsClient.GetDashboardAsync(
             search, Facet(filterCompanies), Facet(filterDcs), Facet(filterDeliveryManagers),
-            Facet(filterProjectTypes), statuses, null, from, to, classifications, formats);
+            Facet(filterProjectTypes), statuses, null, from, to, classifications, formats, includeDismissed);
 
         projects = (await NpsClient.ListProjectsAsync(
             search, Facet(filterCompanies), Facet(filterDcs), Facet(filterDeliveryManagers),
@@ -544,6 +544,11 @@ public partial class NpsPage : ComponentBase, IDisposable
             await SelectProjectAsync(projectId);
         }
 
+        // O detalhe tem uma ação "Gerar link". Deixar os dois abertos empilha
+        // diálogo sobre diálogo e embaralha a devolução do foco, que guarda um
+        // gatilho só.
+        showDetailModal = false;
+
         OpenCreateLinkModal();
     }
 
@@ -590,6 +595,11 @@ public partial class NpsPage : ComponentBase, IDisposable
         AddFacet("deliveryManager", filterDeliveryManagers);
         AddFacet("projectType", filterProjectTypes);
         if (OffersStatusFacet) AddFacet("status", filterStatuses);
+        if (OffersResponseFacets)
+        {
+            AddFacet("classification", filterClassifications);
+            AddFacet("format", filterFormats);
+        }
         AddSingle("from", from);
         AddSingle("to", to);
 

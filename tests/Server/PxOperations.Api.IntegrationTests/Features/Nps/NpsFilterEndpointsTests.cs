@@ -2,7 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using PxOperations.Api.Features.Nps.Contracts;
 using PxOperations.Api.Features.Projects.Contracts;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using PxOperations.Api.IntegrationTests.Infrastructure;
+using PxOperations.Infrastructure.Persistence;
 
 namespace PxOperations.Api.IntegrationTests.Features.Nps;
 
@@ -127,6 +130,102 @@ public sealed class NpsFilterEndpointsTests(PostgreSqlFixture fixture)
 
         Assert.NotNull(projects.Single(p => p.Id == withClosedLink.Id).LastDispatchClosedAt);
         Assert.Null(projects.Single(p => p.Id == neverHadLink.Id).LastDispatchClosedAt);
+    }
+
+    [Fact]
+    public async Task ListProjects_should_reject_a_malformed_date()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+
+        // DateOnly.Parse lança FormatException, que não estava na lista de
+        // capturas: erro do cliente virava 500, contado como falha nossa.
+        var response = await client.GetAsync("/api/nps/projects?from=abc");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>
+    /// F6: os KPIs têm de ver a MESMA carteira que a tabela logo abaixo. O
+    /// dashboard ignorava a dispensa, então o projeto sumia da lista e seguia
+    /// somando no NPS oficial — e o drill-down de F8 não fechava com ele.
+    /// </summary>
+    [Fact]
+    public async Task Dashboard_should_exclude_dismissed_projects_by_default()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+        var marker = $"Kpi{Guid.NewGuid():N}";
+        var project = await CreateProjectAsync(client, marker);
+        var token = await CreateGenericTokenAsync(client, project.Id);
+        await SubmitAsync(client, token, 10);
+
+        var antes = await GetDashboardAsync(client, marker);
+        await client.PostAsJsonAsync($"/api/nps/projects/{project.Id}/collection-waiver",
+            new DismissNpsCollectionRequest("fora do escopo"));
+        var depois = await GetDashboardAsync(client, marker);
+        var mostrando = await GetDashboardAsync(client, marker, includeDismissed: true);
+
+        Assert.Equal(1, antes.TotalResponses);
+        Assert.Equal(0, depois.TotalResponses);
+        Assert.Equal(1, mostrando.TotalResponses);
+    }
+
+    /// <summary>
+    /// B12: link vencido não coleta mais. Contá-lo como ativo punha o mesmo
+    /// projeto em "Links ativos" e em "Projetos vencidos" na mesma barra.
+    /// </summary>
+    [Fact]
+    public async Task Dashboard_should_not_count_an_expired_link_as_active()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+        var marker = $"Vencido{Guid.NewGuid():N}";
+        var project = await CreateProjectAsync(client, marker);
+        await CreateGenericTokenAsync(client, project.Id);
+
+        var antes = await GetDashboardAsync(client, marker);
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await db.Database.ExecuteSqlRawAsync(
+                "update nps_dispatches set expires_at = now() - interval '1 day' where project_id = {0}",
+                project.Id);
+        }
+
+        var depois = await GetDashboardAsync(client, marker);
+
+        Assert.Equal(1, antes.ActiveDispatches);
+        Assert.Equal(0, depois.ActiveDispatches);
+        Assert.Equal(1, depois.OverdueProjects);
+    }
+
+    private static async Task<NpsDashboardResponse> GetDashboardAsync(HttpClient client, string marker, bool includeDismissed = false)
+        => (await client.GetFromJsonAsync<NpsDashboardResponse>(
+            $"/api/nps/dashboard?search={marker}&includeDismissed={includeDismissed.ToString().ToLowerInvariant()}"))!;
+
+    private static async Task SubmitAsync(HttpClient client, Guid token, int score)
+    {
+        var response = await client.PostAsJsonAsync($"/api/nps/public/{token}/responses", new SubmitNpsSurveyResponseRequest(
+            score, null, null, null, null, null, null, null, null));
+        response.EnsureSuccessStatusCode();
+    }
+
+    private static async Task<Guid> CreateGenericTokenAsync(HttpClient client, int projectId)
+    {
+        var response = await client.PostAsJsonAsync("/api/nps/dispatches", new CreateNpsDispatchRequest(
+            ProjectId: projectId,
+            PeriodStart: "2026-06-01",
+            PeriodEnd: "2026-06-30",
+            Format: "Simplificado",
+            Language: "Português",
+            CreatedBy: "ops@example.com",
+            ContactIds: [],
+            CreateGenericToken: true));
+        response.EnsureSuccessStatusCode();
+        var detail = (await response.Content.ReadFromJsonAsync<NpsDispatchDetailResponse>())!;
+        return detail.Targets.Single(t => t.IsGeneric).Token;
     }
 
     [Fact]

@@ -53,7 +53,11 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
     {
         // Com a faceta de status ativa os KPIs precisam ver a MESMA carteira que
         // a tabela; como o status só existe na view montada, os ids vêm dela.
-        var projectIds = filter.CollectionStatuses is { Count: > 0 }
+        // Os ids vêm de ListProjectsAsync sempre que o recorte depender de algo
+        // que só existe na view montada — o status — ou da dispensa. Antes o
+        // ramo padrão ignorava a dispensa, e o projeto dispensado sumia da
+        // tabela enquanto seguia somando no NPS oficial logo acima dela.
+        var projectIds = filter.CollectionStatuses is { Count: > 0 } || !filter.IncludeDismissed
             ? (await ListProjectsAsync(filter, ct)).Select(p => p.Id).ToList()
             : await ApplyProjectFilters(dbContext.Projects.AsQueryable(), filter)
                 .Select(p => p.Id)
@@ -62,8 +66,14 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
         var responses = await ApplyResponseFilters(dbContext.Set<SurveyResponse>().Where(r => projectIds.Contains(r.ProjectId)), filter)
             .ToListAsync(ct);
 
+        // B12: link vencido não coleta mais, então não é ativo. Sem o prazo aqui,
+        // o mesmo projeto aparecia em "Links ativos" e em "Projetos vencidos" na
+        // mesma barra de KPIs, dizendo duas coisas opostas.
+        var now = DateTimeOffset.UtcNow;
         var activeDispatches = await dbContext.Set<Dispatch>()
-            .CountAsync(d => projectIds.Contains(d.ProjectId) && d.Status == NpsDispatchStatus.Open, ct);
+            .CountAsync(d => projectIds.Contains(d.ProjectId)
+                && d.Status == NpsDispatchStatus.Open
+                && d.ExpiresAt > now, ct);
 
         var overdueProjects = await CountOverdueProjectsAsync(projectIds, ct);
         var classifications = responses.Select(r => r.Classification).ToList();
@@ -321,6 +331,18 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
 
         query = ApplyResponseFilters(query, filter);
         query = ApplyProjectResponseFilters(query, filter);
+
+        // O status da coleta só existe na view montada, então recortar por ele
+        // aqui significa perguntar antes quais projetos casam. Sem isto o
+        // parâmetro era aceito e ignorado, e o CSV saía com a carteira inteira
+        // enquanto a tela mostrava o recorte.
+        if (filter.CollectionStatuses is { Count: > 0 })
+        {
+            var wanted = (await ListProjectsAsync(filter with { IncludeDismissed = true }, ct))
+                .Select(p => p.Id)
+                .ToHashSet();
+            query = query.Where(r => wanted.Contains(r.ProjectId));
+        }
 
         var responses = await query
             .OrderByDescending(r => r.SubmittedAt)

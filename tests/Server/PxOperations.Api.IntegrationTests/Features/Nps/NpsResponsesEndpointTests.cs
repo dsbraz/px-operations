@@ -151,6 +151,47 @@ public sealed class NpsResponsesEndpointTests(PostgreSqlFixture fixture)
         Assert.Empty(expanded);
     }
 
+    /// <summary>
+    /// O parâmetro status era aceito e ignorado: a tela filtrava, o CSV saía
+    /// com a carteira inteira e nada indicava a diferença.
+    /// </summary>
+    [Fact]
+    public async Task ListResponses_should_honour_the_collection_status()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+        var marker = $"StatusResp{Guid.NewGuid():N}";
+        var token = await CreateTokenAsync(client, marker, "Simplificado");
+
+        await SubmitAsync(client, token, score: 9, comment: "respondeu");
+
+        // O projeto respondeu, então é "Respondido" — e nunca "Pendente".
+        var respondido = await ListAsync(client, $"search={marker}&status=Respondido");
+        var pendente = await ListAsync(client, $"search={marker}&status=Pendente");
+
+        Assert.Single(respondido);
+        Assert.Empty(pendente);
+    }
+
+    [Fact]
+    public async Task Export_should_honour_the_classification_facet()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+        var marker = $"Csv{Guid.NewGuid():N}";
+        var token = await CreateTokenAsync(client, marker, "Simplificado");
+
+        await SubmitAsync(client, token, score: 10, comment: "promotor no csv");
+        await SubmitAsync(client, token, score: 2, comment: "detrator no csv");
+
+        var response = await client.GetAsync($"/api/nps/responses/export?search={marker}&classification=Detrator");
+        var csv = await response.Content.ReadAsStringAsync();
+
+        // F11: o CSV tem de corresponder ao que está na tela.
+        Assert.Contains("detrator no csv", csv);
+        Assert.DoesNotContain("promotor no csv", csv);
+    }
+
     [Fact]
     public async Task ListResponses_should_reject_an_unknown_format()
     {
