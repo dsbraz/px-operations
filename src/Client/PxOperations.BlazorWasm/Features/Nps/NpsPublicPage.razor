@@ -45,6 +45,14 @@
     {
         <p class="state">@T.AlreadyAnswered</p>
     }
+    else if (answeredInThisBrowser)
+    {
+        @* B4: o freio de navegador. Vem DEPOIS de expirado e fechado — quem
+           voltou a um link vencido precisa saber do prazo, não do reenvio. *@
+        <h1 class="heading-xl">@T.SentTitle</h1>
+        <p class="state">@T.AnsweredInThisBrowser</p>
+        <p class="state">@T.SentClose</p>
+    }
     else
     {
         <header class="intro">

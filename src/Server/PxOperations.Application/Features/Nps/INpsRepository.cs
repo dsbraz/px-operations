@@ -23,6 +23,7 @@ public interface INpsRepository
     void AddDispatchTarget(DispatchTarget target);
     Task<DispatchTarget?> GetTargetByTokenAsync(Guid token, CancellationToken ct);
     Task<bool> TargetHasResponseAsync(int targetId, CancellationToken ct);
+    Task<bool> TargetHasResponseFromEmailAsync(int targetId, string email, CancellationToken ct);
     Task<NpsPublicSurveyView?> GetPublicSurveyAsync(Guid token, CancellationToken ct);
     Task<IReadOnlyList<NpsResponseView>> ListResponsesAsync(int? dispatchId, NpsFilter filter, CancellationToken ct);
     void AddResponse(SurveyResponse response);

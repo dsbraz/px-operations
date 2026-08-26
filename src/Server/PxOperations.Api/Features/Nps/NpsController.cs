@@ -1,6 +1,7 @@
 using System.Net.Mime;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using PxOperations.Api.Features.Nps.Contracts;
 using PxOperations.Application.Features.Nps;
 using PxOperations.Application.Features.Nps.UseCases;
@@ -276,8 +277,14 @@ public sealed class NpsController(
         return survey is null ? NotFound() : Ok(NpsMappings.ToResponse(survey));
     }
 
+    /// <summary>
+    /// B4: único endpoint com limite por IP. É o que fica exposto sem
+    /// autenticação atrás de um link que qualquer um pode repassar.
+    /// </summary>
     [HttpPost("public/{token:guid}/responses")]
+    [EnableRateLimiting(AntiAbuse.SubmitPolicy)]
     [ProducesResponseType<NpsSurveyResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]

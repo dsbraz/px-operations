@@ -15,6 +15,14 @@ public sealed class NpsPublicFormTests : TestContext
 {
     private static readonly Guid Token = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
+    public NpsPublicFormTests()
+    {
+        // B4: a página consulta localStorage para o freio de navegador. Em modo
+        // frouxo a leitura devolve nulo, que é "ainda não respondeu" — o estado
+        // que estes testes assumem.
+        JSInterop.Mode = JSRuntimeMode.Loose;
+    }
+
     /// <summary>
     /// D10: a nota não nasce escolhida. Um 10 pré-marcado transformaria "não
     /// respondi" em "sou promotor" e inflaria o NPS a cada envio distraído.

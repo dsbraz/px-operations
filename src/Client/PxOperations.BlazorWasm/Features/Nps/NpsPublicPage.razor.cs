@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using PxOperations.BlazorWasm.Api;
 
 namespace PxOperations.BlazorWasm.Features.Nps;
@@ -8,10 +9,12 @@ public partial class NpsPublicPage : ComponentBase
 {
     [Parameter] public Guid Token { get; set; }
     [Inject] private NpsClient NpsClient { get; set; } = default!;
+    [Inject] private IJSRuntime JsRuntime { get; set; } = default!;
 
     private NpsPublicSurveyResponse? survey;
     private bool isLoading = true;
     private bool submitted;
+    private bool answeredInThisBrowser;
     private string? loadError;
     private string? submitError;
 
@@ -57,6 +60,7 @@ public partial class NpsPublicPage : ComponentBase
         try
         {
             survey = await NpsClient.GetPublicAsync(Token);
+            answeredInThisBrowser = await HasAnsweredInThisBrowserAsync();
         }
         catch (Exception)
         {
@@ -104,13 +108,60 @@ public partial class NpsPublicPage : ComponentBase
                 RespondentEmail = respondentEmail
             });
             submitted = true;
+            await MarkAnsweredInThisBrowserAsync();
         }
-        catch (Exception)
+        catch (ApiException apiException)
         {
             // Erro de envio não pode apagar o formulário: quem preencheu
             // perderia tudo. loadError substitui a tela; submitError fica junto
-            // do botão.
+            // do botão. B4: cada freio tem a sua mensagem — "já respondi com
+            // este e-mail" e "muitas respostas deste ponto" pedem reações
+            // diferentes de quem está do outro lado.
+            submitError = apiException.StatusCode switch
+            {
+                409 => T.DuplicateEmail,
+                429 => T.TooManyRequests,
+                _ => T.SubmitError
+            };
+        }
+        catch (Exception)
+        {
             submitError = T.SubmitError;
+        }
+    }
+
+    /// <summary>
+    /// B4: o freio de navegador. É o mais fraco dos três de propósito — quem
+    /// quiser burlar abre uma janela anônima —, e existe para barrar o reenvio
+    /// distraído, não fraude. Vive no cliente porque o cookie teria de cruzar
+    /// origem, e a API não usa credenciais.
+    /// </summary>
+    private string BrowserFlagKey => $"nps-answered-{Token}";
+
+    private async Task<bool> HasAnsweredInThisBrowserAsync()
+    {
+        try
+        {
+            return await JsRuntime.InvokeAsync<string?>("localStorage.getItem", BrowserFlagKey) is not null;
+        }
+        catch (Exception)
+        {
+            // Janela anônima ou armazenamento bloqueado: sem a marca, mostrar o
+            // formulário. Barrar quem talvez nem tenha respondido é pior.
+            return false;
+        }
+    }
+
+    private async Task MarkAnsweredInThisBrowserAsync()
+    {
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("localStorage.setItem", BrowserFlagKey, "1");
+        }
+        catch (Exception)
+        {
+            // A resposta já foi gravada no servidor. Não conseguir marcar o
+            // navegador não pode transformar um envio bem-sucedido em erro.
         }
     }
 
@@ -133,7 +184,12 @@ public partial class NpsPublicPage : ComponentBase
         string SentTitle, string SentText, string SentPrivacyAnon, string SentPrivacyNamed,
         string SentShare, string SentClose,
         string ClosedTitle, string ClosedText, string ErrorTitle, string ErrorText,
-        string AlreadyAnswered, string FootPrivacy)
+        string AlreadyAnswered,
+        // B4/F4: cada freio fala com o respondente de um jeito. Os três dizem
+        // que o link SEGUE VALENDO para as outras pessoas — sem isso o aviso
+        // parece encerrar a coleta, que é o oposto do link compartilhado (D1).
+        string AnsweredInThisBrowser, string DuplicateEmail, string TooManyRequests,
+        string FootPrivacy)
     {
         public string DeadlineText(string date) => Deadline.Replace("{date}", date);
 
@@ -181,6 +237,9 @@ public partial class NpsPublicPage : ComponentBase
             "Não encontramos esta avaliação",
             "O link pode ter expirado ou ter sido copiado pela metade. Confira o endereço ou peça um novo link ao time da BRQ.",
             "Este link já recebeu uma resposta.",
+            "Você já respondeu por este navegador. O link continua valendo: as outras pessoas do seu time ainda podem responder.",
+            "Este e-mail já respondeu esta pesquisa. Se quiser mandar outro retorno, deixe o campo de e-mail em branco.",
+            "Recebemos muitas respostas deste ponto de acesso em pouco tempo. Aguarde um minuto e envie de novo.",
             "Nome e e-mail são opcionais e só são usados para dar retorno sobre esta avaliação.");
 
         private static readonly Texts English = Portuguese with
@@ -221,6 +280,9 @@ public partial class NpsPublicPage : ComponentBase
             ErrorTitle = "We could not find this survey",
             ErrorText = "The link may have expired or been copied incompletely.",
             AlreadyAnswered = "This link has already received a response.",
+            AnsweredInThisBrowser = "You have already answered from this browser. The link is still valid: others on your team can still answer.",
+            DuplicateEmail = "This e-mail has already answered this survey. To send more feedback, leave the e-mail field blank.",
+            TooManyRequests = "We received a lot of answers from this connection in a short time. Please wait a minute and send again.",
             FootPrivacy = "Name and email are optional."
         };
 
@@ -238,7 +300,10 @@ public partial class NpsPublicPage : ComponentBase
             SentTitle = "Gracias",
             ClosedTitle = "El plazo de esta encuesta terminó",
             ErrorTitle = "No encontramos esta evaluación",
-            AlreadyAnswered = "Este enlace ya recibió una respuesta."
+            AlreadyAnswered = "Este enlace ya recibió una respuesta.",
+            AnsweredInThisBrowser = "Ya respondiste desde este navegador. El enlace sigue válido: las demás personas de tu equipo aún pueden responder.",
+            DuplicateEmail = "Este correo ya respondió esta encuesta. Si quieres enviar otro comentario, deja el campo de correo en blanco.",
+            TooManyRequests = "Recibimos muchas respuestas desde esta conexión en poco tiempo. Espera un minuto y envía de nuevo."
         };
     }
 }

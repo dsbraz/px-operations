@@ -43,6 +43,15 @@ public sealed class SubmitNpsPublicResponseUseCase(INpsRepository repository, IU
             throw new InvalidOperationException("This NPS link has already been answered.");
         }
 
+        // B4/F4: com o link aberto, o e-mail é o único identificador estável que
+        // o respondente pode dar. Quando ele informa, vale como freio; quando
+        // não, a resposta é anônima e passa — que é a regra, não a exceção (D4).
+        if (!string.IsNullOrWhiteSpace(command.RespondentEmail)
+            && await repository.TargetHasResponseFromEmailAsync(target.Id, command.RespondentEmail, ct))
+        {
+            throw new InvalidOperationException("This e-mail has already answered this NPS link.");
+        }
+
         var isComplete = target.Dispatch.Format == NpsFormFormat.Complete;
         var response = SurveyResponse.Submit(
             target.ProjectId,

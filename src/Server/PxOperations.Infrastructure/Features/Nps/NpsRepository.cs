@@ -255,6 +255,21 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
     public Task<bool> TargetHasResponseAsync(int targetId, CancellationToken ct)
         => dbContext.Set<SurveyResponse>().AnyAsync(r => r.TargetId == targetId, ct);
 
+    /// <summary>
+    /// B4: dedupe por e-mail no MESMO link. Aparado e sem distinguir
+    /// maiúsculas, senão " ANA@x.com " passa como pessoa diferente de
+    /// "ana@x.com" e o freio não freia nada.
+    /// </summary>
+    public Task<bool> TargetHasResponseFromEmailAsync(int targetId, string email, CancellationToken ct)
+    {
+        var wanted = email.Trim().ToLower();
+        return dbContext.Set<SurveyResponse>().AnyAsync(
+            r => r.TargetId == targetId
+                && r.RespondentEmail != null
+                && r.RespondentEmail.ToLower() == wanted,
+            ct);
+    }
+
     public async Task<NpsPublicSurveyView?> GetPublicSurveyAsync(Guid token, CancellationToken ct)
     {
         var target = await GetTargetByTokenAsync(token, ct);

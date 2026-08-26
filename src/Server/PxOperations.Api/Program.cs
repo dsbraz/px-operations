@@ -1,6 +1,9 @@
+using System.Threading.RateLimiting;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.RateLimiting;
+using PxOperations.Api.Features.Nps;
 using PxOperations.Api.Features.Projects;
 using PxOperations.Api.Observability;
 using PxOperations.Api.Serialization;
@@ -32,6 +35,23 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod();
     });
 });
+// B4: limite por IP só no envio público de resposta. Atrás do Cloud Run o IP
+// real vem do X-Forwarded-For, que ASPNETCORE_FORWARDEDHEADERS_ENABLED já
+// resolve (scripts/cloudrun-api.yaml.template) — não repetir UseForwardedHeaders
+// aqui, ou a cadeia é processada duas vezes.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(AntiAbuse.SubmitPolicy, context => RateLimitPartition.GetFixedWindowLimiter(
+        // Sob TestServer não há IP remoto. Sem o fallback a partição recebe
+        // chave nula e o limiter estoura.
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = AntiAbuse.SubmitPermitLimit,
+            Window = AntiAbuse.SubmitWindow
+        }));
+});
 builder.Services.AddApiOpenTelemetry(builder.Configuration, builder.Environment);
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<CreateProjectRequestValidator>();
@@ -49,6 +69,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.UseCors("ClientDevelopment");
 }
+
+app.UseRateLimiter();
 
 app.MapControllers();
 
