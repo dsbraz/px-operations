@@ -1012,6 +1012,10 @@ textarea.fi { resize: vertical; min-height: 90px; line-height: 1.65; }
     font-size: 11px;
     margin-top: 2px;
 }
+/* O app.css legado pinta `tbody tr` com --surface, que é #fff fixo. Como é
+   regra de ELEMENTO (0,0,2), ela alcança as tabelas do NPS e deixava a linha
+   branca no tema escuro — visível só sob o hover, que tem cor própria. */
+[data-brq-ui] .nps-table tbody tr { background: var(--color-surface-2); }
 [data-brq-ui] .nps-table tr:hover,
 [data-brq-ui] .nps-table tr.selected { background: var(--color-hover); }
 [data-brq-ui] .nps-ops-table td:last-child { width: 150px; }
