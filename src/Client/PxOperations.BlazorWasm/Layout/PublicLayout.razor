@@ -1,0 +1,18 @@
+@inherits LayoutComponentBase
+
+@* O formulário público é visto por cliente externo: não leva navegação
+   interna, nem alternador de tema, nem nada que sugira ferramenta interna.
+   Só a marca e o conteúdo. *@
+<div class="public-shell" data-brq-ui>
+    <header class="public-shell__head">
+        <img class="logo-brq"
+             src="_content/PxOperations.Ui/images/brq-logo.svg"
+             alt="BRQ"
+             aria-hidden="true" />
+        <span class="public-shell__product">Operations PX</span>
+    </header>
+
+    <main id="brq-main-content" class="public-shell__content">
+        @Body
+    </main>
+</div>

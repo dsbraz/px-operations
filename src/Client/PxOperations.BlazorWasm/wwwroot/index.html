@@ -9,6 +9,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/app.css" />
+    <!-- Tokens e primitivas do design system. O reset fica escopado em
+         [data-brq-ui], emitido pelo chrome do BrqAppShell e pelo conteúdo das
+         telas que o usam, para conviver com o app.css das telas legadas. -->
+    <link rel="stylesheet" href="_content/PxOperations.Ui/css/foundation.css" />
+    <!-- Bundle de CSS isolation (.razor.css do app e da RCL). -->
+    <link rel="stylesheet" href="PxOperations.BlazorWasm.styles.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
 </head>
 <body>

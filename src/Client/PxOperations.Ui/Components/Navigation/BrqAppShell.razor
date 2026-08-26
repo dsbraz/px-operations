@@ -1,7 +1,7 @@
-<div class="app" data-brq-ui>
+<div class="app">
     <a class="brq-skip-link" href="#brq-main-content">Pular para o conteúdo</a>
 
-    <aside class="app__sidebar"
+    <aside class="app__sidebar" data-brq-ui
            id="brq-app-sidebar"
            aria-label="Navegação principal">
         <a class="app__brand"
@@ -24,7 +24,7 @@
     </aside>
 
     <div class="app__main">
-        <header class="app__topbar">
+        <header class="app__topbar" data-brq-ui>
             <button type="button"
                     class="brq-icon-button topbar__toggle"
                     aria-controls="brq-app-sidebar"
@@ -47,7 +47,10 @@
         <main id="brq-main-content"
               class="app__content"
               tabindex="-1">
-            <div class="app__content-inner">
+            @* O reset do design system fica no chrome. O conteúdo só entra em
+               [data-brq-ui] quando a página pede: as telas legadas usam app.css
+               e um `* { margin: 0 }` herdado as reestilizaria inteiras. *@
+            <div class="app__content-inner" data-brq-ui="@(ContentUsesDesignSystem ? "" : null)">
                 @ChildContent
             </div>
         </main>
@@ -58,7 +61,7 @@
                Title="Navegação principal"
                CssClass="brq-mobile-dialog"
                AutofocusSelector=".side-nav__link[aria-current='page']">
-        <div class="mobile-drawer">
+        <div class="mobile-drawer" data-brq-ui>
             <a class="app__brand"
                href="@HomeHref"
                aria-label="@($"{ProductName}, início")"
@@ -86,6 +89,12 @@
     [Parameter] public string CurrentSection { get; set; } = "Projetos";
     [Parameter] public string HomeHref { get; set; } = "/preview/projects";
     [Parameter, EditorRequired] public IReadOnlyList<BrqNavigationItem> NavigationItems { get; set; } = [];
+    /// <summary>
+    /// Liga o reset do design system no slot de conteúdo. Só as telas
+    /// construídas sobre o DS pedem — as legadas continuam com app.css intacto.
+    /// </summary>
+    [Parameter] public bool ContentUsesDesignSystem { get; set; }
+
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
     private bool mobileMenuOpen;

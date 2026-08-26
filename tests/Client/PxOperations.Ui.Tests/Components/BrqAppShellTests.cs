@@ -29,7 +29,11 @@ public sealed class BrqAppShellTests : BunitContext
             .Add(component => component.NavigationItems, items)
             .AddChildContent("<h1>Carteira</h1>"));
 
-        Assert.NotNull(cut.Find("[data-brq-ui].app"));
+        // O reset vive no chrome, não na raiz: o slot de conteúdo hospeda telas
+        // legadas que um `* { margin: 0 }` herdado reestilizaria inteiras.
+        Assert.NotNull(cut.Find("aside.app__sidebar[data-brq-ui]"));
+        Assert.NotNull(cut.Find("header.app__topbar[data-brq-ui]"));
+        Assert.False(cut.Find(".app__content-inner").HasAttribute("data-brq-ui"));
 
         var skipLink = cut.Find("a.brq-skip-link");
         Assert.Equal("#brq-main-content", skipLink.GetAttribute("href"));

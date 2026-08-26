@@ -1,8 +1,47 @@
 @inherits LayoutComponentBase
+@using PxOperations.Ui.Components.Navigation
+@inject NavigationManager Navigation
+@implements IDisposable
 
-<div class="app-shell">
-    <NavMenu />
-    <main class="app-content">
-        @Body
-    </main>
-</div>
+<BrqAppShell NavigationItems="@NavigationItems"
+             CurrentSection="@CurrentSection"
+             HomeHref="/"
+             ContentUsesDesignSystem="@IsDesignSystemRoute">
+    @Body
+</BrqAppShell>
+
+@code {
+    // A barra lateral do protótipo lista os quatro módulos; ela é do app, não
+    // do NPS. Projetos, Marcos e Saúde entram nela sem mudar por dentro.
+    private static readonly IReadOnlyList<BrqNavigationItem> NavigationItems =
+    [
+        new("Projetos", "/", "projects", MatchExact: true),
+        new("Marcos", "/milestones", "milestones"),
+        new("Saúde", "/project-health", "health"),
+        new("NPS", "/nps", "nps")
+    ];
+
+    /// <summary>
+    /// Só o NPS foi construído sobre o design system. Ligar o reset nas telas
+    /// legadas as reestilizaria inteiras — elas ganham a moldura nova, não uma
+    /// aparência nova.
+    /// </summary>
+    private bool IsDesignSystemRoute => CurrentPath.StartsWith("nps", StringComparison.OrdinalIgnoreCase);
+
+    private string CurrentSection => CurrentPath switch
+    {
+        var path when path.StartsWith("milestones", StringComparison.OrdinalIgnoreCase) => "Marcos",
+        var path when path.StartsWith("project-health", StringComparison.OrdinalIgnoreCase) => "Saúde",
+        var path when path.StartsWith("nps", StringComparison.OrdinalIgnoreCase) => "NPS",
+        _ => "Projetos"
+    };
+
+    private string CurrentPath => Navigation.ToBaseRelativePath(Navigation.Uri).Split('?')[0];
+
+    protected override void OnInitialized() => Navigation.LocationChanged += OnLocationChanged;
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+        => StateHasChanged();
+
+    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
+}
