@@ -1,0 +1,67 @@
+@using PxOperations.Ui.Components.Forms
+@* F1/D11: busca livre + UM botão "Filtro", não fileira de dropdowns. O que
+   está ligado vira chip removível abaixo da barra, e o botão mostra o
+   contador de facetas ativas. *@
+<section class="filterbar" aria-label="Filtros">
+    <div class="filterbar__row">
+        <div class="search">
+            <svg class="search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+            </svg>
+            <label class="brq-visually-hidden" for="busca-nps">Buscar projeto, cliente ou comentário</label>
+            <input class="search__input"
+                   id="busca-nps"
+                   type="search"
+                   autocomplete="off"
+                   placeholder="Buscar…"
+                   value="@Search"
+                   @oninput="OnSearchInput" />
+        </div>
+
+        <BrqFilterPanel ActiveFacetCount="@Chips.Count" OnClear="OnClearAll">
+            @FacetContent
+        </BrqFilterPanel>
+
+        @if (!string.IsNullOrEmpty(Count))
+        {
+            <span class="filterbar__count">@Count</span>
+        }
+    </div>
+
+    @if (Chips.Count > 0)
+    {
+        <div class="filterbar__applied">
+            <div class="filterbar__tokens">
+                @foreach (var chip in Chips)
+                {
+                    <button type="button"
+                            class="token"
+                            @onclick="() => OnRemoveChip.InvokeAsync(chip)"
+                            aria-label="@($"Remover filtro {chip.Label}")">
+                        <span class="token__facet">@chip.Facet</span>
+                        <span>@chip.Label</span>
+                        <span class="token__x" aria-hidden="true">×</span>
+                    </button>
+                }
+            </div>
+            <button class="filterbar__clear" type="button" @onclick="OnClearAll">Limpar tudo</button>
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter] public string Search { get; set; } = "";
+    [Parameter] public EventCallback<string> SearchChanged { get; set; }
+    [Parameter] public IReadOnlyList<NpsFilterChip> Chips { get; set; } = [];
+    [Parameter] public EventCallback<NpsFilterChip> OnRemoveChip { get; set; }
+    [Parameter] public EventCallback OnClearAll { get; set; }
+    [Parameter] public RenderFragment? FacetContent { get; set; }
+    [Parameter] public string? Count { get; set; }
+
+    private Task OnSearchInput(ChangeEventArgs args)
+        => SearchChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+
+    /// <summary>Uma faceta ligada, pronta para virar chip removível.</summary>
+    public sealed record NpsFilterChip(string Facet, string Label, string Value);
+}

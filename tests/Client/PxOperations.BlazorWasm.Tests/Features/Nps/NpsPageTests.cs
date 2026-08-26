@@ -9,6 +9,13 @@ namespace PxOperations.BlazorWasm.Tests.Features.Nps;
 
 public sealed class NpsPageTests : TestContext
 {
+    public NpsPageTests()
+    {
+        // A barra de filtros usa BrqFilterPanel, que importa um módulo JS para
+        // fechar ao clicar fora, e o clipboard no compartilhamento do link.
+        JSInterop.Mode = JSRuntimeMode.Loose;
+    }
+
     [Fact]
     public void NpsPage_should_render_dashboard_and_projects()
     {
@@ -20,7 +27,7 @@ public sealed class NpsPageTests : TestContext
         Services.AddScoped(_ => client);
         Services.AddScoped<NpsClient>();
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = RenderComponent<NpsPage>(p => p.Add(x => x.Tab, "resultados"));
 
         cut.WaitForAssertion(() =>
         {
@@ -45,7 +52,7 @@ public sealed class NpsPageTests : TestContext
         Services.AddScoped(_ => client);
         Services.AddScoped<NpsClient>();
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = RenderComponent<NpsPage>(p => p.Add(x => x.Tab, "resultados"));
 
         cut.WaitForAssertion(() =>
         {
@@ -66,10 +73,10 @@ public sealed class NpsPageTests : TestContext
         Services.AddScoped(_ => client);
         Services.AddScoped<NpsClient>();
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = RenderComponent<NpsPage>(p => p.Add(x => x.Tab, "resultados"));
         cut.WaitForAssertion(() => Assert.Contains("Projeto NPS", cut.Markup));
 
-        var generateLinkButton = cut.Find(".page-actions-bar button");
+        var generateLinkButton = cut.Find(".page-head__actions button");
         Assert.Equal("Gerar link", generateLinkButton.TextContent.Trim());
         Assert.Null(generateLinkButton.GetAttribute("disabled"));
 
@@ -164,7 +171,7 @@ public sealed class NpsPageTests : TestContext
         Services.AddScoped(_ => client);
         Services.AddScoped<NpsClient>();
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = RenderComponent<NpsPage>(p => p.Add(x => x.Tab, "resultados"));
         cut.WaitForAssertion(() => Assert.Contains("Projeto NPS", cut.Markup));
 
         cut.FindAll(".nps-row-actions button").Single(button => button.TextContent.Contains("Ver histórico")).Click();
@@ -222,18 +229,18 @@ public sealed class NpsPageTests : TestContext
         Services.AddScoped(_ => client);
         Services.AddScoped<NpsClient>();
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = RenderComponent<NpsPage>(p => p.Add(x => x.Tab, "resultados"));
         cut.WaitForAssertion(() => Assert.Contains("Projeto NPS", cut.Markup));
 
-        var filters = cut.FindAll(".toolbar select");
-        filters[0].Change("DC1");
+        // D11: os dropdowns viraram facetas dentro do menu do botão "Filtro".
+        cut.Find("button.fmenu__btn").Click();
+        cut.FindAll(".fmenu__pop fieldset")[0].QuerySelectorAll("input[type=checkbox]")[0].Change(true);
         cut.WaitForAssertion(() => Assert.Contains(handler.RequestUris, uri =>
             uri is not null
             && uri.AbsolutePath == "/api/nps/dashboard"
             && uri.Query.Contains("dc=DC1")));
 
-        filters = cut.FindAll(".toolbar select");
-        filters[1].Change("Squad");
+        cut.FindAll(".fmenu__pop fieldset")[1].QuerySelectorAll("input[type=checkbox]")[0].Change(true);
         cut.WaitForAssertion(() => Assert.Contains(handler.RequestUris, uri =>
             uri is not null
             && uri.AbsolutePath == "/api/nps/dashboard"

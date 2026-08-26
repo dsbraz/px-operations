@@ -290,6 +290,11 @@
    `a { text-decoration: none }` globais reestilizariam todas as páginas
    que ainda usam app.css.
 
+   O ancestral vai em :where() para ZERAR a especificidade do reset. Sem isso
+   `[data-brq-ui] button` (0,1,1) vence `.brq-button--primary` (0,1,0) e força
+   `color: inherit` — o botão preto fica com texto preto. Reset nunca pode
+   ganhar de componente.
+
    As PRIMITIVAS de classe (.brq-button, .brq-icon-button,
    .brq-visually-hidden, .brq-skip-link) são deliberadamente globais.
    O prefixo brq- já as isola de app.css, e sem escopo de ancestral os
@@ -342,18 +347,18 @@
   color-scheme: dark;
 }
 
-[data-brq-ui],
-[data-brq-ui] *,
-[data-brq-ui] *::before,
-[data-brq-ui] *::after {
+:where([data-brq-ui]),
+:where([data-brq-ui]) *,
+:where([data-brq-ui]) *::before,
+:where([data-brq-ui]) *::after {
   box-sizing: border-box;
 }
 
-[data-brq-ui] * {
+:where([data-brq-ui]) * {
   margin: 0;
 }
 
-[data-brq-ui] {
+:where([data-brq-ui]) {
   background-color: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-body);
@@ -364,64 +369,64 @@
   text-rendering: optimizeLegibility;
 }
 
-[data-brq-ui] img,
-[data-brq-ui] picture,
-[data-brq-ui] video,
-[data-brq-ui] canvas,
-[data-brq-ui] svg {
+:where([data-brq-ui]) img,
+:where([data-brq-ui]) picture,
+:where([data-brq-ui]) video,
+:where([data-brq-ui]) canvas,
+:where([data-brq-ui]) svg {
   display: block;
   max-width: 100%;
 }
 
-[data-brq-ui] input,
-[data-brq-ui] button,
-[data-brq-ui] textarea,
-[data-brq-ui] select {
+:where([data-brq-ui]) input,
+:where([data-brq-ui]) button,
+:where([data-brq-ui]) textarea,
+:where([data-brq-ui]) select {
   color: inherit;
   font: inherit;
 }
 
-[data-brq-ui] p,
-[data-brq-ui] h1,
-[data-brq-ui] h2,
-[data-brq-ui] h3,
-[data-brq-ui] h4,
-[data-brq-ui] h5,
-[data-brq-ui] h6 {
+:where([data-brq-ui]) p,
+:where([data-brq-ui]) h1,
+:where([data-brq-ui]) h2,
+:where([data-brq-ui]) h3,
+:where([data-brq-ui]) h4,
+:where([data-brq-ui]) h5,
+:where([data-brq-ui]) h6 {
   overflow-wrap: break-word;
 }
 
-[data-brq-ui] ul[role="list"],
-[data-brq-ui] ol[role="list"] {
+:where([data-brq-ui]) ul[role="list"],
+:where([data-brq-ui]) ol[role="list"] {
   list-style: none;
   padding: 0;
 }
 
-[data-brq-ui] a {
+:where([data-brq-ui]) a {
   color: inherit;
   text-decoration: none;
 }
 
-[data-brq-ui] [hidden] {
+:where([data-brq-ui]) [hidden] {
   display: none !important;
 }
 
-[data-brq-ui] h1,
-[data-brq-ui] h2,
-[data-brq-ui] h3,
-[data-brq-ui] h4,
-[data-brq-ui] h5 {
+:where([data-brq-ui]) h1,
+:where([data-brq-ui]) h2,
+:where([data-brq-ui]) h3,
+:where([data-brq-ui]) h4,
+:where([data-brq-ui]) h5 {
   font-family: var(--font-display);
   font-weight: var(--fw-medium);
 }
 
-[data-brq-ui] :focus-visible {
+:where([data-brq-ui]) :focus-visible {
   border-radius: var(--radius-sm);
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
 
-[data-brq-ui] :focus:not(:focus-visible) {
+:where([data-brq-ui]) :focus:not(:focus-visible) {
   outline: none;
 }
 

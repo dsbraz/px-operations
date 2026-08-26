@@ -1,0 +1,29 @@
+@* F1/D5: cada subpágina tem rota própria. São âncoras, não botões: o
+   protótipo usa href e é isso que dá voltar/avançar do navegador e link
+   compartilhável para uma subpágina. *@
+<div class="tabs">
+    <div class="tabs__bar">
+        <div class="tabs__list" role="tablist" aria-label="Visões de NPS">
+            @foreach (var tab in Tabs)
+            {
+                var selected = string.Equals(tab.Slug, Active, StringComparison.Ordinal);
+                <a class="tab @(selected ? "is-active" : "")"
+                   role="tab"
+                   aria-selected="@(selected ? "true" : "false")"
+                   href="@($"/nps/{tab.Slug}")">@tab.Label</a>
+            }
+        </div>
+        @if (!string.IsNullOrEmpty(Count))
+        {
+            <span class="tabs__count">@Count</span>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<NpsTab> Tabs { get; set; } = [];
+    [Parameter, EditorRequired] public string Active { get; set; } = "";
+    [Parameter] public string? Count { get; set; }
+
+    public sealed record NpsTab(string Slug, string Label);
+}

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using PxOperations.BlazorWasm.Api;
+using PxOperations.BlazorWasm.Features.Nps.Components;
 
 namespace PxOperations.BlazorWasm.Features.Nps;
 
@@ -25,6 +26,50 @@ public partial class NpsPage : ComponentBase
 
     private string filterDc = "";
     private string filterProjectType = "";
+    private string filterSearch = "";
+    private bool includeDismissed;
+
+    /// <summary>
+    /// F1/D5: a subpágina vem da rota. Abrir /nps/resultados direto carrega a
+    /// visão certa, e voltar/avançar do navegador transita entre elas.
+    /// </summary>
+    [Parameter] public string? Tab { get; set; }
+
+    internal const string TabCollection = "coleta";
+    internal const string TabResults = "resultados";
+    internal const string TabResponses = "respostas";
+
+    private static readonly IReadOnlyList<NpsTabs.NpsTab> TabDefinitions =
+    [
+        new(TabCollection, "Coleta"),
+        new(TabResults, "Resultados"),
+        new(TabResponses, "Respostas")
+    ];
+
+    private static readonly string[] DcOptions = ["DC1", "DC2", "DC3", "DC4", "DC5", "DC6"];
+    private static readonly string[] ProjectTypeOptions = ["Squad", "Escopo Fechado", "Alocação"];
+
+    // O protótipo abre em Coleta: é a tela de trabalho do operador.
+    private string ActiveTab => Tab switch
+    {
+        TabResults => TabResults,
+        TabResponses => TabResponses,
+        _ => TabCollection
+    };
+
+    private string PortfolioCount => $"{projects.Count} projetos";
+
+    private IReadOnlyList<NpsFilterBar.NpsFilterChip> FilterChips
+    {
+        get
+        {
+            var chips = new List<NpsFilterBar.NpsFilterChip>();
+            if (!string.IsNullOrWhiteSpace(filterDc)) chips.Add(new("DC", filterDc, filterDc));
+            if (!string.IsNullOrWhiteSpace(filterProjectType)) chips.Add(new("Tipo", filterProjectType, filterProjectType));
+            if (includeDismissed) chips.Add(new("Dispensados", "Mostrando", "dismissed"));
+            return chips;
+        }
+    }
     private string dispatchFormat = "Simplificado";
     private string dispatchLanguage = "Português";
 
@@ -36,17 +81,49 @@ public partial class NpsPage : ComponentBase
         await RefreshAsync();
     }
 
-    private async Task OnFilterDcChanged(ChangeEventArgs args)
+    private async Task OnSearchChanged(string value)
     {
-        filterDc = args.Value?.ToString() ?? string.Empty;
+        filterSearch = value;
         await RefreshAsync();
     }
 
-    private async Task OnFilterProjectTypeChanged(ChangeEventArgs args)
+    private async Task ToggleDc(string dc, ChangeEventArgs args)
     {
-        filterProjectType = args.Value?.ToString() ?? string.Empty;
+        filterDc = IsChecked(args) ? dc : string.Empty;
         await RefreshAsync();
     }
+
+    private async Task ToggleProjectType(string type, ChangeEventArgs args)
+    {
+        filterProjectType = IsChecked(args) ? type : string.Empty;
+        await RefreshAsync();
+    }
+
+    private async Task ToggleDismissed(ChangeEventArgs args)
+    {
+        includeDismissed = IsChecked(args);
+        await RefreshAsync();
+    }
+
+    private async Task RemoveChip(NpsFilterBar.NpsFilterChip chip)
+    {
+        if (chip.Value == "dismissed") includeDismissed = false;
+        else if (chip.Facet == "DC") filterDc = string.Empty;
+        else if (chip.Facet == "Tipo") filterProjectType = string.Empty;
+
+        await RefreshAsync();
+    }
+
+    private async Task ClearFilters()
+    {
+        filterDc = string.Empty;
+        filterProjectType = string.Empty;
+        includeDismissed = false;
+        await RefreshAsync();
+    }
+
+    private static bool IsChecked(ChangeEventArgs args)
+        => args.Value is true || (bool.TryParse(args.Value?.ToString(), out var parsed) && parsed);
 
     private async Task OnCreateLinkProjectChanged(ChangeEventArgs args)
     {
@@ -156,9 +233,10 @@ public partial class NpsPage : ComponentBase
     {
         var dcFilter = string.IsNullOrWhiteSpace(filterDc) ? null : filterDc;
         var projectTypeFilter = string.IsNullOrWhiteSpace(filterProjectType) ? null : filterProjectType;
+        var search = string.IsNullOrWhiteSpace(filterSearch) ? null : filterSearch.Trim();
 
-        dashboard = await NpsClient.GetDashboardAsync(null, dcFilter, null, projectTypeFilter, null, null, null, null);
-        projects = (await NpsClient.ListProjectsAsync(null, dcFilter, null, projectTypeFilter, false)).ToList();
+        dashboard = await NpsClient.GetDashboardAsync(search, dcFilter, null, projectTypeFilter, null, null, null, null);
+        projects = (await NpsClient.ListProjectsAsync(search, dcFilter, null, projectTypeFilter, includeDismissed)).ToList();
     }
 
     private void OpenCreateLinkModal()
