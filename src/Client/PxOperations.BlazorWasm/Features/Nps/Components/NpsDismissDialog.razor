@@ -1,0 +1,52 @@
+@using PxOperations.BlazorWasm.Api
+
+@* F6 exige motivo: sem ele o card some do quadro sem que ninguém saiba por quê,
+   e a reativação vira adivinhação. *@
+<div class="overlay open" @onclick="OnCancel">
+    <div class="modal" @onclick:stopPropagation="true">
+        <div class="modal-top">
+            <div>
+                <div class="modal-ttl">Dispensar coleta</div>
+                <div class="modal-sub">@Project.Name · @Project.Client</div>
+            </div>
+            <button class="mcls" @onclick="OnCancel" aria-label="Fechar">×</button>
+        </div>
+
+        <div class="nps-inline-form nps-inline-form--stacked">
+            <label for="dismiss-reason">Por que a coleta não se aplica?</label>
+            <textarea id="dismiss-reason" rows="3" @bind="reason"
+                      placeholder="Ex.: cliente pediu pausa nas pesquisas"></textarea>
+
+            @if (error is not null)
+            {
+                <p class="nps-error-text" role="alert">@error</p>
+            }
+
+            <div class="nps-inline-form__actions">
+                <button type="button" class="brq-button brq-button--secondary" @onclick="OnCancel">Cancelar</button>
+                <button type="button" class="brq-button brq-button--primary" @onclick="ConfirmAsync">Dispensar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public NpsProjectResponse Project { get; set; } = default!;
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback<string> OnConfirm { get; set; }
+
+    private string reason = "";
+    private string? error;
+
+    private async Task ConfirmAsync()
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            error = "Informe o motivo da dispensa.";
+            return;
+        }
+
+        error = null;
+        await OnConfirm.InvokeAsync(reason.Trim());
+    }
+}

@@ -253,6 +253,7 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
     {
         IQueryable<SurveyResponse> query = dbContext.Set<SurveyResponse>()
             .Include(r => r.Project)
+            .Include(r => r.Dispatch)
             .Include(r => r.Contact);
 
         if (dispatchId.HasValue)
@@ -511,7 +512,10 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             response.Contact?.Email,
             response.Score,
             FormatClassification(response.Classification),
-            response.Scope,
+            // B5: o formato vem do disparo de origem. Sem ele, a única pista era
+            // adivinhar pelo padrão de aspectos nulos.
+            FormatFormFormat(response.Dispatch.Format),
+            response.BusinessValue,
             response.Schedule,
             response.Quality,
             response.Communication,

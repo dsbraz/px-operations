@@ -3356,6 +3356,7 @@
           "contactEmail",
           "score",
           "classification",
+          "format",
           "businessValue",
           "schedule",
           "quality",
@@ -3433,6 +3434,9 @@
             "format": "int32"
           },
           "classification": {
+            "type": "string"
+          },
+          "format": {
             "type": "string"
           },
           "businessValue": {

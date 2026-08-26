@@ -100,58 +100,6 @@ public sealed class NpsPageTests : TestContext
     }
 
     [Fact]
-    public void Project_history_action_should_open_detail_modal()
-    {
-        var handler = new ProjectsTestHelpers.MultiStubHttpMessageHandler();
-        handler.AddResponse(HttpMethod.Get, DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, ProjectsJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, ProjectDetailJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, DispatchDetailJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, SurveyResponsesJson(), HttpStatusCode.OK);
-
-        var client = new HttpClient(handler) { BaseAddress = new Uri("http://localhost") };
-        Services.AddScoped(_ => client);
-        Services.AddScoped<NpsClient>();
-
-        var cut = RenderComponent<NpsPage>(p => p.Add(x => x.Tab, "resultados"));
-        cut.WaitForAssertion(() => Assert.Contains("Projeto NPS", cut.Markup));
-
-        cut.FindAll(".nps-row-actions button").Single(button => button.TextContent.Contains("Ver histórico")).Click();
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("Histórico de links", cut.Markup);
-            Assert.Contains("Respostas", cut.Markup);
-            Assert.Contains("Respondido", cut.Find(".nps-history-card").TextContent);
-            Assert.DoesNotContain("1 respostas", cut.Find(".nps-history-card").TextContent);
-            Assert.Contains("Promotor", cut.Markup);
-            Assert.Contains("cliente@example.com", cut.Markup);
-            Assert.Contains("Comentário", cut.Markup);
-            Assert.Contains("Valor para o negócio", cut.Markup);
-            Assert.Contains("5/5", cut.Markup);
-            Assert.Contains("Prazo", cut.Markup);
-            Assert.Contains("4/5", cut.Markup);
-            Assert.Contains("Qualidade", cut.Markup);
-            Assert.Contains("Comunicação", cut.Markup);
-            Assert.Contains("Bom", cut.Markup);
-            Assert.DoesNotContain("Link selecionado", cut.Markup);
-        });
-
-        cut.Find(".nps-history-card").Click();
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("Link selecionado", cut.Markup);
-            Assert.Contains("Respondido", cut.Find(".nps-share-panel").TextContent);
-            Assert.DoesNotContain("11111111-1111-1111-1111-111111111111", cut.Find(".nps-share-panel").TextContent);
-            Assert.DoesNotContain("Copiar", cut.Find(".nps-share-panel").TextContent);
-            Assert.Contains("Respostas deste link", cut.Markup);
-            Assert.Contains("Respondente não identificado", cut.Markup);
-            Assert.Contains("5/5", cut.Markup);
-        });
-    }
-
-    [Fact]
     public void Creating_link_should_preserve_active_combo_filters_when_reloading_dashboard_and_projects()
     {
         var handler = new ProjectsTestHelpers.MultiStubHttpMessageHandler();

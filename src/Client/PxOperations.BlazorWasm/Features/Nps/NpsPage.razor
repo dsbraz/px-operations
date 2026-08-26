@@ -165,7 +165,8 @@ else
             <NpsCollectionBoard Projects="@projects"
                                 OnGenerateLink="OpenCreateLinkModal"
                                 OnReactivate="ReactivateCollectionAsync"
-                                OnDismiss="StartDismissAsync" />
+                                OnDismiss="StartDismissAsync"
+                                OnOpenDetail="OpenProjectDetailAsync" />
         }
 
         @if (ActiveTab == TabResponses)
@@ -183,226 +184,29 @@ else
 
 @if (dismissTarget is not null)
 {
-    @* F6 exige motivo: sem ele o card some do quadro sem que ninguém saiba
-       por quê, e a reativação vira adivinhação. *@
-    <div class="overlay open" @onclick="CancelDismiss">
-        <div class="modal" @onclick:stopPropagation="true">
-            <div class="modal-top">
-                <div>
-                    <div class="modal-ttl">Dispensar coleta</div>
-                    <div class="modal-sub">@dismissTarget.Name · @dismissTarget.Client</div>
-                </div>
-                <button class="mcls" @onclick="CancelDismiss" aria-label="Fechar">×</button>
-            </div>
-
-            <div class="nps-inline-form nps-inline-form--stacked">
-                <label for="dismiss-reason">Por que a coleta não se aplica?</label>
-                <textarea id="dismiss-reason" rows="3" @bind="dismissReason"
-                          placeholder="Ex.: cliente pediu pausa nas pesquisas"></textarea>
-
-                @if (dismissError is not null)
-                {
-                    <p class="nps-error-text" role="alert">@dismissError</p>
-                }
-
-                <div class="nps-inline-form__actions">
-                    <button type="button" class="brq-button brq-button--secondary" @onclick="CancelDismiss">Cancelar</button>
-                    <button type="button" class="brq-button brq-button--primary" @onclick="ConfirmDismissAsync">Dispensar</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <NpsDismissDialog Project="@dismissTarget"
+                      OnCancel="CancelDismiss"
+                      OnConfirm="ConfirmDismissAsync" />
 }
 
 @if (showCreateLinkModal)
 {
-    @* F3: gerar link em 2 passos. Passo 1 escolhe projeto, formato e idioma;
-       passo 2 entrega a URL com a validade em DESTAQUE e a mensagem pronta
-       para colar, já com o link e o prazo dentro. *@
-    <div class="overlay open" @onclick="CloseCreateLinkModal">
-        <div class="modal" @onclick:stopPropagation="true">
-            <div class="modal-top">
-                <div>
-                    <div class="modal-ttl">@(createdDispatch is null ? "Novo link NPS" : "Link gerado")</div>
-                    <div class="modal-sub">@CreateLinkSubtitle</div>
-                </div>
-                <button class="mcls" @onclick="CloseCreateLinkModal" aria-label="Fechar">×</button>
-            </div>
-
-            @if (createdDispatch is null)
-            {
-                <div class="nps-inline-form">
-                    <select value="@(selectedProjectId?.ToString() ?? string.Empty)" @onchange="OnCreateLinkProjectChanged">
-                        <option value="">Selecione o projeto</option>
-                        @foreach (var project in projects)
-                        {
-                            <option value="@project.Id">@project.Name · @project.Client</option>
-                        }
-                    </select>
-                    <select @bind="dispatchFormat"><option>Simplificado</option><option>Completo</option></select>
-                    <select @bind="dispatchLanguage"><option>Português</option><option>Inglês</option></select>
-                    <button class="brq-button brq-button--primary" disabled="@(!CanCreateLink)" @onclick="CreateDispatchAsync">Gerar link</button>
-                </div>
-            }
-            else
-            {
-                <div class="link-result">
-                    <div class="link-result__link">
-                        <span class="link-result__url">@CreatedLinkUrl</span>
-                        <button type="button" class="brq-button brq-button--secondary brq-button--sm"
-                                @onclick="CopyCreatedLinkAsync">Copiar link</button>
-                    </div>
-
-                    <p class="link-expiry">@CreatedLinkExpiry</p>
-
-                    <div class="msg">
-                        <div class="msg__head">
-                            <span class="msg__label">Mensagem sugerida</span>
-                            <button type="button" class="brq-button brq-button--secondary brq-button--sm"
-                                    @onclick="CopyCreatedMessageAsync">Copiar mensagem</button>
-                        </div>
-                        <p class="msg__text">@CreatedMessage</p>
-                    </div>
-                </div>
-            }
-        </div>
-    </div>
+    <NpsCreateLinkModal Projects="@projects"
+                        SelectedProjectId="@selectedProjectId"
+                        SelectedProjectIdChanged="OnCreateLinkProjectChanged"
+                        SelectedDetail="@selectedDetail"
+                        Created="@createdDispatch"
+                        OnCreate="CreateDispatchAsync"
+                        OnClose="CloseCreateLinkModal"
+                        OnCopyFailed="@(message => operationError = message)"
+                        PublicFormUrl="@BuildPublicFormUrl" />
 }
 
 @if (showDetailModal && selectedDetail is not null)
 {
-    <div class="overlay open" @onclick="CloseDetailModal">
-        <div class="modal nps-detail-modal" @onclick:stopPropagation="true">
-            <div class="modal-top">
-                <div>
-                    <div class="modal-ttl">@selectedDetail.Project.Name</div>
-                    <div class="modal-sub">@selectedDetail.Project.Client · @selectedDetail.Project.Dc · @selectedDetail.Project.DeliveryManager</div>
-                </div>
-                <button class="mcls" @onclick="CloseDetailModal" aria-label="Fechar">×</button>
-            </div>
-
-            <div class="nps-detail-flow">
-                <section class="nps-detail-section">
-                    <div class="nps-section-title">
-                        <h3>Histórico de links</h3>
-                        <span>@selectedDetail.Dispatches.Count links</span>
-                    </div>
-                    <div class="nps-history-grid">
-                        @foreach (var dispatch in selectedDetail.Dispatches)
-                        {
-                            <button class="nps-history-card @(selectedDispatchDetail?.Dispatch.Id == dispatch.Id ? "selected" : "")" @onclick="() => SelectDispatchAsync(dispatch.Id)">
-                                <span>
-                                    <strong>@FormatTimestamp(dispatch.CreatedAt)</strong>
-                                    <small>@dispatch.Format · @dispatch.Language</small>
-                                </span>
-                                <span class="nps-status @LinkStatusClass(dispatch)">@LinkStatusLabel(dispatch)</span>
-                            </button>
-                        }
-                    </div>
-                </section>
-
-                @if (selectedDispatchDetail is not null)
-                {
-                    <section class="nps-share-panel">
-                        <div class="nps-share-head">
-                            <div>
-                                <strong>Link selecionado</strong>
-                                <span>@selectedDispatchDetail.Dispatch.Format · @selectedDispatchDetail.Dispatch.Language · @selectedDispatchDetail.Dispatch.Status</span>
-                            </div>
-                        </div>
-                        @foreach (var target in selectedDispatchDetail.Targets)
-                        {
-                            var publicFormUrl = BuildPublicFormUrl(target.Token);
-                            <div class="nps-share-row">
-                                <label>@TargetLabel(target)</label>
-                                @if (target.ResponsesCount > 0)
-                                {
-                                    <span class="nps-link-used">Respondido</span>
-                                }
-                                else
-                                {
-                                    <input class="nps-url-input" readonly value="@publicFormUrl" />
-                                    <button class="btn btn-ghost btn-sm" @onclick="() => CopyPublicFormUrlAsync(target.Token)">Copiar</button>
-                                }
-                            </div>
-                        }
-                    </section>
-                }
-
-                <section class="nps-detail-section">
-                    <div class="nps-section-title">
-                        <h3>@(selectedDispatchDetail is null ? "Respostas recentes" : "Respostas deste link")</h3>
-                        <span>@responses.Count respostas</span>
-                    </div>
-                    @if (responses.Count == 0)
-                    {
-                        <div class="nps-empty small">Nenhuma resposta carregada.</div>
-                    }
-                    else
-                    {
-                        <div class="nps-list">
-                            @foreach (var response in responses)
-                            {
-                                <article class="nps-result-card">
-                                    <div class="nps-result-main">
-                                        <div class="nps-score-badge @ClassificationClass(response)">
-                                            <span>NPS</span>
-                                            <strong>@response.Score</strong>
-                                            <em>@response.Classification</em>
-                                        </div>
-                                        <div class="nps-result-body">
-                                            <div class="nps-result-head">
-                                                <strong>@ResponseIdentityOrFallback(response)</strong>
-                                                <span>@FormatTimestamp(response.SubmittedAt)</span>
-                                            </div>
-                                            @if (!string.IsNullOrWhiteSpace(response.Comment))
-                                            {
-                                                <div class="nps-comment">
-                                                    <span>Comentário</span>
-                                                    <p>@response.Comment</p>
-                                                </div>
-                                            }
-                                        </div>
-                                    </div>
-                                    @if (HasDimensionAnswers(response))
-                                    {
-                                        <div class="nps-metrics-grid">
-                                            @if (response.BusinessValue is not null)
-                                            {
-                                                <div class="nps-metric">
-                                                    <div><span>Valor para o negócio</span><strong>@response.BusinessValue/5</strong></div>
-                                                    <div class="nps-metric-bar"><span style="@($"width: {ScorePercent(response.BusinessValue)}")"></span></div>
-                                                </div>
-                                            }
-                                            @if (response.Schedule is not null)
-                                            {
-                                                <div class="nps-metric">
-                                                    <div><span>Prazo</span><strong>@response.Schedule/5</strong></div>
-                                                    <div class="nps-metric-bar"><span style="@($"width: {ScorePercent(response.Schedule)}")"></span></div>
-                                                </div>
-                                            }
-                                            @if (response.Quality is not null)
-                                            {
-                                                <div class="nps-metric">
-                                                    <div><span>Qualidade</span><strong>@response.Quality/5</strong></div>
-                                                    <div class="nps-metric-bar"><span style="@($"width: {ScorePercent(response.Quality)}")"></span></div>
-                                                </div>
-                                            }
-                                            @if (response.Communication is not null)
-                                            {
-                                                <div class="nps-metric">
-                                                    <div><span>Comunicação</span><strong>@response.Communication/5</strong></div>
-                                                    <div class="nps-metric-bar"><span style="@($"width: {ScorePercent(response.Communication)}")"></span></div>
-                                                </div>
-                                            }
-                                        </div>
-                                    }
-                                </article>
-                            }
-                        </div>
-                    }
-                </section>
-            </div>
-        </div>
-    </div>
+    <NpsCollectionDetail Detail="@selectedDetail"
+                         OnClose="CloseDetailModal"
+                         OnGenerateLink="OpenCreateLinkModal"
+                         OnCopyLink="CopyDispatchLinkAsync" />
 }
+

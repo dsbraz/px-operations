@@ -1,0 +1,159 @@
+@using PxOperations.BlazorWasm.Api
+@using Microsoft.JSInterop
+@inject IJSRuntime JsRuntime
+
+@* F3: gerar link em 2 passos. Passo 1 escolhe projeto, formato e idioma; passo
+   2 entrega a URL com a validade em DESTAQUE e a mensagem pronta para colar,
+   já com o link e o prazo dentro. *@
+<div class="overlay open" @onclick="OnClose">
+    <div class="modal" @onclick:stopPropagation="true">
+        <div class="modal-top">
+            <div>
+                <div class="modal-ttl">@(Created is null ? "Novo link NPS" : "Link gerado")</div>
+                <div class="modal-sub">@Subtitle</div>
+            </div>
+            <button class="mcls" @onclick="OnClose" aria-label="Fechar">×</button>
+        </div>
+
+        @if (Created is null)
+        {
+            <div class="nps-inline-form">
+                <select value="@(SelectedProjectId?.ToString() ?? string.Empty)"
+                        @onchange="OnProjectChanged"
+                        aria-label="Projeto">
+                    <option value="">Selecione o projeto</option>
+                    @foreach (var project in Projects)
+                    {
+                        <option value="@project.Id">@project.Name · @project.Client</option>
+                    }
+                </select>
+                <select @bind="format" aria-label="Formato"><option>Simplificado</option><option>Completo</option></select>
+                <select @bind="language" aria-label="Idioma"><option>Português</option><option>Inglês</option></select>
+                <button type="button" class="brq-button brq-button--primary"
+                        disabled="@(!CanCreate)"
+                        @onclick="() => OnCreate.InvokeAsync(new NpsLinkRequest(format, language))">Gerar link</button>
+            </div>
+        }
+        else
+        {
+            <div class="link-result">
+                <div class="link-result__link">
+                    <span class="link-result__url">@LinkUrl</span>
+                    <button type="button" class="brq-button brq-button--secondary brq-button--sm"
+                            @onclick="() => CopyAsync(LinkUrl)">Copiar link</button>
+                </div>
+
+                <p class="link-expiry">@Expiry</p>
+
+                <div class="msg">
+                    <div class="msg__head">
+                        <span class="msg__label">Mensagem sugerida</span>
+                        <button type="button" class="brq-button brq-button--secondary brq-button--sm"
+                                @onclick="() => CopyAsync(Message)">Copiar mensagem</button>
+                    </div>
+                    <p class="msg__text">@Message</p>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<NpsProjectResponse> Projects { get; set; } = [];
+    [Parameter] public int? SelectedProjectId { get; set; }
+    [Parameter] public NpsProjectDetailResponse? SelectedDetail { get; set; }
+    [Parameter] public NpsDispatchDetailResponse? Created { get; set; }
+    [Parameter] public EventCallback<int?> SelectedProjectIdChanged { get; set; }
+    [Parameter] public EventCallback<NpsLinkRequest> OnCreate { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<string> OnCopyFailed { get; set; }
+    [Parameter, EditorRequired] public Func<Guid, string> PublicFormUrl { get; set; } = default!;
+
+    private string format = "Simplificado";
+    private string language = "Português";
+
+    /// <summary>
+    /// Exige que o detalhe carregado seja o DO projeto escolhido. Só checar se
+    /// há um escolhido deixaria o botão ativo durante o round-trip, e trocar o
+    /// projeto e clicar rápido geraria o link no projeto anterior.
+    /// </summary>
+    private bool CanCreate
+        => SelectedProjectId is not null
+            && SelectedDetail is not null
+            && SelectedDetail.Project.Id == SelectedProjectId;
+
+    private string Subtitle
+    {
+        get
+        {
+            if (Created is not null)
+            {
+                return $"{Created.Dispatch.ProjectName} · {Created.Dispatch.Format} · {Created.Dispatch.Language}";
+            }
+
+            return SelectedDetail is null
+                ? "Selecione o projeto que receberá o link"
+                : $"{SelectedDetail.Project.Name} · {SelectedDetail.Project.Dc}";
+        }
+    }
+
+    private string LinkUrl
+        => Created is null ? string.Empty : PublicFormUrl(Created.Targets.First().Token);
+
+    /// <summary>F3: a validade vai em destaque, com a data por extenso.</summary>
+    private string Expiry
+        => Created is not null && DateTimeOffset.TryParse(Created.Dispatch.ExpiresAt, out var expires)
+            ? $"Este link vale por 20 dias: expira em {expires.ToLocalTime():dd/MM/yyyy}"
+            : string.Empty;
+
+    /// <summary>
+    /// F3: mensagem pronta para colar, com o link e o prazo dentro. Montada no
+    /// cliente — persistir template no backend é não-objetivo declarado na §4.
+    /// </summary>
+    private string Message
+    {
+        get
+        {
+            if (Created is null)
+            {
+                return string.Empty;
+            }
+
+            var project = Created.Dispatch.ProjectName;
+            var prazo = DateTimeOffset.TryParse(Created.Dispatch.ExpiresAt, out var expires)
+                ? expires.ToLocalTime().ToString("dd/MM")
+                : "";
+
+            if (string.Equals(Created.Dispatch.Language, "Inglês", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"Hi! We're collecting NPS for the {project} project and your feedback really matters. "
+                    + $"It takes under a minute and your answer is anonymous:\n{LinkUrl}"
+                    + $"\nThe survey is open until {prazo}. Thank you!";
+            }
+
+            return $"Olá! Estamos coletando o NPS do projeto {project} e a sua opinião faz diferença. "
+                + $"Leva menos de 1 minuto e a resposta é anônima:\n{LinkUrl}"
+                + $"\nA pesquisa fica aberta até {prazo}. Obrigado!";
+        }
+    }
+
+    private Task OnProjectChanged(ChangeEventArgs args)
+        => SelectedProjectIdChanged.InvokeAsync(
+            int.TryParse(args.Value?.ToString(), out var id) ? id : null);
+
+    private async Task CopyAsync(string text)
+    {
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+        }
+        catch (Exception)
+        {
+            // navigator.clipboard rejeita fora de contexto seguro; sem captura a
+            // rejeição sobe pelo EventCallback e derruba a aplicação no WASM.
+            await OnCopyFailed.InvokeAsync("Não foi possível copiar. Selecione o texto e copie manualmente.");
+        }
+    }
+
+    public sealed record NpsLinkRequest(string Format, string Language);
+}

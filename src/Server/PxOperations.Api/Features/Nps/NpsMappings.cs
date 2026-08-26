@@ -28,7 +28,7 @@ public static class NpsMappings
         => new(view.Id, view.DispatchId, view.ContactId, view.ContactName, view.ContactEmail, view.Token, view.IsGeneric, view.ResponsesCount);
 
     public static NpsSurveyResponse ToResponse(NpsResponseView view)
-        => new(view.Id, view.ProjectId, view.ProjectName, view.DispatchId, view.TargetId, view.ContactId, view.ContactName, view.ContactEmail, view.Score, view.Classification, view.BusinessValue, view.Schedule, view.Quality, view.Communication, view.Tags, view.Comment, view.RespondentName, view.RespondentEmail, view.SubmittedAt);
+        => new(view.Id, view.ProjectId, view.ProjectName, view.DispatchId, view.TargetId, view.ContactId, view.ContactName, view.ContactEmail, view.Score, view.Classification, view.Format, view.BusinessValue, view.Schedule, view.Quality, view.Communication, view.Tags, view.Comment, view.RespondentName, view.RespondentEmail, view.SubmittedAt);
 
     public static NpsPublicSurveyResponse ToResponse(NpsPublicSurveyView view)
         => new(view.Token, view.ProjectId, view.ProjectName, view.DispatchId, view.PeriodStart, view.PeriodEnd, view.Format, view.Language, view.ExpiresAt, view.IsExpired, view.IsClosed, view.AlreadyAnswered);

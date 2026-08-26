@@ -43,7 +43,22 @@
 
 .kcard.is-dismissed { opacity: 0.72; }
 
-.kcard__title { margin: 0; font-weight: 600; font-size: 14px; }
+.kcard__title {
+    display: block;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    font-weight: 600;
+    font-size: 14px;
+    text-align: left;
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+.kcard__title:hover { text-decoration: underline; }
 
 .kcard__client { margin: 2px 0 10px; font-size: 12px; color: var(--brq-color-text-muted, #4a4a4a); }
 

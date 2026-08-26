@@ -1,0 +1,72 @@
+.detail-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--brq-color-border-subtle, #ededed);
+}
+
+.detail-kpis span {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--brq-color-text-muted, #4a4a4a);
+}
+
+.detail-kpis strong { font-size: 20px; }
+
+.detail-links, .detail-responses { padding-top: 16px; }
+
+.detail-links h3, .detail-responses h3 { margin: 0 0 12px; font-size: 14px; }
+
+.detail-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    margin-bottom: 8px;
+    border: 1px solid var(--brq-color-border, #d9d9d9);
+    border-radius: 10px;
+}
+
+/* F5: neutro com folga, atenção a 5 dias, crítico quando vencido. */
+.detail-link.is-warn { border-color: var(--brq-color-warn, #b45309); }
+.detail-link.is-expired { border-color: var(--brq-color-danger, #dc2626); }
+
+.detail-link__head { display: flex; flex-direction: column; }
+
+.detail-link__format { font-weight: 600; font-size: 13px; }
+
+.detail-link__lang { font-size: 12px; color: var(--brq-color-text-muted, #4a4a4a); }
+
+.detail-link__deadline { flex: 1; margin: 0; font-size: 13px; }
+
+.detail-link.is-warn .detail-link__deadline { color: var(--brq-color-warn, #b45309); font-weight: 600; }
+.detail-link.is-expired .detail-link__deadline { color: var(--brq-color-danger, #dc2626); font-weight: 600; }
+
+.detail-responses__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.detail-response {
+    display: flex;
+    gap: 12px;
+    padding: 12px 0;
+    border-top: 1px solid var(--brq-color-border-subtle, #ededed);
+}
+
+.detail-response__score { min-width: 56px; text-align: center; }
+
+.detail-response__score strong { display: block; font-size: 20px; }
+
+.detail-response__score span { font-size: 11px; color: var(--brq-color-text-muted, #4a4a4a); }
+
+.detail-response__meta { margin: 0; font-size: 12px; color: var(--brq-color-text-muted, #4a4a4a); }
+
+.detail-response__comment { margin: 4px 0 0; font-size: 13px; }
+
+.detail-empty { margin: 0 0 12px; font-size: 13px; color: var(--brq-color-text-muted, #4a4a4a); }

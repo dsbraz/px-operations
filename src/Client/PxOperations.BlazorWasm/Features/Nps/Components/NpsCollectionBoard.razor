@@ -43,7 +43,9 @@
                                 }
                             </div>
                         }
-                        <p class="kcard__title">@project.Name</p>
+                        @* F2: card com link abre o detalhe. O título é o gatilho — clicar no
+                           card inteiro engoliria os cliques dos botões do rodapé. *@
+                        <button type="button" class="kcard__title" @onclick="() => OnOpenDetail.InvokeAsync(project.Id)">@project.Name</button>
                         <p class="kcard__client">@project.Client · @project.Dc</p>
 
                         <div class="kcard__meta">
@@ -86,6 +88,7 @@
     [Parameter] public EventCallback<int> OnGenerateLink { get; set; }
     [Parameter] public EventCallback<NpsProjectResponse> OnReactivate { get; set; }
     [Parameter] public EventCallback<NpsProjectResponse> OnDismiss { get; set; }
+    [Parameter] public EventCallback<int> OnOpenDetail { get; set; }
 
     private int? openMenuProjectId;
 

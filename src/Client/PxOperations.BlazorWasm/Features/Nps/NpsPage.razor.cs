@@ -80,11 +80,8 @@ public partial class NpsPage : ComponentBase
     private string dismissReason = "";
     private string? dismissError;
 
-    private string dispatchFormat = "Simplificado";
-    private string dispatchLanguage = "Português";
 
     private string ExportHref => BuildExportUrl();
-    private bool CanCreateLink => selectedProjectId is not null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -135,18 +132,16 @@ public partial class NpsPage : ComponentBase
     private static bool IsChecked(ChangeEventArgs args)
         => args.Value is true || (bool.TryParse(args.Value?.ToString(), out var parsed) && parsed);
 
-    private async Task OnCreateLinkProjectChanged(ChangeEventArgs args)
+    private async Task OnCreateLinkProjectChanged(int? projectId)
     {
-        if (!int.TryParse(args.Value?.ToString(), out var projectId))
+        if (projectId is null)
         {
             selectedProjectId = null;
             selectedDetail = null;
-            responses = [];
-            selectedDispatchDetail = null;
             return;
         }
 
-        await SelectProjectAsync(projectId);
+        await SelectProjectAsync(projectId.Value);
     }
 
     private Task StartDismissAsync(NpsProjectResponse project)
@@ -206,65 +201,23 @@ public partial class NpsPage : ComponentBase
         }
     }
 
-    private string CreateLinkSubtitle
+    /// <summary>F5: copiar o link de um disparo listado no detalhe.</summary>
+    private async Task CopyDispatchLinkAsync(int dispatchId)
     {
-        get
+        try
         {
-            if (createdDispatch is not null)
+            var detail = await NpsClient.GetDispatchAsync(dispatchId);
+            var target = detail.Targets.FirstOrDefault();
+            if (target is not null)
             {
-                return $"{createdDispatch.Dispatch.ProjectName} · {createdDispatch.Dispatch.Format} · {createdDispatch.Dispatch.Language}";
+                await CopyAsync(BuildPublicFormUrl(target.Token), "Não foi possível copiar o link.");
             }
-
-            return selectedDetail is null
-                ? "Selecione o projeto que receberá o link"
-                : $"{selectedDetail.Project.Name} · {selectedDetail.Project.Dc}";
+        }
+        catch (Exception)
+        {
+            operationError = "Não foi possível copiar o link.";
         }
     }
-
-    private string CreatedLinkUrl
-        => createdDispatch is null ? string.Empty : BuildPublicFormUrl(createdDispatch.Targets.First().Token);
-
-    /// <summary>F3: a validade vai em destaque, com a data por extenso.</summary>
-    private string CreatedLinkExpiry
-        => createdDispatch is not null && DateTimeOffset.TryParse(createdDispatch.Dispatch.ExpiresAt, out var expires)
-            ? $"Este link vale por 20 dias: expira em {expires.ToLocalTime():dd/MM/yyyy}"
-            : string.Empty;
-
-    /// <summary>
-    /// F3: mensagem pronta para colar, com o link e o prazo dentro. Montada no
-    /// cliente — persistir template no backend é não-objetivo declarado.
-    /// </summary>
-    private string CreatedMessage
-    {
-        get
-        {
-            if (createdDispatch is null)
-            {
-                return string.Empty;
-            }
-
-            var project = createdDispatch.Dispatch.ProjectName;
-            var url = CreatedLinkUrl;
-            var prazo = DateTimeOffset.TryParse(createdDispatch.Dispatch.ExpiresAt, out var expires)
-                ? expires.ToLocalTime().ToString("dd/MM")
-                : "";
-
-            if (string.Equals(createdDispatch.Dispatch.Language, "Inglês", StringComparison.OrdinalIgnoreCase))
-            {
-                return $"Hi! We're collecting NPS for the {project} project and your feedback really matters. "
-                    + $"It takes under a minute and your answer is anonymous:\n{url}"
-                    + $"\nThe survey is open until {prazo}. Thank you!";
-            }
-
-            return $"Olá! Estamos coletando o NPS do projeto {project} e a sua opinião faz diferença. "
-                + $"Leva menos de 1 minuto e a resposta é anônima:\n{url}"
-                + $"\nA pesquisa fica aberta até {prazo}. Obrigado!";
-        }
-    }
-
-    private Task CopyCreatedLinkAsync() => CopyAsync(CreatedLinkUrl, "Não foi possível copiar o link.");
-
-    private Task CopyCreatedMessageAsync() => CopyAsync(CreatedMessage, "Não foi possível copiar a mensagem.");
 
     private async Task CopyAsync(string text, string errorMessage)
     {
@@ -328,7 +281,7 @@ public partial class NpsPage : ComponentBase
         showDetailModal = true;
     }
 
-    private async Task CreateDispatchAsync()
+    private async Task CreateDispatchAsync(NpsCreateLinkModal.NpsLinkRequest request)
     {
         if (selectedProjectId is null)
         {
@@ -345,8 +298,8 @@ public partial class NpsPage : ComponentBase
                 ProjectId = selectedProjectId.Value,
                 PeriodStart = periodStart.ToString("yyyy-MM-dd"),
                 PeriodEnd = periodEnd.ToString("yyyy-MM-dd"),
-                Format = dispatchFormat,
-                Language = dispatchLanguage,
+                Format = request.Format,
+                Language = request.Language,
                 CreatedBy = "Operations PX",
                 ContactIds = [],
                 CreateGenericToken = true
@@ -362,12 +315,6 @@ public partial class NpsPage : ComponentBase
         {
             operationError = "Não foi possível criar o disparo.";
         }
-    }
-
-    private async Task SelectDispatchAsync(int dispatchId)
-    {
-        selectedDispatchDetail = await NpsClient.GetDispatchAsync(dispatchId);
-        responses = (await NpsClient.ListResponsesAsync(dispatchId)).ToList();
     }
 
     private async Task LoadDashboardAndProjectsAsync()

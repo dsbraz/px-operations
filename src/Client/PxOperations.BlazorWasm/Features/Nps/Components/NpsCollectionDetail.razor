@@ -1,0 +1,167 @@
+@using PxOperations.BlazorWasm.Api
+
+@* F5: detalhe da coleta, aberto do card. KPIs do projeto, links ATIVOS
+   rotulados por formato, cada um com prazo e estado de proximidade, e as
+   respostas recentes. Evolução do modal de detalhe da v1. *@
+<div class="overlay open" @onclick="OnClose">
+    <div class="modal nps-detail-modal" @onclick:stopPropagation="true">
+        <div class="modal-top">
+            <div>
+                <div class="modal-ttl">@Detail.Project.Name</div>
+                <div class="modal-sub">@Detail.Project.Client · @Detail.Project.Dc · @DeliveryManager</div>
+            </div>
+            <button class="mcls" @onclick="OnClose" aria-label="Fechar">×</button>
+        </div>
+
+        <div class="detail-kpis">
+            <div><span>NPS</span><strong>@(Detail.Project.LastNps?.ToString("0.0") ?? "—")</strong></div>
+            <div><span>Respostas</span><strong>@Detail.Project.ResponsesCount</strong></div>
+            <div><span>Última resposta</span><strong>@LastResponse</strong></div>
+        </div>
+
+        <section class="detail-links">
+            <h3>Links ativos</h3>
+            @if (ActiveDispatches.Count == 0)
+            {
+                <p class="detail-empty">Nenhum link ativo. Gere um para começar a coleta.</p>
+                <button type="button" class="brq-button brq-button--primary brq-button--sm"
+                        @onclick="() => OnGenerateLink.InvokeAsync(Detail.Project.Id)">Gerar link</button>
+            }
+            @foreach (var dispatch in ActiveDispatches)
+            {
+                var deadline = Deadline(dispatch);
+                <article class="detail-link @deadline.Modifier">
+                    <div class="detail-link__head">
+                        @* D3: o rótulo é o formato — é o que distingue os dois links
+                           ativos que o projeto pode ter ao mesmo tempo. *@
+                        <span class="detail-link__format">@dispatch.Format</span>
+                        <span class="detail-link__lang">@dispatch.Language</span>
+                    </div>
+
+                    <p class="detail-link__deadline">@deadline.Label</p>
+
+                    @if (deadline.Expired)
+                    {
+                        <button type="button" class="brq-button brq-button--primary brq-button--sm"
+                                @onclick="() => OnGenerateLink.InvokeAsync(Detail.Project.Id)">Gerar novo</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="brq-button brq-button--secondary brq-button--sm"
+                                @onclick="() => OnCopyLink.InvokeAsync(dispatch.Id)">Copiar</button>
+                    }
+                </article>
+            }
+        </section>
+
+        <section class="detail-responses">
+            <div class="detail-responses__head">
+                <h3>Respostas recentes</h3>
+                @if (HasBothFormats)
+                {
+                    @* F5: o filtro por formato só aparece quando há os dois — com um
+                       formato só ele seria um controle que não filtra nada. *@
+                    <select @onchange="OnFormatFilterChanged" aria-label="Filtrar por formato">
+                        <option value="">Todos os formatos</option>
+                        <option value="Simplificado">Simplificado</option>
+                        <option value="Completo">Completo</option>
+                    </select>
+                }
+            </div>
+
+            @if (FilteredResponses.Count == 0)
+            {
+                <p class="detail-empty">Nenhuma resposta ainda.</p>
+            }
+            @foreach (var response in FilteredResponses)
+            {
+                <article class="detail-response">
+                    <div class="detail-response__score">
+                        <strong>@response.Score</strong>
+                        <span>@response.Classification</span>
+                    </div>
+                    <div class="detail-response__body">
+                        <p class="detail-response__meta">@Author(response) · @Received(response)</p>
+                        @if (!string.IsNullOrWhiteSpace(response.Comment))
+                        {
+                            <p class="detail-response__comment">@response.Comment</p>
+                        }
+                    </div>
+                </article>
+            }
+        </section>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public NpsProjectDetailResponse Detail { get; set; } = default!;
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<int> OnGenerateLink { get; set; }
+    [Parameter] public EventCallback<int> OnCopyLink { get; set; }
+
+    /// <summary>F5: atenção quando faltam 5 dias ou menos.</summary>
+    private const int WarningDays = 5;
+
+    private string? formatFilter;
+
+    private string DeliveryManager
+        => string.IsNullOrWhiteSpace(Detail.Project.DeliveryManager) ? "Sem DM" : Detail.Project.DeliveryManager;
+
+    private string LastResponse
+        => DateTimeOffset.TryParse(Detail.Project.LastResponseAt, out var last)
+            ? last.ToLocalTime().ToString("dd/MM/yyyy")
+            : "—";
+
+    /// <summary>
+    /// "Links ATIVOS" é literal no requisito: disparo fechado não é link ativo e
+    /// não deve competir por atenção no topo do detalhe.
+    /// </summary>
+    private IReadOnlyList<NpsDispatchResponse> ActiveDispatches
+        => [.. Detail.Dispatches.Where(d => d.ClosedAt is null)];
+
+    private bool HasBothFormats
+        => Detail.RecentResponses.Select(r => r.Format).Distinct().Count() > 1;
+
+    private IReadOnlyList<NpsSurveyResponse> FilteredResponses
+        => string.IsNullOrEmpty(formatFilter)
+            ? [.. Detail.RecentResponses]
+            : [.. Detail.RecentResponses.Where(r => r.Format == formatFilter)];
+
+    private void OnFormatFilterChanged(ChangeEventArgs args)
+        => formatFilter = args.Value?.ToString();
+
+    private static string Author(NpsSurveyResponse response)
+        => response.RespondentName
+            ?? response.RespondentEmail
+            ?? response.ContactName
+            ?? "Resposta anônima";
+
+    private static string Received(NpsSurveyResponse response)
+        => DateTimeOffset.TryParse(response.SubmittedAt, out var at)
+            ? at.ToLocalTime().ToString("dd/MM/yyyy")
+            : "—";
+
+    /// <summary>
+    /// F5: neutro com folga, atenção a 5 dias ou menos, crítico quando vencido.
+    /// O texto é o do critério de aceite: "expira em Xd" / "expirado há Xd".
+    /// </summary>
+    private static Proximity Deadline(NpsDispatchResponse dispatch)
+    {
+        if (!DateTimeOffset.TryParse(dispatch.ExpiresAt, out var expires))
+        {
+            return new("Sem prazo registrado", "", false);
+        }
+
+        var left = expires - DateTimeOffset.UtcNow;
+        if (left <= TimeSpan.Zero)
+        {
+            var days = (int)(-left).TotalDays;
+            return new(days >= 1 ? $"Expirado há {days}d" : "Expirado", "is-expired", true);
+        }
+
+        var remaining = (int)Math.Ceiling(left.TotalDays);
+        return new($"Expira em {remaining}d", remaining <= WarningDays ? "is-warn" : "", false);
+    }
+
+    private sealed record Proximity(string Label, string Modifier, bool Expired);
+}
