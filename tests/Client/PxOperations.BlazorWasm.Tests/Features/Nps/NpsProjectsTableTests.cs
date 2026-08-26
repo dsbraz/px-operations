@@ -112,6 +112,28 @@ public sealed class NpsProjectsTableTests : TestContext
         });
     }
 
+    /// <summary>
+    /// Critério de aceite de F8. Trocar o período recalcula o NPS da linha; as
+    /// notas do recorte anterior continuavam abaixo dela, e a distribuição
+    /// expandida seguia somando o que já não estava no número exibido.
+    /// </summary>
+    [Fact]
+    public void Reloading_the_list_should_drop_the_expansion_even_if_the_project_stays()
+    {
+        var cut = Render([Project(1, "Alfa", responses: 3, nps: 33)], _ => [Response(10, "Promotor", "do recorte antigo")]);
+
+        ProjectButtons(cut)[0].Click();
+        cut.WaitForAssertion(() => Assert.Contains("do recorte antigo", cut.Markup));
+
+        // Mesmo projeto, outro recorte: 1 resposta em vez de 3.
+        cut.SetParametersAndRender(p => p
+            .Add(x => x.Projects, [Project(1, "Alfa", responses: 1, nps: 100)])
+            .Add(x => x.LoadResponses, _ => Task.FromResult<IReadOnlyList<NpsSurveyResponse>>([])));
+
+        Assert.Empty(cut.FindAll(".nps-drill"));
+        Assert.DoesNotContain("do recorte antigo", cut.Markup);
+    }
+
     [Fact]
     public void Sorting_by_nps_should_reorder_and_announce_itself()
     {

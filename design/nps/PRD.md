@@ -347,18 +347,16 @@ definir na revisão deste PRD; baseline = leitura do dashboard atual na ativaç�
    redesign (custo ~zero) ou corta de propósito?
 2. O subtexto do KPI de respostas da v1 ("% de enviados") morre com D1/D2: fica contagem
    simples ou entra B8?
-3. **Permissões**: quem pode gerar link e quem pode dispensar coleta? O motivo da dispensa é
-   auditado?
-4. Filtros na querystring das **rotas do app** (compartilhar visão filtrada)? Natural com D5,
+3. Filtros na querystring das **rotas do app** (compartilhar visão filtrada)? Natural com D5,
    mas com multi-seleção (D11) cada faceta vira uma lista na URL; definir o formato
    (`?empresa=Santander,Itaú`). **Segue em aberto** — a API já usa parâmetro repetido
    (`?company=Santander&company=Itaú`), mas a rota do app não carrega filtro nenhum ainda.
-5. **Fase futura**: links por contato para nudge individual ("quem não respondeu"), mantém no
+4. **Fase futura**: links por contato para nudge individual ("quem não respondeu"), mantém no
    radar?
-6. **B13/B14**: converter, segregar ou descartar o histórico na virada de escala e do quarto
+5. **B13/B14**: converter, segregar ou descartar o histórico na virada de escala e do quarto
    aspecto? É a decisão que trava as duas migrações.
-7. O prazo de 20 dias (D7) é **fixo** ou vira parâmetro por projeto/rodada mais adiante?
-8. Com D9, o KPI de **vencidos** passa a contar todo projeto sem coleta recente, inclusive os que
+6. O prazo de 20 dias (D7) é **fixo** ou vira parâmetro por projeto/rodada mais adiante?
+7. Com D9, o KPI de **vencidos** passa a contar todo projeto sem coleta recente, inclusive os que
    antes eram descartados por estarem encerrados. Confirmar que é isso mesmo que a liderança quer
    ver, ou se a régua de "vencido" também precisa mudar.
 

@@ -192,6 +192,31 @@ public sealed class NpsResponsesEndpointTests(PostgreSqlFixture fixture)
         Assert.DoesNotContain("promotor no csv", csv);
     }
 
+    /// <summary>
+    /// F6/F11: o dispensado sai da tabela e dos KPIs. Suas respostas têm de
+    /// sair junto, ou o CSV desmente a tela que acabou de escondê-lo.
+    /// </summary>
+    [Fact]
+    public async Task ListResponses_should_drop_responses_of_a_dismissed_project()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+        var marker = $"Dispensa{Guid.NewGuid():N}";
+        var project = await CreateProjectAsync(client, marker);
+        var token = await CreateDispatchAsync(client, project.Id, "Simplificado");
+        await SubmitAsync(client, token, score: 9, comment: "antes da dispensa");
+
+        var antes = await ListAsync(client, $"search={marker}");
+        (await client.PostAsJsonAsync($"/api/nps/projects/{project.Id}/collection-waiver",
+            new DismissNpsCollectionRequest("fora do escopo"))).EnsureSuccessStatusCode();
+        var depois = await ListAsync(client, $"search={marker}");
+        var mostrando = await ListAsync(client, $"search={marker}&includeDismissed=true");
+
+        Assert.Single(antes);
+        Assert.Empty(depois);
+        Assert.Single(mostrando);
+    }
+
     [Fact]
     public async Task ListResponses_should_reject_an_unknown_format()
     {

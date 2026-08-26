@@ -228,6 +228,36 @@ public sealed class NpsFilterEndpointsTests(PostgreSqlFixture fixture)
         return detail.Targets.Single(t => t.IsGeneric).Token;
     }
 
+    /// <summary>
+    /// B12: link vencido não coleta mais, então o projeto não está "Link
+    /// gerado". Sem isto o KPI dizia "Links ativos 0" e a linha, na mesma
+    /// tela, dizia que havia link — e ?status=Link gerado ainda a selecionava.
+    /// </summary>
+    [Fact]
+    public async Task An_expired_link_should_not_leave_the_project_as_link_sent()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+        var marker = $"StatusVencido{Guid.NewGuid():N}";
+        var project = await CreateProjectAsync(client, marker);
+        await CreateGenericTokenAsync(client, project.Id);
+
+        var antes = await ListAsync(client, $"search={marker}");
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await db.Database.ExecuteSqlRawAsync(
+                "update nps_dispatches set expires_at = now() - interval '1 day' where project_id = {0}",
+                project.Id);
+        }
+
+        var depois = await ListAsync(client, $"search={marker}");
+
+        Assert.Equal("Link gerado", antes.Single().CollectionStatus);
+        Assert.Equal("Pendente", depois.Single().CollectionStatus);
+    }
+
     [Fact]
     public async Task ListProjects_should_reject_an_unknown_facet_value()
     {

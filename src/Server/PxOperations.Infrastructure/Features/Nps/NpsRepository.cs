@@ -106,13 +106,25 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
 
         // Contagem e prazo saem agregados no banco. Quando há mais de um link
         // aberto vale o que vence por último: é o que ainda dá para responder.
+        var now = DateTimeOffset.UtcNow;
         var openDispatches = await dbContext.Set<Dispatch>()
             .Where(d => projectIds.Contains(d.ProjectId) && d.Status == NpsDispatchStatus.Open)
             .GroupBy(d => d.ProjectId)
-            .Select(g => new { ProjectId = g.Key, Count = g.Count(), LastExpiry = g.Max(d => d.ExpiresAt) })
+            .Select(g => new
+            {
+                ProjectId = g.Key,
+                Count = g.Count(),
+                // B12: aberto e ainda dentro do prazo. O quadro precisa do
+                // total para manter o card em "Aguardando" com o chip de
+                // vencido (D7/D8); o STATUS precisa deste, ou chamaria de
+                // "Link gerado" um link que ninguém consegue mais responder.
+                Collecting = g.Count(d => d.ExpiresAt > now),
+                LastExpiry = g.Max(d => d.ExpiresAt)
+            })
             .ToDictionaryAsync(x => x.ProjectId, x => x, ct);
 
         var activeDispatches = openDispatches.ToDictionary(kv => kv.Key, kv => kv.Value.Count);
+        var collectingDispatches = openDispatches.ToDictionary(kv => kv.Key, kv => kv.Value.Collecting);
         var dispatchExpiry = openDispatches.ToDictionary(kv => kv.Key, kv => kv.Value.LastExpiry);
 
         var linkTargets = await dbContext.Set<DispatchTarget>()
@@ -173,6 +185,7 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             lastResponses.GetValueOrDefault(project.Id),
             npsByProject.GetValueOrDefault(project.Id),
             overdue.Contains(project.Id),
+            collectingDispatches.GetValueOrDefault(project.Id),
             waivers.GetValueOrDefault(project.Id),
             dispatchExpiry.TryGetValue(project.Id, out var expiry) ? expiry : null,
             lastClosures.TryGetValue(project.Id, out var closed) ? closed : null)).ToList();
@@ -332,13 +345,18 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
         query = ApplyResponseFilters(query, filter);
         query = ApplyProjectResponseFilters(query, filter);
 
-        // O status da coleta só existe na view montada, então recortar por ele
+        // Status e dispensa só existem na view montada, então recortar por eles
         // aqui significa perguntar antes quais projetos casam. Sem isto o
-        // parâmetro era aceito e ignorado, e o CSV saía com a carteira inteira
-        // enquanto a tela mostrava o recorte.
-        if (filter.CollectionStatuses is { Count: > 0 })
+        // status era aceito e ignorado, e a resposta de projeto dispensado
+        // seguia no CSV depois de sumir da tela.
+        if (filter.CollectionStatuses is { Count: > 0 } || !filter.IncludeDismissed)
         {
-            var wanted = (await ListProjectsAsync(filter with { IncludeDismissed = true }, ct))
+            // Sem Search: a busca de RESPOSTA cobre comentário e pessoa, que
+            // não existem no projeto. Reusá-la aqui zerava a lista de projetos
+            // permitidos e, com ela, o resultado inteiro. O recorte por texto
+            // já foi aplicado acima; aqui só interessa quem passa na dispensa
+            // e no status.
+            var wanted = (await ListProjectsAsync(filter with { Search = null }, ct))
                 .Select(p => p.Id)
                 .ToHashSet();
             query = query.Where(r => wanted.Contains(r.ProjectId));
@@ -578,6 +596,7 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
         SurveyResponse? lastResponse,
         decimal? lastNps,
         bool isOverdue,
+        int collectingDispatches,
         CollectionWaiver? waiver,
         DateTimeOffset? activeDispatchExpiresAt,
         DateTimeOffset? lastDispatchClosedAt)
@@ -595,7 +614,7 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             lastResponse?.SubmittedAt.ToString("O"),
             lastNps,
             isOverdue,
-            FormatCollectionStatus(NpsCollectionStatusCalculator.Derive(lastResponse is not null, activeDispatches)),
+            FormatCollectionStatus(NpsCollectionStatusCalculator.Derive(lastResponse is not null, collectingDispatches)),
             waiver is not null,
             waiver?.Reason,
             activeDispatchExpiresAt?.ToString("O"),

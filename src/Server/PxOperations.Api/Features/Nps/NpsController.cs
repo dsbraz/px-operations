@@ -240,12 +240,15 @@ public sealed class NpsController(
         [FromQuery] string? to,
         [FromQuery] string[]? classification,
         [FromQuery] string[]? format,
+        // F6: o dispensado sai da lista e dos KPIs; as respostas dele têm de
+        // sair junto, ou o CSV desmente a tela.
+        [FromQuery] bool includeDismissed,
         CancellationToken ct)
     {
         try
         {
             var responses = await listResponses.ExecuteAsync(
-                null, BuildFilter(search, company, dc, deliveryManager, projectType, status, projectId, from, to, classification, format), ct);
+                null, BuildFilter(search, company, dc, deliveryManager, projectType, status, projectId, from, to, classification, format, includeDismissed), ct);
             return Ok(responses.Select(NpsMappings.ToResponse));
         }
         catch (Exception ex) when (ex is ArgumentOutOfRangeException or FormatException)
@@ -269,11 +272,14 @@ public sealed class NpsController(
         [FromQuery] string? to,
         [FromQuery] string[]? classification,
         [FromQuery] string[]? format,
+        // F6: o dispensado sai da lista e dos KPIs; as respostas dele têm de
+        // sair junto, ou o CSV desmente a tela.
+        [FromQuery] bool includeDismissed,
         CancellationToken ct)
     {
         try
         {
-            var responses = await listResponses.ExecuteAsync(null, BuildFilter(search, company, dc, deliveryManager, projectType, status, projectId, from, to, classification, format), ct);
+            var responses = await listResponses.ExecuteAsync(null, BuildFilter(search, company, dc, deliveryManager, projectType, status, projectId, from, to, classification, format, includeDismissed), ct);
             var csv = BuildCsv(responses);
             return File(Encoding.UTF8.GetBytes(csv), "text/csv", "nps-responses.csv");
         }

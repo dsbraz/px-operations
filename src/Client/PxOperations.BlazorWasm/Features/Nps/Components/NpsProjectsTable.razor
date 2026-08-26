@@ -135,13 +135,18 @@
     ];
 
     /// <summary>
-    /// Trocar de filtro invalida a expansão: notas de um recorte antigo ao lado
-    /// de um NPS recalculado não fecham, e nada na tela avisaria.
+    /// Qualquer recarga da lista invalida a expansão. Checar só se o projeto
+    /// SAIU não bastava: mudar o período mantém o projeto e recalcula o NPS da
+    /// linha, e as notas antigas continuavam abaixo dela sem fechar com o
+    /// número exibido — que é o critério de aceite de F8.
     /// </summary>
+    private IReadOnlyList<NpsProjectResponse>? loadedProjects;
+
     protected override void OnParametersSet()
     {
-        if (expandedProjectId is { } id && Projects.All(p => p.Id != id))
+        if (!ReferenceEquals(loadedProjects, Projects))
         {
+            loadedProjects = Projects;
             Collapse();
         }
     }
@@ -204,8 +209,8 @@
         }
 
         sortKey = key;
-        // Texto começa em A→Z; número e status começam do maior, que é onde
-        // está o que pede atenção.
+        // Número começa do maior, que é onde está o que pede atenção; texto e
+        // status começam em A→Z.
         sortDescending = key is "respostas" or "nps";
     }
 

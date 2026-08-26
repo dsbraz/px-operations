@@ -149,8 +149,29 @@ public partial class NpsPage : ComponentBase, IDisposable
 
     private string ExportHref => BuildExportUrl();
 
+    /// <summary>
+    /// A aba vem da ROTA, e as três subpáginas compartilham o mesmo componente:
+    /// clicar numa aba troca o parâmetro sem recriar a página, então
+    /// OnInitializedAsync não roda de novo. Sem isto a aba Respostas chegava
+    /// vazia por clique e só carregava quando aberta direto pela URL.
+    /// </summary>
+    private string? loadedTab;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loadedTab is null || loadedTab == ActiveTab)
+        {
+            return;
+        }
+
+        loadedTab = ActiveTab;
+        await RefreshAsync();
+    }
+
     protected override async Task OnInitializedAsync()
     {
+        loadedTab = ActiveTab;
+
         // As opções não dependem do filtro corrente, então uma carga só basta.
         // Falhar aqui não pode derrubar a tela: sem elas as facetas de texto
         // livre ficam vazias, o resto segue funcionando.
@@ -478,7 +499,7 @@ public partial class NpsPage : ComponentBase, IDisposable
         {
             responses = (await NpsClient.ListResponsesAsync(
                 search, Facet(filterCompanies), Facet(filterDcs), Facet(filterDeliveryManagers),
-                Facet(filterProjectTypes), null, null, from, to, classifications, formats)).ToList();
+                Facet(filterProjectTypes), null, null, from, to, classifications, formats, includeDismissed)).ToList();
         }
     }
 
@@ -495,7 +516,7 @@ public partial class NpsPage : ComponentBase, IDisposable
 
         return (await NpsClient.ListResponsesAsync(
             search, Facet(filterCompanies), Facet(filterDcs), Facet(filterDeliveryManagers),
-            Facet(filterProjectTypes), null, projectId, from, to, null, null)).ToList();
+            Facet(filterProjectTypes), null, projectId, from, to, null, null, true)).ToList();
     }
 
     private void OpenResponseDetail(NpsSurveyResponse response) => selectedResponse = response;
@@ -602,6 +623,9 @@ public partial class NpsPage : ComponentBase, IDisposable
         }
         AddSingle("from", from);
         AddSingle("to", to);
+        // F6/F11: o dashboard e a tabela já escondem o dispensado; sem isto o
+        // arquivo trazia as respostas dele de volta.
+        if (includeDismissed) AddSingle("includeDismissed", "true");
 
         var queryString = string.Join('&', parts);
         var relativeUrl = string.IsNullOrEmpty(queryString)
@@ -657,35 +681,6 @@ public partial class NpsPage : ComponentBase, IDisposable
             _ => "passive"
         };
 
-    // O rótulo vem pronto do servidor (B15): derivar aqui de novo criaria uma
-    // segunda definição da mesma regra, e foi assim que "Sem link" virou um
-    // estado que a tabela nunca chegava a mostrar.
-    private static string ProjectStatusClass(NpsProjectResponse project)
-        => project.CollectionStatus switch
-        {
-            "Respondido" => "ok",
-            "Link gerado" => "info",
-            _ => "late"
-        };
-
-    private static string LinkStatusLabel(NpsProjectResponse project)
-    {
-        if (project.LinkTargetsCount == 0)
-        {
-            return "Sem link";
-        }
-
-        return project.AnsweredLinkTargetsCount >= project.LinkTargetsCount ? "Respondido" : "Aberto";
-    }
-
-    private static string LinkStatusClass(NpsProjectResponse project)
-        => LinkStatusLabel(project) switch
-        {
-            "Respondido" => "ok",
-            "Aberto" => "info",
-            _ => "late"
-        };
-
     private static string LinkStatusLabel(NpsDispatchResponse dispatch)
     {
         if (dispatch.TargetsCount == 0)
@@ -703,9 +698,6 @@ public partial class NpsPage : ComponentBase, IDisposable
             "Aberto" => "info",
             _ => "late"
         };
-
-    private static string LastResponseLabel(NpsProjectResponse project)
-        => project.LastResponseAt is null ? "Sem resposta" : FormatTimestamp(project.LastResponseAt);
 
     private static string TargetLabel(NpsDispatchTargetResponse target)
         => target.IsGeneric ? "Link de resposta" : target.ContactName ?? target.ContactEmail ?? "Contato";
