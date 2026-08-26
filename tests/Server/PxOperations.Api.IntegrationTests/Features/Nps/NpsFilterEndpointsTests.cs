@@ -106,6 +106,29 @@ public sealed class NpsFilterEndpointsTests(PostgreSqlFixture fixture)
         Assert.Equal("Pendente", pending[0].CollectionStatus);
     }
 
+    /// <summary>
+    /// F2: a idade do card "Sem link" sai do fechamento do último disparo. É o
+    /// único caso em que existe data real — projeto que nunca teve link fica
+    /// sem o campo, e o quadro omite o chip em vez de inventar a conta.
+    /// </summary>
+    [Fact]
+    public async Task ListProjects_should_expose_when_the_last_link_was_closed()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+        var marker = $"Fechado{Guid.NewGuid():N}";
+
+        var withClosedLink = await CreateProjectAsync(client, marker);
+        var neverHadLink = await CreateProjectAsync(client, marker);
+        var dispatch = await CreateDispatchAsync(client, withClosedLink.Id);
+        (await client.PatchAsync($"/api/nps/dispatches/{dispatch}/close", null)).EnsureSuccessStatusCode();
+
+        var projects = await ListAsync(client, $"search={marker}");
+
+        Assert.NotNull(projects.Single(p => p.Id == withClosedLink.Id).LastDispatchClosedAt);
+        Assert.Null(projects.Single(p => p.Id == neverHadLink.Id).LastDispatchClosedAt);
+    }
+
     [Fact]
     public async Task ListProjects_should_reject_an_unknown_facet_value()
     {
@@ -166,7 +189,7 @@ public sealed class NpsFilterEndpointsTests(PostgreSqlFixture fixture)
         return (await response.Content.ReadFromJsonAsync<ProjectResponse>())!;
     }
 
-    private static async Task CreateDispatchAsync(HttpClient client, int projectId)
+    private static async Task<int> CreateDispatchAsync(HttpClient client, int projectId)
     {
         var response = await client.PostAsJsonAsync("/api/nps/dispatches", new CreateNpsDispatchRequest(
             ProjectId: projectId,
@@ -179,5 +202,6 @@ public sealed class NpsFilterEndpointsTests(PostgreSqlFixture fixture)
             CreateGenericToken: true));
 
         response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<NpsDispatchDetailResponse>())!.Dispatch.Id;
     }
 }

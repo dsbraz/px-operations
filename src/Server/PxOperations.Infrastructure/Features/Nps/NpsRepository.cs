@@ -116,6 +116,14 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             })
             .ToDictionaryAsync(x => x.ProjectId, x => x, ct);
 
+        // F2: o mais recente fechamento entre os disparos do projeto. Quem tem
+        // disparo aberto não usa este valor — está em outra coluna do quadro.
+        var lastClosures = await dbContext.Set<Dispatch>()
+            .Where(d => projectIds.Contains(d.ProjectId) && d.ClosedAt != null)
+            .GroupBy(d => d.ProjectId)
+            .Select(g => new { ProjectId = g.Key, LastClosedAt = g.Max(d => d.ClosedAt) })
+            .ToDictionaryAsync(x => x.ProjectId, x => x.LastClosedAt, ct);
+
         var responses = await ApplyResponseFilters(dbContext.Set<SurveyResponse>().Where(r => projectIds.Contains(r.ProjectId)), filter)
             .ToListAsync(ct);
 
@@ -156,7 +164,8 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             npsByProject.GetValueOrDefault(project.Id),
             overdue.Contains(project.Id),
             waivers.GetValueOrDefault(project.Id),
-            dispatchExpiry.TryGetValue(project.Id, out var expiry) ? expiry : null)).ToList();
+            dispatchExpiry.TryGetValue(project.Id, out var expiry) ? expiry : null,
+            lastClosures.TryGetValue(project.Id, out var closed) ? closed : null)).ToList();
 
         // O status sai de agregados que só existem depois da projeção, então a
         // faceta filtra a view montada. A carteira é pequena; reescrever a
@@ -535,7 +544,8 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
         decimal? lastNps,
         bool isOverdue,
         CollectionWaiver? waiver,
-        DateTimeOffset? activeDispatchExpiresAt)
+        DateTimeOffset? activeDispatchExpiresAt,
+        DateTimeOffset? lastDispatchClosedAt)
         => new(
             project.Id,
             project.Name,
@@ -553,7 +563,8 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             FormatCollectionStatus(NpsCollectionStatusCalculator.Derive(lastResponse is not null, activeDispatches)),
             waiver is not null,
             waiver?.Reason,
-            activeDispatchExpiresAt?.ToString("O"));
+            activeDispatchExpiresAt?.ToString("O"),
+            lastDispatchClosedAt?.ToString("O"));
 
     private static NpsDispatchTargetView ToTargetView(DispatchTarget target)
         => new(

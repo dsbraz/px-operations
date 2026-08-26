@@ -98,6 +98,33 @@ public sealed class NpsCollectionBoardTests : TestContext
     }
 
     /// <summary>
+    /// F2: o terceiro temporal, "sem link há Xd". A conta começa no fechamento
+    /// do último disparo — dado que existe. Projeto que NUNCA teve link não
+    /// entra aqui: exigiria uma data de entrada na carteira que o domínio não
+    /// guarda, e inventá-la seria mostrar um número que parece dado.
+    /// </summary>
+    [Fact]
+    public void A_project_whose_last_link_was_closed_should_show_its_age()
+    {
+        var cut = Render([Project(1, "Fechou", activeDispatches: 0, lastLinkClosedDaysAgo: 8)]);
+
+        var chip = cut.FindAll(".kanban__col")[0].QuerySelector(".kcard__timing")!;
+        Assert.Contains("Sem link há 8d", chip.TextContent);
+        Assert.Contains("kcard__timing--age", chip.ClassName);
+        // Neutro: quem está sem link não tem prazo correndo, tem contexto.
+        Assert.DoesNotContain("is-warn", chip.ClassName);
+        Assert.DoesNotContain("is-danger", chip.ClassName);
+    }
+
+    [Fact]
+    public void A_project_that_never_had_a_link_should_show_no_age()
+    {
+        var cut = Render([Project(1, "Nunca teve", activeDispatches: 0)]);
+
+        Assert.Null(cut.FindAll(".kanban__col")[0].QuerySelector(".kcard__timing"));
+    }
+
+    /// <summary>
     /// F6: a volta atrás é parte do fluxo — o card dispensado traz a ação de
     /// reativar nele mesmo, não escondida num menu.
     /// </summary>
@@ -142,7 +169,8 @@ public sealed class NpsCollectionBoardTests : TestContext
 
     private static NpsProjectResponse Project(
         int id, string name, int activeDispatches,
-        int responses = 0, int? expiresInDays = null, int? lastResponseDaysAgo = null, string? dismissed = null)
+        int responses = 0, int? expiresInDays = null, int? lastResponseDaysAgo = null, string? dismissed = null,
+        int? lastLinkClosedDaysAgo = null)
         => new()
         {
             Id = id,
@@ -159,6 +187,9 @@ public sealed class NpsCollectionBoardTests : TestContext
                 ? null
                 : DateTimeOffset.UtcNow.AddDays(expiresInDays.Value).ToString("O"),
             IsDismissed = dismissed is not null,
-            DismissalReason = dismissed
+            DismissalReason = dismissed,
+            LastDispatchClosedAt = lastLinkClosedDaysAgo is null
+                ? null
+                : DateTimeOffset.UtcNow.AddDays(-lastLinkClosedDaysAgo.Value).ToString("O")
         };
 }

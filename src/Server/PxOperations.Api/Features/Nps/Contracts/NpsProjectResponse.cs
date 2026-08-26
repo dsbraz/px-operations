@@ -17,4 +17,5 @@ public sealed record NpsProjectResponse(
     string CollectionStatus,
     bool IsDismissed,
     string? DismissalReason,
-    string? ActiveDispatchExpiresAt);
+    string? ActiveDispatchExpiresAt,
+    string? LastDispatchClosedAt);

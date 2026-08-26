@@ -3352,7 +3352,8 @@
           "collectionStatus",
           "isDismissed",
           "dismissalReason",
-          "activeDispatchExpiresAt"
+          "activeDispatchExpiresAt",
+          "lastDispatchClosedAt"
         ],
         "type": "object",
         "properties": {
@@ -3453,6 +3454,12 @@
             ]
           },
           "activeDispatchExpiresAt": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lastDispatchClosedAt": {
             "type": [
               "null",
               "string"

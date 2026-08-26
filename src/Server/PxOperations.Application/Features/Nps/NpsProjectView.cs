@@ -22,4 +22,9 @@ public sealed record NpsProjectView(
     string? DismissalReason,
     // B12: o quadro mostra o prazo do link aberto no card; sem isto não há como
     // trocar "expira em 3d" por "expirado há Xd".
-    string? ActiveDispatchExpiresAt);
+    string? ActiveDispatchExpiresAt,
+    // F2: fechamento do último disparo, para o card na coluna "Sem link" dizer
+    // há quanto tempo está assim. Só existe para quem JÁ teve link — projeto
+    // que nunca teve exigiria uma data de entrada na carteira que o domínio
+    // não guarda.
+    string? LastDispatchClosedAt);

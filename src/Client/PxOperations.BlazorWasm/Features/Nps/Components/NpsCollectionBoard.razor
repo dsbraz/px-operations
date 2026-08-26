@@ -67,6 +67,14 @@
                                             <path d="M7 2v4.17a2 2 0 0 0 .59 1.41L12 12l4.41-4.42A2 2 0 0 0 17 6.17V2" />
                                         </svg>
                                     }
+                                    else if (timing.Kind == "age")
+                                    {
+                                        @* Relógio: quanto tempo o projeto está sem link. *@
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+                                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+                                        </svg>
+                                    }
                                     else
                                     {
                                         @* Histórico: olha para trás, é contexto. *@
@@ -205,8 +213,16 @@
             return days == double.MaxValue ? null : new($"há {(int)days}d", "", "recency");
         }
 
-        // "Sem link há Xd" precisaria da data de criação do projeto, que a API não
-        // expõe. Inventar a idade seria mostrar dado que o servidor não tem.
+        // F2, terceiro temporal. A conta começa no fechamento do último disparo,
+        // que é dado real. Projeto que NUNCA teve link fica sem chip: a idade
+        // pediria uma data de entrada na carteira que o domínio não guarda, e
+        // inventá-la seria mostrar um número que só parece dado.
+        if (column == "sem-link" && DateTimeOffset.TryParse(project.LastDispatchClosedAt, out var closed))
+        {
+            var days = (int)(Now - closed).TotalDays;
+            return new($"Sem link há {days}d", "", "age");
+        }
+
         return null;
     }
 

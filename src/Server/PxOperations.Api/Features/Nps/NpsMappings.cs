@@ -11,7 +11,7 @@ public static class NpsMappings
         => new(view.TotalProjects, view.OverdueProjects, view.ActiveDispatches, view.TotalResponses, view.OfficialNps, view.AverageScore, view.Detractors, view.Passives, view.Promoters);
 
     public static NpsProjectResponse ToResponse(NpsProjectView view)
-        => new(view.Id, view.Name, view.Client, view.Dc, view.DeliveryManager, view.ContactsCount, view.ActiveDispatches, view.LinkTargetsCount, view.AnsweredLinkTargetsCount, view.ResponsesCount, view.LastResponseAt, view.LastNps, view.IsOverdue, view.CollectionStatus, view.IsDismissed, view.DismissalReason, view.ActiveDispatchExpiresAt);
+        => new(view.Id, view.Name, view.Client, view.Dc, view.DeliveryManager, view.ContactsCount, view.ActiveDispatches, view.LinkTargetsCount, view.AnsweredLinkTargetsCount, view.ResponsesCount, view.LastResponseAt, view.LastNps, view.IsOverdue, view.CollectionStatus, view.IsDismissed, view.DismissalReason, view.ActiveDispatchExpiresAt, view.LastDispatchClosedAt);
 
     public static NpsProjectDetailResponse ToResponse(NpsProjectDetailView view)
         => new(ToResponse(view.Project), view.Contacts.Select(ToResponse).ToList(), view.Dispatches.Select(ToResponse).ToList(), view.RecentResponses.Select(ToResponse).ToList());
