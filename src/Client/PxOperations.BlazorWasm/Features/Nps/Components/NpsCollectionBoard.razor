@@ -52,7 +52,32 @@
                             <span>@project.ResponsesCount @(project.ResponsesCount == 1 ? "resposta" : "respostas")</span>
                             @if (Timing(project, column.Slug) is { } timing)
                             {
-                                <span class="kcard__timing @timing.Modifier">@timing.Label</span>
+                                @* F2: o critério de aceite pede que prazo e recência sejam
+                                   distinguíveis à primeira vista, e cor sozinha não faz isso
+                                   — a recência é sempre neutra, então dois chips cinzas
+                                   ficariam idênticos. O ícone é o que separa os dois. *@
+                                <span class="kcard__timing kcard__timing--@timing.Kind @timing.Modifier">
+                                    @if (timing.Kind == "deadline")
+                                    {
+                                        @* Ampulheta: olha para frente, é acionável. *@
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+                                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M5 22h14" /><path d="M5 2h14" />
+                                            <path d="M17 22v-4.17a2 2 0 0 0-.59-1.41L12 12l-4.41 4.42A2 2 0 0 0 7 17.83V22" />
+                                            <path d="M7 2v4.17a2 2 0 0 0 .59 1.41L12 12l4.41-4.42A2 2 0 0 0 17 6.17V2" />
+                                        </svg>
+                                    }
+                                    else
+                                    {
+                                        @* Histórico: olha para trás, é contexto. *@
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+                                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                                            <path d="M3 3v5h5" /><path d="M12 7v5l4 2" />
+                                        </svg>
+                                    }
+                                    <span>@timing.Label</span>
+                                </span>
                             }
                         </div>
 
@@ -167,17 +192,17 @@
             if (left <= TimeSpan.Zero)
             {
                 var days = (int)(-left).TotalDays;
-                return new(days >= 1 ? $"Link expirado há {days}d" : "Link expirado", "is-danger");
+                return new(days >= 1 ? $"Link expirado há {days}d" : "Link expirado", "is-danger", "deadline");
             }
 
             var remaining = (int)Math.Ceiling(left.TotalDays);
-            return new($"Expira em {remaining}d", remaining <= DeadlineWarningDays ? "is-warn" : "");
+            return new($"Expira em {remaining}d", remaining <= DeadlineWarningDays ? "is-warn" : "", "deadline");
         }
 
         if (column is "recoleta" or "em-dia")
         {
             var days = DaysSinceLastResponse(project);
-            return days == double.MaxValue ? null : new($"há {(int)days}d", "");
+            return days == double.MaxValue ? null : new($"há {(int)days}d", "", "recency");
         }
 
         // "Sem link há Xd" precisaria da data de criação do projeto, que a API não
@@ -193,5 +218,5 @@
         IReadOnlyList<NpsProjectResponse> Projects,
         string? Action);
 
-    private sealed record TimingChip(string Label, string Modifier);
+    private sealed record TimingChip(string Label, string Modifier, string Kind);
 }

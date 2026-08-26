@@ -71,6 +71,21 @@
     color: var(--color-text-muted);
 }
 
+.kcard__timing {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+/* currentColor para o ícone seguir o estado do chip — neutro, âmbar ou
+   vermelho — nos dois temas, sem uma regra de cor por variante. */
+.kcard__timing svg {
+    width: 13px;
+    height: 13px;
+    flex: none;
+}
+
 /* Só o prazo pode virar badge de alarme; a recência é sempre texto discreto. */
 .kcard__timing.is-warn,
 .kcard__timing.is-danger {

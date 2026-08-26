@@ -70,6 +70,34 @@ public sealed class NpsCollectionBoardTests : TestContext
     }
 
     /// <summary>
+    /// F2, critério de aceite: "prazo e recência são distinguíveis à primeira
+    /// vista (ícone e tratamento diferentes)". Cor sozinha não cumpre — a
+    /// recência é sempre neutra, então um prazo folgado e uma recência ficariam
+    /// dois chips cinzas idênticos. O ícone é o que separa.
+    /// </summary>
+    [Fact]
+    public void Deadline_and_recency_should_carry_different_icons()
+    {
+        var cut = Render([
+            Project(1, "Folgado", activeDispatches: 1, expiresInDays: 14),
+            Project(2, "Recoleta", activeDispatches: 1, responses: 1, lastResponseDaysAgo: 60)
+        ]);
+
+        var prazo = cut.FindAll(".kanban__col")[1].QuerySelector(".kcard__timing")!;
+        var recencia = cut.FindAll(".kanban__col")[2].QuerySelector(".kcard__timing")!;
+
+        Assert.Contains("kcard__timing--deadline", prazo.ClassName);
+        Assert.Contains("kcard__timing--recency", recencia.ClassName);
+
+        // Ambos neutros neste recorte: sem o ícone seriam indistinguíveis.
+        Assert.DoesNotContain("is-warn", prazo.ClassName);
+        Assert.DoesNotContain("is-warn", recencia.ClassName);
+        Assert.NotEqual(
+            prazo.QuerySelector("svg")!.InnerHtml,
+            recencia.QuerySelector("svg")!.InnerHtml);
+    }
+
+    /// <summary>
     /// F6: a volta atrás é parte do fluxo — o card dispensado traz a ação de
     /// reativar nele mesmo, não escondida num menu.
     /// </summary>
