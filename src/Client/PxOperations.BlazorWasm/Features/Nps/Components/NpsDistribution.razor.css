@@ -1,7 +1,7 @@
 .dist {
     padding: 24px;
-    background: var(--brq-color-surface, #fff);
-    border: 1px solid var(--brq-color-border, #d9d9d9);
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
     border-radius: 16px;
 }
 
@@ -9,19 +9,19 @@
 
 .dist__head h2 { margin: 0; font-size: 18px; }
 
-.dist__sub { margin: 4px 0 0; font-size: 13px; color: var(--brq-color-text-muted, #4a4a4a); }
+.dist__sub { margin: 4px 0 0; font-size: 13px; color: var(--color-text-muted); }
 
 .dist__bar {
     display: flex;
     overflow: hidden;
     height: 10px;
     border-radius: 9999px;
-    background: var(--brq-color-surface-muted, #fafafa);
+    background: var(--color-surface);
 }
 
-.dist__seg--danger { background: var(--brq-color-danger, #dc2626); }
-.dist__seg--warn { background: var(--brq-color-warn, #b45309); }
-.dist__seg--good { background: var(--brq-color-success, #2ba66a); }
+.dist__seg--danger { background: var(--color-danger); }
+.dist__seg--warn { background: var(--color-warn); }
+.dist__seg--good { background: var(--color-good); }
 
 .dist__legend { margin: 20px 0 0; padding: 0; list-style: none; }
 
@@ -33,23 +33,23 @@
     padding: 10px 0;
 }
 
-.dist__item + .dist__item { border-top: 1px solid var(--brq-color-border-subtle, #ededed); }
+.dist__item + .dist__item { border-top: 1px solid var(--color-border); }
 
 .dist__dot { width: 10px; height: 10px; border-radius: 50%; }
-.dist__dot--danger { background: var(--brq-color-danger, #dc2626); }
-.dist__dot--warn { background: var(--brq-color-warn, #b45309); }
-.dist__dot--good { background: var(--brq-color-success, #2ba66a); }
+.dist__dot--danger { background: var(--color-danger); }
+.dist__dot--warn { background: var(--color-warn); }
+.dist__dot--good { background: var(--color-good); }
 
 .dist__count { font-weight: 600; }
 
-.dist__pct { min-width: 56px; text-align: right; color: var(--brq-color-text-muted, #4a4a4a); }
+.dist__pct { min-width: 56px; text-align: right; color: var(--color-text-muted); }
 
 .dist__formula {
     margin: 16px 0 0;
     padding-top: 16px;
-    border-top: 1px solid var(--brq-color-border-subtle, #ededed);
+    border-top: 1px solid var(--color-border);
     font-size: 13px;
-    color: var(--brq-color-text-muted, #4a4a4a);
+    color: var(--color-text-muted);
 }
 
-.dist__empty { margin: 0; color: var(--brq-color-text-muted, #4a4a4a); }
+.dist__empty { margin: 0; color: var(--color-text-muted); }

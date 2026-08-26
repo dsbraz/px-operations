@@ -7,39 +7,39 @@
 
 .kanban__col {
     padding: 16px;
-    background: var(--brq-color-surface-muted, #fafafa);
-    border: 1px solid var(--brq-color-border, #d9d9d9);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: 16px;
 }
 
 .kanban__col-head { display: flex; align-items: center; gap: 8px; }
 
 .kanban__dot { width: 8px; height: 8px; border-radius: 50%; }
-.kanban__dot--neutral { background: var(--brq-color-text-muted, #4a4a4a); }
-.kanban__dot--info { background: var(--brq-color-accent, #4b148c); }
-.kanban__dot--danger { background: var(--brq-color-danger, #dc2626); }
-.kanban__dot--good { background: var(--brq-color-success, #2ba66a); }
+.kanban__dot--neutral { background: var(--color-text-muted); }
+.kanban__dot--info { background: var(--color-accent); }
+.kanban__dot--danger { background: var(--color-danger); }
+.kanban__dot--good { background: var(--color-good); }
 
 .kanban__col-title { font-weight: 600; font-size: 14px; }
 
-.kanban__count { margin-left: auto; font-size: 13px; color: var(--brq-color-text-muted, #4a4a4a); }
+.kanban__count { margin-left: auto; font-size: 13px; color: var(--color-text-muted); }
 
-.kanban__tip { margin: 6px 0 14px; font-size: 12px; color: var(--brq-color-text-muted, #4a4a4a); }
+.kanban__tip { margin: 6px 0 14px; font-size: 12px; color: var(--color-text-muted); }
 
 .kanban__cards { display: flex; flex-direction: column; gap: 10px; }
 
-.kanban__empty { margin: 0; padding: 12px 0; font-size: 13px; color: var(--brq-color-text-muted, #4a4a4a); }
+.kanban__empty { margin: 0; padding: 12px 0; font-size: 13px; color: var(--color-text-muted); }
 
 .kcard {
     position: relative;
     padding: 14px;
-    background: var(--brq-color-surface, #fff);
-    border: 1px solid var(--brq-color-border, #d9d9d9);
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
     border-radius: 12px;
 }
 
 /* D8: vencido é estado dentro da coluna, sinalizado na borda. */
-.kcard.is-expired { border-color: var(--brq-color-danger, #dc2626); }
+.kcard.is-expired { border-color: var(--color-danger); }
 
 .kcard.is-dismissed { opacity: 0.72; }
 
@@ -60,7 +60,7 @@
 
 .kcard__title:hover { text-decoration: underline; }
 
-.kcard__client { margin: 2px 0 10px; font-size: 12px; color: var(--brq-color-text-muted, #4a4a4a); }
+.kcard__client { margin: 2px 0 10px; font-size: 12px; color: var(--color-text-muted); }
 
 .kcard__meta {
     display: flex;
@@ -68,7 +68,7 @@
     justify-content: space-between;
     gap: 8px;
     font-size: 12px;
-    color: var(--brq-color-text-muted, #4a4a4a);
+    color: var(--color-text-muted);
 }
 
 /* Só o prazo pode virar badge de alarme; a recência é sempre texto discreto. */
@@ -80,13 +80,13 @@
 }
 
 .kcard__timing.is-warn {
-    color: var(--brq-color-warn, #b45309);
-    background: var(--brq-color-warn-surface, rgba(180, 83, 9, 0.1));
+    color: var(--color-warn);
+    background: var(--color-warn-bg);
 }
 
 .kcard__timing.is-danger {
-    color: var(--brq-color-danger, #dc2626);
-    background: var(--brq-color-danger-surface, rgba(220, 38, 38, 0.08));
+    color: var(--color-danger);
+    background: var(--color-danger-bg);
 }
 
 .kcard__foot {
@@ -96,15 +96,15 @@
     gap: 8px;
     margin-top: 12px;
     padding-top: 12px;
-    border-top: 1px solid var(--brq-color-border-subtle, #ededed);
+    border-top: 1px solid var(--color-border);
 }
 
-.kcard__dm { font-size: 12px; color: var(--brq-color-text-muted, #4a4a4a); }
+.kcard__dm { font-size: 12px; color: var(--color-text-muted); }
 
 .kcard__dismissed {
     margin: 10px 0 0;
     font-size: 12px;
-    color: var(--brq-color-warn, #b45309);
+    color: var(--color-warn);
 }
 
 @media (max-width: 1100px) {
@@ -122,14 +122,14 @@
     padding: 0;
     font-size: 16px;
     line-height: 1;
-    color: var(--brq-color-text-muted, #4a4a4a);
+    color: var(--color-text-muted);
     background: none;
     border: 0;
     border-radius: 6px;
     cursor: pointer;
 }
 
-.kcard__kebab:hover { background: var(--brq-color-surface-muted, #fafafa); }
+.kcard__kebab:hover { background: var(--color-surface); }
 
 .kcard__menu {
     position: absolute;
@@ -138,10 +138,10 @@
     z-index: 2;
     min-width: 170px;
     padding: 4px;
-    background: var(--brq-color-surface, #fff);
-    border: 1px solid var(--brq-color-border, #d9d9d9);
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
     border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--shadow-lg);
 }
 
 .kcard__menu-item {
@@ -151,11 +151,11 @@
     font: inherit;
     font-size: 13px;
     text-align: left;
-    color: var(--brq-color-text, #000);
+    color: var(--color-text);
     background: none;
     border: 0;
     border-radius: 6px;
     cursor: pointer;
 }
 
-.kcard__menu-item:hover { background: var(--brq-color-surface-muted, #fafafa); }
+.kcard__menu-item:hover { background: var(--color-surface); }
