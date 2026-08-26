@@ -11,6 +11,7 @@ public interface INpsRepository
     Task<bool> ContactBelongsToProjectAsync(int projectId, int contactId, CancellationToken ct);
     Task<NpsDashboardView> GetDashboardAsync(NpsFilter filter, CancellationToken ct);
     Task<IReadOnlyList<NpsProjectView>> ListProjectsAsync(NpsFilter filter, CancellationToken ct);
+    Task<NpsFilterOptionsView> GetFilterOptionsAsync(CancellationToken ct);
     Task<NpsProjectDetailView?> GetProjectAsync(int projectId, CancellationToken ct);
     Task<IReadOnlyList<NpsContactView>> ListContactsAsync(int projectId, bool includeArchived, CancellationToken ct);
     Task<Contact?> GetContactAsync(int id, CancellationToken ct);

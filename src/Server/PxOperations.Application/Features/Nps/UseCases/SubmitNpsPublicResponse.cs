@@ -70,7 +70,7 @@ public sealed class SubmitNpsPublicResponseUseCase(INpsRepository repository, IU
             throw new InvalidOperationException("This NPS link has already been answered.", ex);
         }
 
-        return (await repository.ListResponsesAsync(target.DispatchId, new NpsFilter(null, null, null, null, null, null, null, null), ct))
+        return (await repository.ListResponsesAsync(target.DispatchId, NpsFilter.None, ct))
             .Single(r => r.Id == response.Id);
     }
 }

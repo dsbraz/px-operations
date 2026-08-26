@@ -57,6 +57,7 @@ public static class DependencyInjection
         services.AddScoped<INpsRepository, NpsRepository>();
         services.AddScoped<GetNpsDashboardUseCase>();
         services.AddScoped<ListNpsProjectsUseCase>();
+        services.AddScoped<GetNpsFilterOptionsUseCase>();
         services.AddScoped<GetNpsProjectUseCase>();
         services.AddScoped<ListNpsContactsUseCase>();
         services.AddScoped<CreateNpsContactUseCase>();

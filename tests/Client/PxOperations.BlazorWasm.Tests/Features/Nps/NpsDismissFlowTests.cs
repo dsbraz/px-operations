@@ -81,6 +81,6 @@ public sealed class NpsDismissFlowTests : TestContext
     """;
 
     private static string ProjectsJson() => """
-    [{"id":1,"name":"Projeto NPS","client":"Cliente A","dc":"DC1","deliveryManager":"Maria","contactsCount":0,"activeDispatches":1,"linkTargetsCount":1,"answeredLinkTargetsCount":0,"responsesCount":0,"lastResponseAt":null,"lastNps":null,"isOverdue":false,"isDismissed":false,"dismissalReason":null,"activeDispatchExpiresAt":"2026-09-15T00:00:00Z"}]
+    [{"id":1,"name":"Projeto NPS","client":"Cliente A","dc":"DC1","deliveryManager":"Maria","contactsCount":0,"activeDispatches":1,"linkTargetsCount":1,"answeredLinkTargetsCount":0,"responsesCount":0,"lastResponseAt":null,"lastNps":null,"isOverdue":false,"collectionStatus":"Pendente","isDismissed":false,"dismissalReason":null,"activeDispatchExpiresAt":"2026-09-15T00:00:00Z"}]
     """;
 }

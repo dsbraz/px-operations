@@ -51,6 +51,8 @@ internal static class ProjectsTestHelpers
         /// </summary>
         public List<string> RequestBodies { get; } = [];
 
+        private const string FilterOptionsJson = "{\"companies\":[],\"deliveryManagers\":[]}";
+
         public void AddResponse(HttpMethod method, string content, HttpStatusCode status)
             => _responses.Enqueue((method, content, status));
 
@@ -60,6 +62,21 @@ internal static class ProjectsTestHelpers
         {
             RequestUris.Add(request.RequestUri);
             RequestBodies.Add(request.Content?.ReadAsStringAsync(cancellationToken).GetAwaiter().GetResult() ?? "");
+
+            // As opções de faceta são carregadas uma vez, na inicialização, e
+            // nenhum teste fala sobre elas. Fora da fila de propósito: enfileirar
+            // essa resposta em todo teste deslocaria as demais e faria a fila
+            // descrever a infraestrutura em vez do fluxo do usuário.
+            if (request.RequestUri?.AbsolutePath == "/api/nps/filter-options")
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        FilterOptionsJson,
+                        Encoding.UTF8,
+                        "application/json")
+                });
+            }
 
             if (_responses.TryDequeue(out var r))
             {

@@ -843,24 +843,53 @@
             }
           },
           {
+            "name": "company",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
             "name": "dc",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           {
             "name": "deliveryManager",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           {
             "name": "projectType",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           {
@@ -893,7 +922,10 @@
             "name": "classification",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           }
         ],
@@ -936,21 +968,64 @@
             }
           },
           {
+            "name": "company",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
             "name": "dc",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           {
             "name": "deliveryManager",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           {
             "name": "projectType",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
             "in": "query",
             "schema": {
               "type": "string"
@@ -990,6 +1065,36 @@
                   "items": {
                     "$ref": "#/components/schemas/NpsProjectResponse"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/nps/filter-options": {
+      "get": {
+        "tags": [
+          "Nps"
+        ],
+        "operationId": "GetFilterOptions",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/NpsFilterOptionsResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NpsFilterOptionsResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NpsFilterOptionsResponse"
                 }
               }
             }
@@ -1633,24 +1738,53 @@
             }
           },
           {
+            "name": "company",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
             "name": "dc",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           {
             "name": "deliveryManager",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           {
             "name": "projectType",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           {
@@ -1683,7 +1817,10 @@
             "name": "classification",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           }
         ],
@@ -3124,6 +3261,27 @@
           }
         }
       },
+      "NpsFilterOptionsResponse": {
+        "required": [
+          "companies",
+          "deliveryManagers"
+        ],
+        "type": "object",
+        "properties": {
+          "companies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "deliveryManagers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "NpsProjectDetailResponse": {
         "required": [
           "project",
@@ -3171,6 +3329,7 @@
           "lastResponseAt",
           "lastNps",
           "isOverdue",
+          "collectionStatus",
           "isDismissed",
           "dismissalReason",
           "activeDispatchExpiresAt"
@@ -3260,6 +3419,9 @@
           },
           "isOverdue": {
             "type": "boolean"
+          },
+          "collectionStatus": {
+            "type": "string"
           },
           "isDismissed": {
             "type": "boolean"

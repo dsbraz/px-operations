@@ -170,12 +170,12 @@ public sealed class NpsPageTests : TestContext
     """;
 
     private static string ProjectsJson() => """
-    [{"id":1,"name":"Projeto NPS","client":"Cliente A","dc":"DC1","deliveryManager":"Maria","contactsCount":1,"activeDispatches":0,"linkTargetsCount":0,"answeredLinkTargetsCount":0,"responsesCount":0,"lastResponseAt":null,"lastNps":null,"isOverdue":true,"isDismissed":false,"dismissalReason":null,"activeDispatchExpiresAt":null}]
+    [{"id":1,"name":"Projeto NPS","client":"Cliente A","dc":"DC1","deliveryManager":"Maria","contactsCount":1,"activeDispatches":0,"linkTargetsCount":0,"answeredLinkTargetsCount":0,"responsesCount":0,"lastResponseAt":null,"lastNps":null,"isOverdue":true,"collectionStatus":"Pendente","isDismissed":false,"dismissalReason":null,"activeDispatchExpiresAt":null}]
     """;
 
     private static string ProjectDetailJson() => """
     {
-      "project":{"id":1,"name":"Projeto NPS","client":"Cliente A","dc":"DC1","deliveryManager":"Maria","contactsCount":1,"activeDispatches":1,"linkTargetsCount":1,"answeredLinkTargetsCount":1,"responsesCount":1,"lastResponseAt":null,"lastNps":50.0,"isOverdue":false,"isDismissed":false,"dismissalReason":null,"activeDispatchExpiresAt":null},
+      "project":{"id":1,"name":"Projeto NPS","client":"Cliente A","dc":"DC1","deliveryManager":"Maria","contactsCount":1,"activeDispatches":1,"linkTargetsCount":1,"answeredLinkTargetsCount":1,"responsesCount":1,"lastResponseAt":null,"lastNps":50.0,"isOverdue":false,"collectionStatus":"Pendente","isDismissed":false,"dismissalReason":null,"activeDispatchExpiresAt":null},
       "contacts":[],
       "dispatches":[{"id":20,"projectId":1,"projectName":"Projeto NPS","periodStart":"2026-06-01","periodEnd":"2026-06-30","format":"Simplificado","language":"Português","status":"Aberto","createdBy":"ops","createdAt":"2026-06-01T00:00:00Z","closedAt":null,"expiresAt":"2026-06-21T00:00:00Z","isExpired":false,"targetsCount":1,"responsesCount":1}],
       "recentResponses":[{"id":30,"projectId":1,"projectName":"Projeto NPS","dispatchId":20,"targetId":40,"contactId":null,"contactName":null,"contactEmail":null,"score":9,"classification":"Promotor","businessValue":5,"schedule":4,"quality":5,"communication":5,"tags":null,"comment":"Bom","respondentName":"Cliente","respondentEmail":"cliente@example.com","submittedAt":"2026-06-02T00:00:00Z"}]

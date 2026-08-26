@@ -22,10 +22,26 @@ public partial class NpsPage : ComponentBase, IDisposable
     private bool showCreateLinkModal;
     private bool showDetailModal;
 
-    private string filterDc = "";
-    private string filterProjectType = "";
+    // D11: faceta de lista guarda um CONJUNTO. Marcar dois valores filtra pela
+    // união deles; entre facetas diferentes vale a interseção, que o servidor
+    // já produz ao aplicar as cláusulas em AND.
+    private readonly HashSet<string> filterCompanies = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> filterDcs = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> filterDeliveryManagers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> filterProjectTypes = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> filterStatuses = new(StringComparer.OrdinalIgnoreCase);
     private string filterSearch = "";
     private bool includeDismissed;
+
+    // D11: período é INTERVALO, então é single — marcar "30 dias" e "6 meses"
+    // ao mesmo tempo não quer dizer nada.
+    private string filterPeriod = "";
+
+    /// <summary>
+    /// Empresa e DM são texto livre: as opções vêm do servidor, não da lista
+    /// exibida, que já chega filtrada.
+    /// </summary>
+    private NpsFilterOptionsResponse? filterOptions;
 
     private CancellationTokenSource? searchDebounce;
 
@@ -51,6 +67,23 @@ public partial class NpsPage : ComponentBase, IDisposable
 
     private static readonly string[] DcOptions = ["DC1", "DC2", "DC3", "DC4", "DC5", "DC6"];
     private static readonly string[] ProjectTypeOptions = ["Squad", "Escopo Fechado", "Alocação"];
+    private static readonly string[] StatusOptions = ["Respondido", "Link gerado", "Pendente"];
+
+    /// <summary>
+    /// F1: períodos prontos mais intervalo livre. A régua é a data da RESPOSTA,
+    /// por isso a faceta não é oferecida na Coleta: lá esvaziaria justamente as
+    /// colunas de quem ainda não respondeu, que é o trabalho da tela.
+    /// </summary>
+    private static readonly (string Value, string Label)[] PeriodOptions =
+    [
+        ("30d", "Últimos 30 dias"),
+        ("90d", "Últimos 90 dias"),
+        ("6m", "Últimos 6 meses"),
+        ("12m", "Últimos 12 meses")
+    ];
+
+    private bool OffersDateFacet => ActiveTab != TabCollection;
+    private bool OffersStatusFacet => ActiveTab == TabResults;
 
     // O protótipo abre em Coleta: é a tela de trabalho do operador.
     private string ActiveTab => Tab switch
@@ -66,13 +99,30 @@ public partial class NpsPage : ComponentBase, IDisposable
     {
         get
         {
+            // F1: um chip por FACETA, juntando os valores — dois chips "DC"
+            // lado a lado não diriam se é união ou interseção.
             var chips = new List<NpsFilterBar.NpsFilterChip>();
-            if (!string.IsNullOrWhiteSpace(filterDc)) chips.Add(new("DC", filterDc, filterDc));
-            if (!string.IsNullOrWhiteSpace(filterProjectType)) chips.Add(new("Tipo", filterProjectType, filterProjectType));
+            AddFacetChip(chips, "Empresa", filterCompanies);
+            AddFacetChip(chips, "DC", filterDcs);
+            AddFacetChip(chips, "Tipo", filterProjectTypes);
+            AddFacetChip(chips, "DM", filterDeliveryManagers);
+            if (OffersStatusFacet) AddFacetChip(chips, "Status", filterStatuses);
+            if (OffersDateFacet && PeriodLabel is { } period) chips.Add(new("Período", period, "period"));
             if (includeDismissed) chips.Add(new("Dispensados", "Mostrando", "dismissed"));
             return chips;
         }
     }
+    private static void AddFacetChip(List<NpsFilterBar.NpsFilterChip> chips, string facet, IReadOnlyCollection<string> values)
+    {
+        if (values.Count > 0)
+        {
+            chips.Add(new(facet, string.Join(", ", values), facet));
+        }
+    }
+
+    private string? PeriodLabel
+        => PeriodOptions.FirstOrDefault(o => o.Value == filterPeriod).Label;
+
     /// <summary>
     /// Passo 2 do F3: quando existe, o modal deixa de perguntar e passa a
     /// entregar — URL, validade em destaque e mensagem pronta para colar.
@@ -81,11 +131,22 @@ public partial class NpsPage : ComponentBase, IDisposable
 
     private NpsProjectResponse? dismissTarget;
 
-
     private string ExportHref => BuildExportUrl();
 
     protected override async Task OnInitializedAsync()
     {
+        // As opções não dependem do filtro corrente, então uma carga só basta.
+        // Falhar aqui não pode derrubar a tela: sem elas as facetas de texto
+        // livre ficam vazias, o resto segue funcionando.
+        try
+        {
+            filterOptions = await NpsClient.GetFilterOptionsAsync();
+        }
+        catch (Exception)
+        {
+            filterOptions = null;
+        }
+
         await RefreshAsync();
     }
 
@@ -115,15 +176,37 @@ public partial class NpsPage : ComponentBase, IDisposable
         await RefreshAsync();
     }
 
-    private async Task ToggleDc(string dc, ChangeEventArgs args)
+    private Task ToggleCompany(string value, ChangeEventArgs args) => ToggleFacet(filterCompanies, value, args);
+
+    private Task ToggleDc(string value, ChangeEventArgs args) => ToggleFacet(filterDcs, value, args);
+
+    private Task ToggleProjectType(string value, ChangeEventArgs args) => ToggleFacet(filterProjectTypes, value, args);
+
+    private Task ToggleDeliveryManager(string value, ChangeEventArgs args) => ToggleFacet(filterDeliveryManagers, value, args);
+
+    private Task ToggleStatus(string value, ChangeEventArgs args) => ToggleFacet(filterStatuses, value, args);
+
+    private async Task ToggleFacet(HashSet<string> facet, string value, ChangeEventArgs args)
     {
-        filterDc = IsChecked(args) ? dc : string.Empty;
+        if (IsChecked(args))
+        {
+            facet.Add(value);
+        }
+        else
+        {
+            facet.Remove(value);
+        }
+
         await RefreshAsync();
     }
 
-    private async Task ToggleProjectType(string type, ChangeEventArgs args)
+    /// <summary>
+    /// Período é radio, não checkbox: marcar o que já está marcado desliga, que
+    /// é como se limpa um intervalo sem um botão só para isso.
+    /// </summary>
+    private async Task SelectPeriod(string value)
     {
-        filterProjectType = IsChecked(args) ? type : string.Empty;
+        filterPeriod = filterPeriod == value ? string.Empty : value;
         await RefreshAsync();
     }
 
@@ -135,9 +218,16 @@ public partial class NpsPage : ComponentBase, IDisposable
 
     private async Task RemoveChip(NpsFilterBar.NpsFilterChip chip)
     {
-        if (chip.Value == "dismissed") includeDismissed = false;
-        else if (chip.Facet == "DC") filterDc = string.Empty;
-        else if (chip.Facet == "Tipo") filterProjectType = string.Empty;
+        switch (chip.Value)
+        {
+            case "dismissed": includeDismissed = false; break;
+            case "period": filterPeriod = string.Empty; break;
+            case "Empresa": filterCompanies.Clear(); break;
+            case "DC": filterDcs.Clear(); break;
+            case "Tipo": filterProjectTypes.Clear(); break;
+            case "DM": filterDeliveryManagers.Clear(); break;
+            case "Status": filterStatuses.Clear(); break;
+        }
 
         await RefreshAsync();
     }
@@ -149,8 +239,12 @@ public partial class NpsPage : ComponentBase, IDisposable
     private async Task ClearFilters()
     {
         filterSearch = string.Empty;
-        filterDc = string.Empty;
-        filterProjectType = string.Empty;
+        filterPeriod = string.Empty;
+        filterCompanies.Clear();
+        filterDcs.Clear();
+        filterProjectTypes.Clear();
+        filterDeliveryManagers.Clear();
+        filterStatuses.Clear();
         includeDismissed = false;
         await RefreshAsync();
     }
@@ -337,12 +431,47 @@ public partial class NpsPage : ComponentBase, IDisposable
 
     private async Task LoadDashboardAndProjectsAsync()
     {
-        var dcFilter = string.IsNullOrWhiteSpace(filterDc) ? null : filterDc;
-        var projectTypeFilter = string.IsNullOrWhiteSpace(filterProjectType) ? null : filterProjectType;
         var search = string.IsNullOrWhiteSpace(filterSearch) ? null : filterSearch.Trim();
+        var (from, to) = PeriodRange();
+        // Status e período só valem onde a faceta é oferecida; carregados de
+        // outra aba, filtrariam por algo que não está na tela.
+        var statuses = OffersStatusFacet ? Facet(filterStatuses) : null;
 
-        dashboard = await NpsClient.GetDashboardAsync(search, dcFilter, null, projectTypeFilter, null, null, null, null);
-        projects = (await NpsClient.ListProjectsAsync(search, dcFilter, null, projectTypeFilter, includeDismissed)).ToList();
+        dashboard = await NpsClient.GetDashboardAsync(
+            search, Facet(filterCompanies), Facet(filterDcs), Facet(filterDeliveryManagers),
+            Facet(filterProjectTypes), statuses, null, from, to, null);
+
+        projects = (await NpsClient.ListProjectsAsync(
+            search, Facet(filterCompanies), Facet(filterDcs), Facet(filterDeliveryManagers),
+            Facet(filterProjectTypes), statuses, from, to, includeDismissed)).ToList();
+    }
+
+    /// <summary>Conjunto vazio é ausência de filtro, não filtro que não casa.</summary>
+    private static IEnumerable<string>? Facet(IReadOnlyCollection<string> values)
+        => values.Count == 0 ? null : values;
+
+    /// <summary>
+    /// O período vira intervalo aqui, no cliente: o servidor recebe as datas
+    /// resolvidas e não precisa saber o que "últimos 90 dias" quer dizer.
+    /// </summary>
+    private (string? From, string? To) PeriodRange()
+    {
+        if (!OffersDateFacet || string.IsNullOrEmpty(filterPeriod))
+        {
+            return (null, null);
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var from = filterPeriod switch
+        {
+            "30d" => today.AddDays(-30),
+            "90d" => today.AddDays(-90),
+            "6m" => today.AddMonths(-6),
+            "12m" => today.AddMonths(-12),
+            _ => (DateOnly?)null
+        };
+
+        return from is null ? (null, null) : (from.Value.ToString("yyyy-MM-dd"), today.ToString("yyyy-MM-dd"));
     }
 
     private void OpenCreateLinkModal()
@@ -373,22 +502,42 @@ public partial class NpsPage : ComponentBase, IDisposable
 
     private string BuildExportUrl()
     {
-        var query = new Dictionary<string, string?>
-        {
-            // O CSV tem de corresponder ao que está na tela: sem a busca e o
-            // toggle, exportar de uma lista filtrada baixava a carteira inteira.
-            // selectedProjectId fica de fora de propósito — ele sobrevive ao
-            // fechar o modal e não aparece na barra de filtros, então
-            // recortaria o arquivo sem nada indicando isso.
-            ["search"] = string.IsNullOrWhiteSpace(filterSearch) ? null : filterSearch.Trim(),
-            ["dc"] = string.IsNullOrWhiteSpace(filterDc) ? null : filterDc,
-            ["projectType"] = string.IsNullOrWhiteSpace(filterProjectType) ? null : filterProjectType
-        };
+        // O CSV tem de corresponder ao que está na tela: sem a busca e as
+        // facetas, exportar de uma lista filtrada baixava a carteira inteira.
+        // selectedProjectId fica de fora de propósito — ele sobrevive ao fechar
+        // o modal e não aparece na barra de filtros, então recortaria o arquivo
+        // sem nada indicando isso.
+        var (from, to) = PeriodRange();
+        var parts = new List<string>();
 
-        var values = query
-            .Where(item => !string.IsNullOrWhiteSpace(item.Value))
-            .Select(item => $"{Uri.EscapeDataString(item.Key)}={Uri.EscapeDataString(item.Value!)}");
-        var queryString = string.Join('&', values);
+        void AddSingle(string key, string? value)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                parts.Add($"{Uri.EscapeDataString(key)}={Uri.EscapeDataString(value)}");
+            }
+        }
+
+        // D11: faceta de lista vai como parâmetro REPETIDO, o mesmo formato que
+        // a API espera. Juntar com vírgula chegaria como um valor só.
+        void AddFacet(string key, IReadOnlyCollection<string> values)
+        {
+            foreach (var value in values)
+            {
+                parts.Add($"{Uri.EscapeDataString(key)}={Uri.EscapeDataString(value)}");
+            }
+        }
+
+        AddSingle("search", string.IsNullOrWhiteSpace(filterSearch) ? null : filterSearch.Trim());
+        AddFacet("company", filterCompanies);
+        AddFacet("dc", filterDcs);
+        AddFacet("deliveryManager", filterDeliveryManagers);
+        AddFacet("projectType", filterProjectTypes);
+        if (OffersStatusFacet) AddFacet("status", filterStatuses);
+        AddSingle("from", from);
+        AddSingle("to", to);
+
+        var queryString = string.Join('&', parts);
         var relativeUrl = string.IsNullOrEmpty(queryString)
             ? "api/nps/responses/export"
             : $"api/nps/responses/export?{queryString}";
@@ -442,23 +591,11 @@ public partial class NpsPage : ComponentBase, IDisposable
             _ => "passive"
         };
 
-    private static string ProjectStatusLabel(NpsProjectResponse project)
-    {
-        if (project.LastResponseAt is not null)
-        {
-            return "Respondido";
-        }
-
-        if (project.ActiveDispatches > 0)
-        {
-            return "Link gerado";
-        }
-
-        return project.IsOverdue ? "Pendente" : "Sem link";
-    }
-
+    // O rótulo vem pronto do servidor (B15): derivar aqui de novo criaria uma
+    // segunda definição da mesma regra, e foi assim que "Sem link" virou um
+    // estado que a tabela nunca chegava a mostrar.
     private static string ProjectStatusClass(NpsProjectResponse project)
-        => ProjectStatusLabel(project) switch
+        => project.CollectionStatus switch
         {
             "Respondido" => "ok",
             "Link gerado" => "info",

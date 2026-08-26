@@ -51,9 +51,13 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
 
     public async Task<NpsDashboardView> GetDashboardAsync(NpsFilter filter, CancellationToken ct)
     {
-        var projectIds = await ApplyProjectFilters(dbContext.Projects.AsQueryable(), filter)
-            .Select(p => p.Id)
-            .ToListAsync(ct);
+        // Com a faceta de status ativa os KPIs precisam ver a MESMA carteira que
+        // a tabela; como o status só existe na view montada, os ids vêm dela.
+        var projectIds = filter.CollectionStatuses is { Count: > 0 }
+            ? (await ListProjectsAsync(filter, ct)).Select(p => p.Id).ToList()
+            : await ApplyProjectFilters(dbContext.Projects.AsQueryable(), filter)
+                .Select(p => p.Id)
+                .ToListAsync(ct);
 
         var responses = await ApplyResponseFilters(dbContext.Set<SurveyResponse>().Where(r => projectIds.Contains(r.ProjectId)), filter)
             .ToListAsync(ct);
@@ -141,7 +145,7 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             projectIds = projects.Select(p => p.Id).ToList();
         }
 
-        return projects.Select(project => ToProjectView(
+        var views = projects.Select(project => ToProjectView(
             project,
             contacts.GetValueOrDefault(project.Id),
             activeDispatches.GetValueOrDefault(project.Id),
@@ -153,6 +157,36 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             overdue.Contains(project.Id),
             waivers.GetValueOrDefault(project.Id),
             dispatchExpiry.TryGetValue(project.Id, out var expiry) ? expiry : null)).ToList();
+
+        // O status sai de agregados que só existem depois da projeção, então a
+        // faceta filtra a view montada. A carteira é pequena; reescrever a
+        // derivação como predicado SQL manteria duas definições da mesma regra.
+        if (filter.CollectionStatuses is { Count: > 0 } statuses)
+        {
+            var wanted = statuses.Select(FormatCollectionStatus).ToHashSet();
+            views = views.Where(v => wanted.Contains(v.CollectionStatus)).ToList();
+        }
+
+        return views;
+    }
+
+    public async Task<NpsFilterOptionsView> GetFilterOptionsAsync(CancellationToken ct)
+    {
+        var companies = await dbContext.Projects
+            .Where(p => p.Client != null && p.Client != "")
+            .Select(p => p.Client!)
+            .Distinct()
+            .OrderBy(c => c)
+            .ToListAsync(ct);
+
+        var deliveryManagers = await dbContext.Projects
+            .Where(p => p.DeliveryManager != null && p.DeliveryManager != "")
+            .Select(p => p.DeliveryManager!)
+            .Distinct()
+            .OrderBy(d => d)
+            .ToListAsync(ct);
+
+        return new NpsFilterOptionsView(companies, deliveryManagers);
     }
 
     public async Task<NpsProjectDetailView?> GetProjectAsync(int projectId, CancellationToken ct)
@@ -357,6 +391,8 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             .ToHashSet();
     }
 
+    // D11: cada faceta de lista vira um IN; entre facetas o AND das cláusulas
+    // já produz a interseção que F1 pede.
     private static IQueryable<Project> ApplyProjectFilters(IQueryable<Project> query, NpsFilter filter)
     {
         if (filter.ProjectId.HasValue)
@@ -364,20 +400,28 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             query = query.Where(p => p.Id == filter.ProjectId.Value);
         }
 
-        if (!string.IsNullOrWhiteSpace(filter.Dc))
+        if (filter.Companies is { Count: > 0 } companies)
         {
-            query = query.Where(p => p.Dc == ParseDc(filter.Dc));
+            var wanted = companies.Select(c => c.Trim().ToLower()).ToList();
+            query = query.Where(p => p.Client != null && wanted.Contains(p.Client.ToLower()));
         }
 
-        if (!string.IsNullOrWhiteSpace(filter.DeliveryManager))
+        if (filter.Dcs is { Count: > 0 } dcs)
         {
-            var deliveryManager = filter.DeliveryManager.Trim().ToLower();
-            query = query.Where(p => p.DeliveryManager != null && p.DeliveryManager.ToLower().Contains(deliveryManager));
+            query = query.Where(p => dcs.Contains(p.Dc));
         }
 
-        if (!string.IsNullOrWhiteSpace(filter.ProjectType))
+        // Igualdade exata, não Contains: como faceta o DM vem de uma lista de
+        // valores existentes, e "Ana" não pode arrastar "Ana Paula" junto.
+        if (filter.DeliveryManagers is { Count: > 0 } deliveryManagers)
         {
-            query = query.Where(p => p.Type == ParseProjectType(filter.ProjectType));
+            var wanted = deliveryManagers.Select(d => d.Trim().ToLower()).ToList();
+            query = query.Where(p => p.DeliveryManager != null && wanted.Contains(p.DeliveryManager.ToLower()));
+        }
+
+        if (filter.ProjectTypes is { Count: > 0 } projectTypes)
+        {
+            query = query.Where(p => projectTypes.Contains(p.Type));
         }
 
         if (!string.IsNullOrWhiteSpace(filter.Search))
@@ -405,9 +449,9 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             query = query.Where(r => r.SubmittedAt <= new DateTimeOffset(to));
         }
 
-        if (filter.Classification.HasValue)
+        if (filter.Classifications is { Count: > 0 } classifications)
         {
-            query = query.Where(r => r.Classification == filter.Classification.Value);
+            query = query.Where(r => classifications.Contains(r.Classification));
         }
 
         return query;
@@ -420,20 +464,26 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             query = query.Where(r => r.ProjectId == filter.ProjectId.Value);
         }
 
-        if (!string.IsNullOrWhiteSpace(filter.Dc))
+        if (filter.Companies is { Count: > 0 } companies)
         {
-            query = query.Where(r => r.Project.Dc == ParseDc(filter.Dc));
+            var wantedCompanies = companies.Select(c => c.Trim().ToLower()).ToList();
+            query = query.Where(r => r.Project.Client != null && wantedCompanies.Contains(r.Project.Client.ToLower()));
         }
 
-        if (!string.IsNullOrWhiteSpace(filter.DeliveryManager))
+        if (filter.Dcs is { Count: > 0 } dcs)
         {
-            var deliveryManager = filter.DeliveryManager.Trim().ToLower();
-            query = query.Where(r => r.Project.DeliveryManager != null && r.Project.DeliveryManager.ToLower().Contains(deliveryManager));
+            query = query.Where(r => dcs.Contains(r.Project.Dc));
         }
 
-        if (!string.IsNullOrWhiteSpace(filter.ProjectType))
+        if (filter.DeliveryManagers is { Count: > 0 } deliveryManagers)
         {
-            query = query.Where(r => r.Project.Type == ParseProjectType(filter.ProjectType));
+            var wantedManagers = deliveryManagers.Select(d => d.Trim().ToLower()).ToList();
+            query = query.Where(r => r.Project.DeliveryManager != null && wantedManagers.Contains(r.Project.DeliveryManager.ToLower()));
+        }
+
+        if (filter.ProjectTypes is { Count: > 0 } projectTypes)
+        {
+            query = query.Where(r => projectTypes.Contains(r.Project.Type));
         }
 
         if (!string.IsNullOrWhiteSpace(filter.Search))
@@ -485,6 +535,7 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             lastResponse?.SubmittedAt.ToString("O"),
             lastNps,
             isOverdue,
+            FormatCollectionStatus(NpsCollectionStatusCalculator.Derive(lastResponse is not null, activeDispatches)),
             waiver is not null,
             waiver?.Reason,
             activeDispatchExpiresAt?.ToString("O"));
@@ -535,23 +586,11 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
         _ => "DC6"
     };
 
-    private static DeliveryCenter ParseDc(string dc) => dc.Trim().ToUpperInvariant() switch
+    private static string FormatCollectionStatus(NpsCollectionStatus status) => status switch
     {
-        "DC1" => DeliveryCenter.Dc1,
-        "DC2" => DeliveryCenter.Dc2,
-        "DC3" => DeliveryCenter.Dc3,
-        "DC4" => DeliveryCenter.Dc4,
-        "DC5" => DeliveryCenter.Dc5,
-        "DC6" => DeliveryCenter.Dc6,
-        _ => DeliveryCenter.Dc1
-    };
-
-    private static ProjectType ParseProjectType(string projectType) => projectType.Trim().ToLowerInvariant() switch
-    {
-        "squad" => ProjectType.Squad,
-        "escopo fechado" or "fixedscope" or "fixed scope" => ProjectType.FixedScope,
-        "alocação" or "alocacao" or "staffing" => ProjectType.Staffing,
-        _ => ProjectType.Squad
+        NpsCollectionStatus.Answered => "Respondido",
+        NpsCollectionStatus.LinkSent => "Link gerado",
+        _ => "Pendente"
     };
 
     private static string FormatFormFormat(NpsFormFormat format) => format switch

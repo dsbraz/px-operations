@@ -1,6 +1,7 @@
 using PxOperations.Api.Features.Nps.Contracts;
 using PxOperations.Application.Features.Nps;
 using PxOperations.Domain.Nps;
+using PxOperations.Domain.Projects;
 
 namespace PxOperations.Api.Features.Nps;
 
@@ -10,7 +11,7 @@ public static class NpsMappings
         => new(view.TotalProjects, view.OverdueProjects, view.ActiveDispatches, view.TotalResponses, view.OfficialNps, view.AverageScore, view.Detractors, view.Passives, view.Promoters);
 
     public static NpsProjectResponse ToResponse(NpsProjectView view)
-        => new(view.Id, view.Name, view.Client, view.Dc, view.DeliveryManager, view.ContactsCount, view.ActiveDispatches, view.LinkTargetsCount, view.AnsweredLinkTargetsCount, view.ResponsesCount, view.LastResponseAt, view.LastNps, view.IsOverdue, view.IsDismissed, view.DismissalReason, view.ActiveDispatchExpiresAt);
+        => new(view.Id, view.Name, view.Client, view.Dc, view.DeliveryManager, view.ContactsCount, view.ActiveDispatches, view.LinkTargetsCount, view.AnsweredLinkTargetsCount, view.ResponsesCount, view.LastResponseAt, view.LastNps, view.IsOverdue, view.CollectionStatus, view.IsDismissed, view.DismissalReason, view.ActiveDispatchExpiresAt);
 
     public static NpsProjectDetailResponse ToResponse(NpsProjectDetailView view)
         => new(ToResponse(view.Project), view.Contacts.Select(ToResponse).ToList(), view.Dispatches.Select(ToResponse).ToList(), view.RecentResponses.Select(ToResponse).ToList());
@@ -56,4 +57,49 @@ public static class NpsMappings
         "promoter" or "promotor" => NpsClassification.Promoter,
         _ => throw new ArgumentOutOfRangeException(nameof(value), value, "Invalid NPS classification.")
     };
+
+    // D11: cada faceta de lista chega como o parâmetro repetido
+    // (?dc=DC1&dc=DC2). Lista vazia é ausência de filtro, não filtro que não
+    // casa com nada.
+    public static IReadOnlyList<T>? ParseFacet<T>(string[]? values, Func<string, T> parse)
+        => values is null or { Length: 0 }
+            ? null
+            : values.Where(v => !string.IsNullOrWhiteSpace(v)).Select(parse).Distinct().ToList() is { Count: > 0 } parsed
+                ? parsed
+                : null;
+
+    // Estrito de propósito: o parse antigo caía em Dc1/Squad no valor
+    // desconhecido, então ?dc=DC99 filtrava por DC1 sem avisar ninguém.
+    public static DeliveryCenter ParseDc(string value) => value.Trim().ToUpperInvariant() switch
+    {
+        "DC1" => DeliveryCenter.Dc1,
+        "DC2" => DeliveryCenter.Dc2,
+        "DC3" => DeliveryCenter.Dc3,
+        "DC4" => DeliveryCenter.Dc4,
+        "DC5" => DeliveryCenter.Dc5,
+        "DC6" => DeliveryCenter.Dc6,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), value, "Invalid delivery center.")
+    };
+
+    public static ProjectType ParseProjectType(string value) => value.Trim().ToLowerInvariant() switch
+    {
+        "squad" => ProjectType.Squad,
+        "escopo fechado" or "fixedscope" or "fixed scope" => ProjectType.FixedScope,
+        "alocação" or "alocacao" or "staffing" => ProjectType.Staffing,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), value, "Invalid project type.")
+    };
+
+    public static NpsCollectionStatus ParseCollectionStatus(string value) => value.Trim().ToLowerInvariant() switch
+    {
+        "respondido" or "answered" => NpsCollectionStatus.Answered,
+        "link gerado" or "linksent" or "link sent" => NpsCollectionStatus.LinkSent,
+        "pendente" or "pending" => NpsCollectionStatus.Pending,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), value, "Invalid NPS collection status.")
+    };
+
+    public static NpsClassification ParseClassification(string value)
+        => ParseClassificationOrNull(value) ?? throw new ArgumentOutOfRangeException(nameof(value), value, "Invalid NPS classification.");
+
+    public static NpsFilterOptionsResponse ToResponse(NpsFilterOptionsView view)
+        => new(view.Companies, view.DeliveryManagers);
 }

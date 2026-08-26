@@ -28,12 +28,27 @@
               OnClearAll="ClearFilters"
               Count="@PortfolioCount">
     <FacetContent>
+        @* D11: checkbox, não radio — marcar dois valores da mesma faceta filtra
+           pela união deles, e o painel segue aberto para marcar vários. *@
+        @if (filterOptions is { Companies.Count: > 0 })
+        {
+            <fieldset>
+                <legend>Empresa</legend>
+                @foreach (var company in filterOptions.Companies)
+                {
+                    <label>
+                        <input type="checkbox" checked="@filterCompanies.Contains(company)" @onchange="@(args => ToggleCompany(company, args))" />
+                        <span>@company</span>
+                    </label>
+                }
+            </fieldset>
+        }
         <fieldset>
             <legend>Delivery Center</legend>
             @foreach (var dc in DcOptions)
             {
                 <label>
-                    <input type="checkbox" checked="@(filterDc == dc)" @onchange="@(args => ToggleDc(dc, args))" />
+                    <input type="checkbox" checked="@filterDcs.Contains(dc)" @onchange="@(args => ToggleDc(dc, args))" />
                     <span>@dc</span>
                 </label>
             }
@@ -43,11 +58,52 @@
             @foreach (var type in ProjectTypeOptions)
             {
                 <label>
-                    <input type="checkbox" checked="@(filterProjectType == type)" @onchange="@(args => ToggleProjectType(type, args))" />
+                    <input type="checkbox" checked="@filterProjectTypes.Contains(type)" @onchange="@(args => ToggleProjectType(type, args))" />
                     <span>@type</span>
                 </label>
             }
         </fieldset>
+        @if (filterOptions is { DeliveryManagers.Count: > 0 })
+        {
+            <fieldset>
+                <legend>Delivery Manager</legend>
+                @foreach (var dm in filterOptions.DeliveryManagers)
+                {
+                    <label>
+                        <input type="checkbox" checked="@filterDeliveryManagers.Contains(dm)" @onchange="@(args => ToggleDeliveryManager(dm, args))" />
+                        <span>@dm</span>
+                    </label>
+                }
+            </fieldset>
+        }
+        @if (OffersStatusFacet)
+        {
+            <fieldset>
+                <legend>Status NPS</legend>
+                @foreach (var status in StatusOptions)
+                {
+                    <label>
+                        <input type="checkbox" checked="@filterStatuses.Contains(status)" @onchange="@(args => ToggleStatus(status, args))" />
+                        <span>@status</span>
+                    </label>
+                }
+            </fieldset>
+        }
+        @if (OffersDateFacet)
+        {
+            @* F1: a régua é a data da RESPOSTA, então a faceta não aparece na
+               Coleta — lá esvaziaria as colunas de quem ainda não respondeu. *@
+            <fieldset>
+                <legend>Data de coleta</legend>
+                @foreach (var period in PeriodOptions)
+                {
+                    <label>
+                        <input type="radio" name="nps-periodo" checked="@(filterPeriod == period.Value)" @onclick="@(() => SelectPeriod(period.Value))" />
+                        <span>@period.Label</span>
+                    </label>
+                }
+            </fieldset>
+        }
         @if (ActiveTab == TabCollection)
         {
             @* F1: "coletas dispensadas" é toggle Ocultar/Mostrar, não faceta de
@@ -128,7 +184,7 @@ else
                             <tr class="@(selectedProjectId == project.Id ? "selected" : "")">
                                 <td><strong>@project.Name</strong><span>@project.Client</span></td>
                                 <td>@project.Dc</td>
-                                <td><span class="nps-status @ProjectStatusClass(project)">@ProjectStatusLabel(project)</span></td>
+                                <td><span class="nps-status @ProjectStatusClass(project)">@project.CollectionStatus</span></td>
                                 <td><span class="nps-status @LinkStatusClass(project)">@LinkStatusLabel(project)</span></td>
                                 <td>
                                     <strong>@(project.LastNps?.ToString("0.0") ?? "-")</strong>

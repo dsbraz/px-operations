@@ -26,23 +26,26 @@ public sealed class NpsController(
     GetNpsPublicSurveyUseCase getPublicSurvey,
     SubmitNpsPublicResponseUseCase submitPublicResponse,
     DismissNpsCollectionUseCase dismissCollection,
-    ReactivateNpsCollectionUseCase reactivateCollection) : ControllerBase
+    ReactivateNpsCollectionUseCase reactivateCollection,
+    GetNpsFilterOptionsUseCase getFilterOptions) : ControllerBase
 {
     [HttpGet("dashboard")]
     public async Task<ActionResult<NpsDashboardResponse>> GetDashboard(
         [FromQuery] string? search,
-        [FromQuery] string? dc,
-        [FromQuery] string? deliveryManager,
-        [FromQuery] string? projectType,
+        [FromQuery] string[]? company,
+        [FromQuery] string[]? dc,
+        [FromQuery] string[]? deliveryManager,
+        [FromQuery] string[]? projectType,
+        [FromQuery] string[]? status,
         [FromQuery] int? projectId,
         [FromQuery] string? from,
         [FromQuery] string? to,
-        [FromQuery] string? classification,
+        [FromQuery] string[]? classification,
         CancellationToken ct)
     {
         try
         {
-            var dashboard = await getDashboard.ExecuteAsync(BuildFilter(search, dc, deliveryManager, projectType, projectId, from, to, classification), ct);
+            var dashboard = await getDashboard.ExecuteAsync(BuildFilter(search, company, dc, deliveryManager, projectType, status, projectId, from, to, classification), ct);
             return Ok(NpsMappings.ToResponse(dashboard));
         }
         catch (ArgumentOutOfRangeException ex)
@@ -54,17 +57,38 @@ public sealed class NpsController(
     [HttpGet("projects")]
     public async Task<ActionResult<IEnumerable<NpsProjectResponse>>> ListProjects(
         [FromQuery] string? search,
-        [FromQuery] string? dc,
-        [FromQuery] string? deliveryManager,
-        [FromQuery] string? projectType,
+        [FromQuery] string[]? company,
+        [FromQuery] string[]? dc,
+        [FromQuery] string[]? deliveryManager,
+        [FromQuery] string[]? projectType,
+        [FromQuery] string[]? status,
+        [FromQuery] string? from,
+        [FromQuery] string? to,
         // F1: "coletas dispensadas" é toggle Ocultar/Mostrar, não faceta de lista.
         [FromQuery] bool includeDismissed,
         CancellationToken ct)
     {
-        var projects = await listProjects.ExecuteAsync(
-            new NpsFilter(search, dc, deliveryManager, projectType, null, null, null, null, includeDismissed), ct);
-        return Ok(projects.Select(NpsMappings.ToResponse));
+        try
+        {
+            var projects = await listProjects.ExecuteAsync(
+                BuildFilter(search, company, dc, deliveryManager, projectType, status, null, from, to, null, includeDismissed), ct);
+            return Ok(projects.Select(NpsMappings.ToResponse));
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            return BadRequest(new ProblemDetails { Detail = ex.Message });
+        }
     }
+
+    /// <summary>
+    /// F1: empresa e DM são texto livre, então o menu de filtros precisa saber
+    /// quais valores existem. Não sai da lista de projetos porque ela já vem
+    /// filtrada — as opções encolheriam conforme o usuário filtra.
+    /// </summary>
+    [HttpGet("filter-options")]
+    [ProducesResponseType<NpsFilterOptionsResponse>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<NpsFilterOptionsResponse>> GetFilterOptions(CancellationToken ct)
+        => Ok(NpsMappings.ToResponse(await getFilterOptions.ExecuteAsync(ct)));
 
     [HttpGet("projects/{projectId:int}")]
     [ProducesResponseType<NpsProjectDetailResponse>(StatusCodes.Status200OK)]
@@ -170,7 +194,7 @@ public sealed class NpsController(
     [HttpGet("dispatches/{id:int}/responses")]
     public async Task<ActionResult<IEnumerable<NpsSurveyResponse>>> ListResponses(int id, CancellationToken ct)
     {
-        var responses = await listResponses.ExecuteAsync(id, new NpsFilter(null, null, null, null, null, null, null, null), ct);
+        var responses = await listResponses.ExecuteAsync(id, NpsFilter.None, ct);
         return Ok(responses.Select(NpsMappings.ToResponse));
     }
 
@@ -186,18 +210,27 @@ public sealed class NpsController(
     [HttpGet("responses/export")]
     public async Task<IActionResult> ExportResponses(
         [FromQuery] string? search,
-        [FromQuery] string? dc,
-        [FromQuery] string? deliveryManager,
-        [FromQuery] string? projectType,
+        [FromQuery] string[]? company,
+        [FromQuery] string[]? dc,
+        [FromQuery] string[]? deliveryManager,
+        [FromQuery] string[]? projectType,
+        [FromQuery] string[]? status,
         [FromQuery] int? projectId,
         [FromQuery] string? from,
         [FromQuery] string? to,
-        [FromQuery] string? classification,
+        [FromQuery] string[]? classification,
         CancellationToken ct)
     {
-        var responses = await listResponses.ExecuteAsync(null, BuildFilter(search, dc, deliveryManager, projectType, projectId, from, to, classification), ct);
-        var csv = BuildCsv(responses);
-        return File(Encoding.UTF8.GetBytes(csv), "text/csv", "nps-responses.csv");
+        try
+        {
+            var responses = await listResponses.ExecuteAsync(null, BuildFilter(search, company, dc, deliveryManager, projectType, status, projectId, from, to, classification), ct);
+            var csv = BuildCsv(responses);
+            return File(Encoding.UTF8.GetBytes(csv), "text/csv", "nps-responses.csv");
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            return BadRequest(new ProblemDetails { Detail = ex.Message });
+        }
     }
 
     /// <summary>
@@ -279,24 +312,36 @@ public sealed class NpsController(
         }
     }
 
+    /// <summary>
+    /// D11: as facetas de lista chegam como parâmetro repetido
+    /// (?dc=DC1&amp;dc=DC2) — o formato nativo do ASP.NET, sem parsing de CSV.
+    /// Valor desconhecido lança e vira 400: filtrar calado pelo valor errado
+    /// é pior do que recusar.
+    /// </summary>
     private static NpsFilter BuildFilter(
         string? search,
-        string? dc,
-        string? deliveryManager,
-        string? projectType,
+        string[]? company,
+        string[]? dc,
+        string[]? deliveryManager,
+        string[]? projectType,
+        string[]? status,
         int? projectId,
         string? from,
         string? to,
-        string? classification)
+        string[]? classification,
+        bool includeDismissed = false)
         => new(
             search,
-            dc,
-            deliveryManager,
-            projectType,
+            NpsMappings.ParseFacet(company, v => v.Trim()),
+            NpsMappings.ParseFacet(dc, NpsMappings.ParseDc),
+            NpsMappings.ParseFacet(deliveryManager, v => v.Trim()),
+            NpsMappings.ParseFacet(projectType, NpsMappings.ParseProjectType),
+            NpsMappings.ParseFacet(status, NpsMappings.ParseCollectionStatus),
             projectId,
             string.IsNullOrWhiteSpace(from) ? null : DateOnly.Parse(from),
             string.IsNullOrWhiteSpace(to) ? null : DateOnly.Parse(to),
-            NpsMappings.ParseClassificationOrNull(classification));
+            NpsMappings.ParseFacet(classification, NpsMappings.ParseClassification),
+            includeDismissed);
 
     private static string BuildCsv(IEnumerable<NpsResponseView> responses)
     {
