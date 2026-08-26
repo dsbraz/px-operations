@@ -478,6 +478,11 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             query = query.Where(r => classifications.Contains(r.Classification));
         }
 
+        if (filter.Formats is { Count: > 0 } formats)
+        {
+            query = query.Where(r => formats.Contains(r.Dispatch.Format));
+        }
+
         return query;
     }
 

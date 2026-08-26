@@ -42,11 +42,12 @@ public sealed class NpsController(
         [FromQuery] string? from,
         [FromQuery] string? to,
         [FromQuery] string[]? classification,
+        [FromQuery] string[]? format,
         CancellationToken ct)
     {
         try
         {
-            var dashboard = await getDashboard.ExecuteAsync(BuildFilter(search, company, dc, deliveryManager, projectType, status, projectId, from, to, classification), ct);
+            var dashboard = await getDashboard.ExecuteAsync(BuildFilter(search, company, dc, deliveryManager, projectType, status, projectId, from, to, classification, format), ct);
             return Ok(NpsMappings.ToResponse(dashboard));
         }
         catch (ArgumentOutOfRangeException ex)
@@ -72,7 +73,7 @@ public sealed class NpsController(
         try
         {
             var projects = await listProjects.ExecuteAsync(
-                BuildFilter(search, company, dc, deliveryManager, projectType, status, null, from, to, null, includeDismissed), ct);
+                BuildFilter(search, company, dc, deliveryManager, projectType, status, null, from, to, null, null, includeDismissed), ct);
             return Ok(projects.Select(NpsMappings.ToResponse));
         }
         catch (ArgumentOutOfRangeException ex)
@@ -193,7 +194,7 @@ public sealed class NpsController(
     }
 
     [HttpGet("dispatches/{id:int}/responses")]
-    public async Task<ActionResult<IEnumerable<NpsSurveyResponse>>> ListResponses(int id, CancellationToken ct)
+    public async Task<ActionResult<IEnumerable<NpsSurveyResponse>>> ListDispatchResponses(int id, CancellationToken ct)
     {
         var responses = await listResponses.ExecuteAsync(id, NpsFilter.None, ct);
         return Ok(responses.Select(NpsMappings.ToResponse));
@@ -208,6 +209,44 @@ public sealed class NpsController(
         return dispatch is null ? NotFound() : Ok(NpsMappings.ToResponse(dispatch));
     }
 
+    /// <summary>
+    /// B6: a listagem de respostas em JSON. A consulta já existia e alimentava
+    /// o CSV; sem o endpoint, nem a tabela de auditoria (F10) nem o drill-down
+    /// por projeto (F8) têm fonte de dados.
+    ///
+    /// Sem paginação de propósito: o PRD não pede, e o CSV já devolve a
+    /// carteira inteira pelo mesmo caminho. Se o volume crescer, o lugar de
+    /// paginar é aqui e no CSV juntos.
+    /// </summary>
+    [HttpGet("responses")]
+    [ProducesResponseType<IEnumerable<NpsSurveyResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<IEnumerable<NpsSurveyResponse>>> ListResponses(
+        [FromQuery] string? search,
+        [FromQuery] string[]? company,
+        [FromQuery] string[]? dc,
+        [FromQuery] string[]? deliveryManager,
+        [FromQuery] string[]? projectType,
+        [FromQuery] string[]? status,
+        [FromQuery] int? projectId,
+        [FromQuery] string? from,
+        [FromQuery] string? to,
+        [FromQuery] string[]? classification,
+        [FromQuery] string[]? format,
+        CancellationToken ct)
+    {
+        try
+        {
+            var responses = await listResponses.ExecuteAsync(
+                null, BuildFilter(search, company, dc, deliveryManager, projectType, status, projectId, from, to, classification, format), ct);
+            return Ok(responses.Select(NpsMappings.ToResponse));
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            return BadRequest(new ProblemDetails { Detail = ex.Message });
+        }
+    }
+
     [HttpGet("responses/export")]
     public async Task<IActionResult> ExportResponses(
         [FromQuery] string? search,
@@ -220,11 +259,12 @@ public sealed class NpsController(
         [FromQuery] string? from,
         [FromQuery] string? to,
         [FromQuery] string[]? classification,
+        [FromQuery] string[]? format,
         CancellationToken ct)
     {
         try
         {
-            var responses = await listResponses.ExecuteAsync(null, BuildFilter(search, company, dc, deliveryManager, projectType, status, projectId, from, to, classification), ct);
+            var responses = await listResponses.ExecuteAsync(null, BuildFilter(search, company, dc, deliveryManager, projectType, status, projectId, from, to, classification, format), ct);
             var csv = BuildCsv(responses);
             return File(Encoding.UTF8.GetBytes(csv), "text/csv", "nps-responses.csv");
         }
@@ -336,6 +376,7 @@ public sealed class NpsController(
         string? from,
         string? to,
         string[]? classification,
+        string[]? format = null,
         bool includeDismissed = false)
         => new(
             search,
@@ -348,6 +389,7 @@ public sealed class NpsController(
             string.IsNullOrWhiteSpace(from) ? null : DateOnly.Parse(from),
             string.IsNullOrWhiteSpace(to) ? null : DateOnly.Parse(to),
             NpsMappings.ParseFacet(classification, NpsMappings.ParseClassification),
+            NpsMappings.ParseFacet(format, NpsMappings.ParseFormFormat),
             includeDismissed);
 
     private static string BuildCsv(IEnumerable<NpsResponseView> responses)

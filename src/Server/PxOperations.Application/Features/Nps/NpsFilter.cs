@@ -19,12 +19,15 @@ public sealed record NpsFilter(
     DateOnly? From,
     DateOnly? To,
     IReadOnlyList<NpsClassification>? Classifications,
+    // Faceta de RESPOSTA, como a classificação: o formato vem do disparo que
+    // originou cada resposta, não do projeto.
+    IReadOnlyList<NpsFormFormat>? Formats,
     // F1: "coletas dispensadas" é toggle Ocultar/Mostrar, não faceta de lista.
     // Padrão oculto: o quadro existe para mostrar o que precisa de ação.
     bool IncludeDismissed = false)
 {
-    public static NpsFilter None => new(null, null, null, null, null, null, null, null, null, null);
+    public static NpsFilter None => new(null, null, null, null, null, null, null, null, null, null, null);
 
     public static NpsFilter ForProject(int projectId)
-        => new(null, null, null, null, null, null, projectId, null, null, null);
+        => new(null, null, null, null, null, null, projectId, null, null, null, null);
 }

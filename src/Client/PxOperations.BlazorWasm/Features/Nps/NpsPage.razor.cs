@@ -437,9 +437,11 @@ public partial class NpsPage : ComponentBase, IDisposable
         // outra aba, filtrariam por algo que não está na tela.
         var statuses = OffersStatusFacet ? Facet(filterStatuses) : null;
 
+        // A faceta de formato existe no contrato desde B6, mas só é oferecida na
+        // aba Respostas (F10) — daí o null aqui até a aba entrar.
         dashboard = await NpsClient.GetDashboardAsync(
             search, Facet(filterCompanies), Facet(filterDcs), Facet(filterDeliveryManagers),
-            Facet(filterProjectTypes), statuses, null, from, to, null);
+            Facet(filterProjectTypes), statuses, null, from, to, null, null);
 
         projects = (await NpsClient.ListProjectsAsync(
             search, Facet(filterCompanies), Facet(filterDcs), Facet(filterDeliveryManagers),
