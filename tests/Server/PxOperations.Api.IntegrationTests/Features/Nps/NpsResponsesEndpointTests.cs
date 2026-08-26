@@ -97,6 +97,60 @@ public sealed class NpsResponsesEndpointTests(PostgreSqlFixture fixture)
         Assert.Single(byEmail);
     }
 
+    /// <summary>
+    /// F8, critério de aceite: "as notas expandidas fecham com o NPS exibido na
+    /// linha (mesma contagem, mesma fórmula)". O NPS da linha é calculado sobre
+    /// as respostas JÁ FILTRADAS, então o drill-down precisa consultar com o
+    /// mesmo recorte — senão a soma não bate e ninguém percebe.
+    /// </summary>
+    [Fact]
+    public async Task Expanded_responses_should_reconcile_with_the_project_nps()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+        var marker = $"Fecha{Guid.NewGuid():N}";
+        var project = await CreateProjectAsync(client, marker);
+        var token = await CreateDispatchAsync(client, project.Id, "Simplificado");
+
+        await SubmitAsync(client, token, score: 10, comment: "promotor");
+        await SubmitAsync(client, token, score: 9, comment: "outro promotor");
+        await SubmitAsync(client, token, score: 3, comment: "detrator");
+
+        // Mesmo recorte nos dois lados: promotores e detratores, sem o neutro.
+        const string recorte = "classification=Promotor&classification=Detrator";
+        var rows = await client.GetFromJsonAsync<List<NpsProjectResponse>>(
+            $"/api/nps/projects?search={marker}&{recorte}");
+        var expanded = await ListAsync(client, $"projectId={project.Id}&{recorte}");
+
+        var row = rows!.Single();
+        Assert.Equal(3, row.ResponsesCount);
+        Assert.Equal(3, expanded.Count);
+        // 2 promotores e 1 detrator em 3 → 66,7 − 33,3 = 33,3
+        Assert.Equal(33.3m, row.LastNps);
+    }
+
+    [Fact]
+    public async Task Expanded_responses_should_honour_the_period_of_the_row()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+        var marker = $"Periodo{Guid.NewGuid():N}";
+        var project = await CreateProjectAsync(client, marker);
+        var token = await CreateDispatchAsync(client, project.Id, "Simplificado");
+
+        await SubmitAsync(client, token, score: 10, comment: "de hoje");
+
+        // Janela que termina ontem: a linha e a expansão têm de concordar que
+        // não há nada — uma delas ignorando o período quebraria o critério.
+        var ontem = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1)).ToString("yyyy-MM-dd");
+        var rows = await client.GetFromJsonAsync<List<NpsProjectResponse>>(
+            $"/api/nps/projects?search={marker}&to={ontem}");
+        var expanded = await ListAsync(client, $"projectId={project.Id}&to={ontem}");
+
+        Assert.Equal(0, rows!.Single().ResponsesCount);
+        Assert.Empty(expanded);
+    }
+
     [Fact]
     public async Task ListResponses_should_reject_an_unknown_format()
     {

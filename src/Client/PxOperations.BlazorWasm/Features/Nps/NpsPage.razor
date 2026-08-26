@@ -186,47 +186,10 @@ else
                          Promoters="@(dashboard?.Promoters ?? 0)"
                          OfficialNps="@(dashboard?.OfficialNps ?? 0)" />
 
-        <section class="nps-panel">
-            <div class="nps-panel-head">
-                <h1>Projetos NPS</h1>
-                <span>@projects.Count projetos</span>
-            </div>
-            <div class="nps-table-wrap">
-                <table class="nps-table nps-ops-table">
-                    <thead>
-                        <tr>
-                            <th>Projeto</th>
-                            <th>DC</th>
-                            <th>Status NPS</th>
-                            <th>Link NPS</th>
-                            <th>Última resposta</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var project in projects)
-                        {
-                            <tr class="@(selectedProjectId == project.Id ? "selected" : "")">
-                                <td><strong>@project.Name</strong><span>@project.Client</span></td>
-                                <td>@project.Dc</td>
-                                <td><span class="nps-status @ProjectStatusClass(project)">@project.CollectionStatus</span></td>
-                                <td><span class="nps-status @LinkStatusClass(project)">@LinkStatusLabel(project)</span></td>
-                                <td>
-                                    <strong>@(project.LastNps?.ToString("0.0") ?? "-")</strong>
-                                    <span>@LastResponseLabel(project)</span>
-                                </td>
-                                <td>
-                                    <div class="nps-row-actions">
-                                        <button class="btn-link" @onclick="() => OpenCreateLinkModal(project.Id)">Gerar link</button>
-                                        <button class="btn-link" @onclick="() => OpenProjectDetailAsync(project.Id)">Ver histórico</button>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </section>
+        <NpsProjectsTable Projects="@projects"
+                          OnGenerateLink="OpenCreateLinkModal"
+                          OnOpenDetail="OpenProjectDetailAsync"
+                          LoadResponses="LoadProjectResponsesAsync" />
         }
 
         @if (ActiveTab == TabCollection)

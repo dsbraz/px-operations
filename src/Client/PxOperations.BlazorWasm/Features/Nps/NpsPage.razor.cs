@@ -482,6 +482,22 @@ public partial class NpsPage : ComponentBase, IDisposable
         }
     }
 
+    /// <summary>
+    /// F8: o drill-down carrega as respostas do projeto com o MESMO recorte da
+    /// linha. É o critério de aceite — as notas expandidas fecham com o NPS
+    /// exibido. O status fica de fora porque é faceta de projeto, e o projeto
+    /// já foi escolhido.
+    /// </summary>
+    private async Task<IReadOnlyList<NpsSurveyResponse>> LoadProjectResponsesAsync(int projectId)
+    {
+        var search = string.IsNullOrWhiteSpace(filterSearch) ? null : filterSearch.Trim();
+        var (from, to) = PeriodRange();
+
+        return (await NpsClient.ListResponsesAsync(
+            search, Facet(filterCompanies), Facet(filterDcs), Facet(filterDeliveryManagers),
+            Facet(filterProjectTypes), null, projectId, from, to, null, null)).ToList();
+    }
+
     private void OpenResponseDetail(NpsSurveyResponse response) => selectedResponse = response;
 
     private void CloseResponseDetail() => selectedResponse = null;

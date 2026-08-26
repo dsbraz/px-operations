@@ -33,11 +33,14 @@ public sealed class NpsPageTests : TestContext
         {
             Assert.Contains("NPS oficial", cut.Markup);
             Assert.Contains("Projeto NPS", cut.Markup);
-            Assert.Contains("Status NPS", cut.Markup);
-            Assert.Contains("Link NPS", cut.Markup);
-            Assert.Contains("Última resposta", cut.Markup);
+            // F8 fixa as colunas: projeto, cliente, DC, DM, respostas, NPS e
+            // status. "Link NPS" e "Última resposta" saíram — a primeira não
+            // está na lista, e a recência é a régua do quadro de Coleta.
+            foreach (var column in new[] { "Projeto", "DC", "DM", "Respostas", "NPS", "Status", "Ações" })
+            {
+                Assert.Contains(column, cut.Markup);
+            }
             Assert.Contains("Pendente", cut.Markup);
-            Assert.Contains("Sem link", cut.Markup);
         });
     }
 

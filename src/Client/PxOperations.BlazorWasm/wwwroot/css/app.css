@@ -1235,3 +1235,58 @@ textarea.fi { resize: vertical; min-height: 90px; line-height: 1.65; }
 
 [data-brq-ui] .resp-detail__who p { margin: 0; font-size: 14px; }
 [data-brq-ui] .resp-detail__empty { color: var(--color-text-muted); }
+
+/* ── F8: ordenação e drill-down das notas ───────────────────────── */
+
+[data-brq-ui] .nps-sort {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    cursor: pointer;
+}
+[data-brq-ui] .nps-sort:hover { color: var(--color-text); }
+[data-brq-ui] .nps-sort:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+}
+/* Largura reservada para a seta: sem isto o cabeçalho salta de posição a
+   cada troca de coluna ordenada. */
+[data-brq-ui] .nps-sort__mark { display: inline-block; min-width: 12px; }
+
+[data-brq-ui] .nps-drill > td {
+    padding: 16px;
+    background: var(--color-surface);
+}
+[data-brq-ui] .nps-drill__state { margin: 0; font-size: 13px; color: var(--color-text-muted); }
+
+[data-brq-ui] .nps-drill__notes {
+    list-style: none;
+    margin: 16px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+}
+[data-brq-ui] .nps-drill__notes li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+[data-brq-ui] .nps-drill__who {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+[data-brq-ui] .nps-drill__comment {
+    margin: 2px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: pre-line;
+}

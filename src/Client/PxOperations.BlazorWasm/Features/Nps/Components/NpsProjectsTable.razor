@@ -1,0 +1,245 @@
+@using PxOperations.BlazorWasm.Api
+
+@* F8: tabela ordenável da carteira, respeitando busca e filtros. Clicar num
+   projeto COM respostas expande a linha com o detalhe das notas. Uma expansão
+   por vez: duas abertas transformam a tabela numa lista de listas. *@
+<section class="nps-panel">
+    <div class="nps-panel-head">
+        <h1>Projetos NPS</h1>
+        <span>@Projects.Count @(Projects.Count == 1 ? "projeto" : "projetos")</span>
+    </div>
+    <div class="nps-table-wrap">
+        <table class="nps-table nps-ops-table">
+            <thead>
+                <tr>
+                    @foreach (var column in Columns)
+                    {
+                        <th aria-sort="@AriaSort(column.Key)">
+                            <button type="button" class="nps-sort" @onclick="() => SortBy(column.Key)">
+                                @column.Label<span class="nps-sort__mark" aria-hidden="true">@SortMark(column.Key)</span>
+                            </button>
+                        </th>
+                    }
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var project in Sorted)
+                {
+                    var expandable = project.ResponsesCount > 0;
+                    <tr class="@(expandedProjectId == project.Id ? "selected" : "")">
+                        <td>
+                            @if (expandable)
+                            {
+                                <button type="button" class="btn-link" @onclick="() => ToggleAsync(project)"
+                                        aria-expanded="@((expandedProjectId == project.Id).ToString().ToLowerInvariant())">
+                                    <strong>@project.Name</strong>
+                                </button>
+                            }
+                            else
+                            {
+                                <strong>@project.Name</strong>
+                            }
+                            <span>@project.Client</span>
+                        </td>
+                        <td>@project.Dc</td>
+                        <td>@(project.DeliveryManager ?? "—")</td>
+                        <td>@project.ResponsesCount</td>
+                        <td>@(project.LastNps?.ToString("0.0") ?? "—")</td>
+                        <td><span class="nps-status @StatusTone(project)">@project.CollectionStatus</span></td>
+                        <td>
+                            <div class="nps-row-actions">
+                                <button class="btn-link" @onclick="() => OnGenerateLink.InvokeAsync(project.Id)">Gerar link</button>
+                                <button class="btn-link" @onclick="() => OnOpenDetail.InvokeAsync(project.Id)">Ver histórico</button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    @if (expandedProjectId == project.Id)
+                    {
+                        <tr class="nps-drill">
+                            <td colspan="7">
+                                @if (isLoadingDrill)
+                                {
+                                    <p class="nps-drill__state">Carregando as notas…</p>
+                                }
+                                else if (drillError is not null)
+                                {
+                                    <p class="nps-drill__state">@drillError</p>
+                                }
+                                else
+                                {
+                                    @* A distribuição é a mesma do painel: o recorte
+                                       expandido tem de ler igual ao de cima. *@
+                                    <NpsDistribution Detractors="@Count("Detrator")"
+                                                     Passives="@Count("Neutro")"
+                                                     Promoters="@Count("Promotor")"
+                                                     OfficialNps="@(project.LastNps ?? 0)" />
+
+                                    <ul class="nps-drill__notes">
+                                        @foreach (var response in drill)
+                                        {
+                                            <li>
+                                                <span class="resp-score @ScoreTone(response)">@response.Score</span>
+                                                <div>
+                                                    <p class="nps-drill__who">
+                                                        @NpsResponsesTable.Author(response)
+                                                        <span class="resp-format">@response.Format</span>
+                                                        <span>@Received(response)</span>
+                                                    </p>
+                                                    @if (!string.IsNullOrWhiteSpace(response.Comment))
+                                                    {
+                                                        <p class="nps-drill__comment">@response.Comment</p>
+                                                    }
+                                                </div>
+                                            </li>
+                                        }
+                                    </ul>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<NpsProjectResponse> Projects { get; set; } = [];
+    [Parameter] public EventCallback<int> OnGenerateLink { get; set; }
+    [Parameter] public EventCallback<int> OnOpenDetail { get; set; }
+
+    /// <summary>
+    /// Carrega as respostas do projeto com o MESMO recorte da linha. É o
+    /// critério de aceite de F8: as notas expandidas fecham com o NPS exibido.
+    /// </summary>
+    [Parameter, EditorRequired] public Func<int, Task<IReadOnlyList<NpsSurveyResponse>>> LoadResponses { get; set; } = default!;
+
+    private int? expandedProjectId;
+    private IReadOnlyList<NpsSurveyResponse> drill = [];
+    private bool isLoadingDrill;
+    private string? drillError;
+
+    private string sortKey = "nps";
+    private bool sortDescending = true;
+
+    private static readonly (string Key, string Label)[] Columns =
+    [
+        ("projeto", "Projeto"),
+        ("dc", "DC"),
+        ("dm", "DM"),
+        ("respostas", "Respostas"),
+        ("nps", "NPS"),
+        ("status", "Status")
+    ];
+
+    /// <summary>
+    /// Trocar de filtro invalida a expansão: notas de um recorte antigo ao lado
+    /// de um NPS recalculado não fecham, e nada na tela avisaria.
+    /// </summary>
+    protected override void OnParametersSet()
+    {
+        if (expandedProjectId is { } id && Projects.All(p => p.Id != id))
+        {
+            Collapse();
+        }
+    }
+
+    private void Collapse()
+    {
+        expandedProjectId = null;
+        drill = [];
+        drillError = null;
+    }
+
+    private async Task ToggleAsync(NpsProjectResponse project)
+    {
+        if (expandedProjectId == project.Id)
+        {
+            Collapse();
+            return;
+        }
+
+        expandedProjectId = project.Id;
+        drill = [];
+        drillError = null;
+        isLoadingDrill = true;
+
+        try
+        {
+            drill = await LoadResponses(project.Id);
+        }
+        catch (Exception)
+        {
+            drillError = "Não foi possível carregar as notas deste projeto.";
+        }
+        finally
+        {
+            isLoadingDrill = false;
+        }
+    }
+
+    private void SortBy(string key)
+    {
+        if (sortKey == key)
+        {
+            sortDescending = !sortDescending;
+            return;
+        }
+
+        sortKey = key;
+        // Texto começa em A→Z; número e status começam do maior, que é onde
+        // está o que pede atenção.
+        sortDescending = key is "respostas" or "nps";
+    }
+
+    private IEnumerable<NpsProjectResponse> Sorted
+    {
+        get
+        {
+            IOrderedEnumerable<NpsProjectResponse> ordered = sortKey switch
+            {
+                "dc" => Order(p => p.Dc),
+                "dm" => Order(p => p.DeliveryManager ?? ""),
+                "respostas" => Order(p => p.ResponsesCount),
+                "nps" => Order(p => p.LastNps ?? double.MinValue),
+                "status" => Order(p => p.CollectionStatus),
+                _ => Order(p => p.Name)
+            };
+
+            return ordered.ThenBy(p => p.Name);
+        }
+    }
+
+    private IOrderedEnumerable<NpsProjectResponse> Order<T>(Func<NpsProjectResponse, T> key)
+        => sortDescending ? Projects.OrderByDescending(key) : Projects.OrderBy(key);
+
+    private string AriaSort(string key)
+        => sortKey != key ? "none" : sortDescending ? "descending" : "ascending";
+
+    private string SortMark(string key)
+        => sortKey != key ? "" : sortDescending ? " ↓" : " ↑";
+
+    private int Count(string classification)
+        => drill.Count(r => r.Classification == classification);
+
+    private static string StatusTone(NpsProjectResponse project) => project.CollectionStatus switch
+    {
+        "Respondido" => "ok",
+        "Link gerado" => "info",
+        _ => "late"
+    };
+
+    private static string ScoreTone(NpsSurveyResponse response) => response.Classification switch
+    {
+        "Promotor" => "ok",
+        "Neutro" => "late",
+        _ => "danger"
+    };
+
+    private static string Received(NpsSurveyResponse response)
+        => DateTimeOffset.TryParse(response.SubmittedAt, out var at)
+            ? at.ToLocalTime().ToString("dd/MM/yyyy")
+            : "—";
+}
