@@ -145,8 +145,12 @@ public partial class NpsPublicPage : ComponentBase
         try
         {
             var current = await NpsClient.GetPublicAsync(Token);
-            if (current.IsExpired || current.IsClosed)
+            if (current.IsExpired || current.IsClosed || current.AlreadyAnswered)
             {
+                // AlreadyAnswered é a quarta causa de 409: link nominal já
+                // usado. O formulário tem tela própria para os três estados, e
+                // omitir este devolvia a pessoa ao mesmo beco — "apague o
+                // e-mail e tente de novo", sem que isso mudasse nada.
                 survey = current;
                 return T.ClosedText;
             }

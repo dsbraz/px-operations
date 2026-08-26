@@ -394,15 +394,29 @@ public partial class NpsPage : ComponentBase, IDisposable
         }
     }
 
+    /// <summary>
+    /// Trocar de aba dispara uma carga nova sem esperar a anterior, e as duas
+    /// escrevem nos mesmos campos. A que voltar por último vence: sem esta
+    /// marca, sair de Respostas para Coleta podia deixar a barra de KPIs da
+    /// Coleta com números calculados sob as facetas da aba já abandonada.
+    /// </summary>
+    private int refreshGeneration;
+
     private async Task RefreshAsync()
     {
+        var generation = ++refreshGeneration;
         isLoading = true;
         loadError = null;
         operationError = null;
 
         try
         {
-            await LoadDashboardAndProjectsAsync();
+            await LoadDashboardAndProjectsAsync(generation);
+
+            if (generation != refreshGeneration)
+            {
+                return;
+            }
 
             if (selectedProjectId.HasValue && projects.Any(p => p.Id == selectedProjectId.Value))
             {
@@ -418,11 +432,17 @@ public partial class NpsPage : ComponentBase, IDisposable
         }
         catch (Exception)
         {
-            loadError = "Não foi possível carregar o módulo NPS.";
+            if (generation == refreshGeneration)
+            {
+                loadError = "Não foi possível carregar o módulo NPS.";
+            }
         }
         finally
         {
-            isLoading = false;
+            if (generation == refreshGeneration)
+            {
+                isLoading = false;
+            }
         }
     }
 
@@ -474,7 +494,7 @@ public partial class NpsPage : ComponentBase, IDisposable
         }
     }
 
-    private async Task LoadDashboardAndProjectsAsync()
+    private async Task LoadDashboardAndProjectsAsync(int? generation = null)
     {
         var search = string.IsNullOrWhiteSpace(filterSearch) ? null : filterSearch.Trim();
         var (from, to) = PeriodRange();
@@ -484,23 +504,33 @@ public partial class NpsPage : ComponentBase, IDisposable
         var formats = OffersResponseFacets ? Facet(filterFormats) : null;
         var classifications = OffersResponseFacets ? Facet(filterClassifications) : null;
 
-        dashboard = await NpsClient.GetDashboardAsync(
+        var loadedDashboard = await NpsClient.GetDashboardAsync(
             search, Facet(filterCompanies), Facet(filterDcs), Facet(filterDeliveryManagers),
             Facet(filterProjectTypes), statuses, null, from, to, classifications, formats, includeDismissed);
 
-        projects = (await NpsClient.ListProjectsAsync(
+        var loadedProjects = (await NpsClient.ListProjectsAsync(
             search, Facet(filterCompanies), Facet(filterDcs), Facet(filterDeliveryManagers),
             Facet(filterProjectTypes), statuses, from, to, includeDismissed)).ToList();
 
         // F10: só a aba Respostas consome a listagem. Carregá-la nas outras
         // seria uma requisição por troca de aba sem ninguém para ler o
         // resultado.
-        if (ActiveTab == TabResponses)
-        {
-            responses = (await NpsClient.ListResponsesAsync(
+        var loadedResponses = ActiveTab == TabResponses
+            ? (await NpsClient.ListResponsesAsync(
                 search, Facet(filterCompanies), Facet(filterDcs), Facet(filterDeliveryManagers),
-                Facet(filterProjectTypes), null, null, from, to, classifications, formats, includeDismissed)).ToList();
+                Facet(filterProjectTypes), null, null, from, to, classifications, formats, includeDismissed)).ToList()
+            : responses;
+
+        // Só a carga corrente escreve. Uma que ficou pelo caminho traz números
+        // do recorte de outra aba.
+        if (generation is { } g && g != refreshGeneration)
+        {
+            return;
         }
+
+        dashboard = loadedDashboard;
+        projects = loadedProjects;
+        responses = loadedResponses;
     }
 
     /// <summary>

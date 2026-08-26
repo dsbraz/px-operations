@@ -57,6 +57,34 @@ public sealed class NpsAntiAbuseFormTests : TestContext
         cut.WaitForAssertion(() => JSInterop.VerifyInvoke("localStorage.setItem"));
     }
 
+    /// <summary>
+    /// O servidor devolve 409 para quatro causas. Se a releitura do link diz
+    /// que ele já foi respondido - caso do link nominal -, a tela tem de trocar
+    /// para o aviso próprio; insistir no dedupe de e-mail devolvia a pessoa ao
+    /// beco de "apague o e-mail e tente de novo", que não muda nada.
+    /// </summary>
+    [Fact]
+    public void A_conflict_on_an_already_answered_link_should_show_its_own_screen()
+    {
+        var handler = new ProjectsTestHelpers.MultiStubHttpMessageHandler();
+        handler.AddResponse(HttpMethod.Get, SurveyJson, HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Post, """{"detail":"already answered"}""", HttpStatusCode.Conflict);
+        handler.AddResponse(HttpMethod.Get, AnsweredSurveyJson, HttpStatusCode.OK);
+        var cut = Render(handler, alreadyAnsweredInBrowser: false);
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".scale__opt")));
+        cut.FindAll(".scale__opt")[8].Click();
+        cut.Find(".next button").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.DoesNotContain("Este e-mail já respondeu", cut.Markup);
+            // Cada estado tem seu aviso; este é o do link já respondido.
+            Assert.Contains("Este link já recebeu uma resposta", cut.Markup);
+            Assert.Empty(cut.FindAll(".scale__opt"));
+        });
+    }
+
     [Theory]
     [InlineData(HttpStatusCode.Conflict, "Este e-mail já respondeu esta pesquisa")]
     [InlineData(HttpStatusCode.TooManyRequests, "muitas respostas deste ponto de acesso")]
@@ -65,6 +93,8 @@ public sealed class NpsAntiAbuseFormTests : TestContext
         var handler = new ProjectsTestHelpers.MultiStubHttpMessageHandler();
         handler.AddResponse(HttpMethod.Get, SurveyJson, HttpStatusCode.OK);
         handler.AddResponse(HttpMethod.Post, """{"detail":"barrado"}""", status);
+        // O 409 relê o link: aqui ele volta aberto, então sobra o dedupe.
+        handler.AddResponse(HttpMethod.Get, SurveyJson, HttpStatusCode.OK);
         var cut = Render(handler, alreadyAnsweredInBrowser: false);
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".scale__opt")));
@@ -107,6 +137,17 @@ public sealed class NpsAntiAbuseFormTests : TestContext
       "format": "Simplificado", "language": "Português",
       "expiresAt": "2126-09-15T00:00:00Z", "isExpired": false,
       "isClosed": false, "alreadyAnswered": false
+    }
+    """;
+
+    private const string AnsweredSurveyJson = """
+    {
+      "token": "11111111-1111-1111-1111-111111111111",
+      "projectId": 1, "projectName": "Projeto 1", "dispatchId": 2,
+      "periodStart": "2026-08-01", "periodEnd": "2026-08-31",
+      "format": "Simplificado", "language": "Português",
+      "expiresAt": "2126-09-15T00:00:00Z", "isExpired": false,
+      "isClosed": false, "alreadyAnswered": true
     }
     """;
 
