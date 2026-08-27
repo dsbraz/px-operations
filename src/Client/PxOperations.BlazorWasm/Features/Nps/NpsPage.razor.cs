@@ -670,12 +670,6 @@ public partial class NpsPage : ComponentBase, IDisposable
     private string BuildPublicFormUrl(Guid token)
         => NavigationManager.ToAbsoluteUri($"nps/{token}").ToString();
 
-    private async Task CopyPublicFormUrlAsync(Guid token)
-    {
-        operationError = null;
-        await JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", BuildPublicFormUrl(token));
-    }
-
     private static string FormatTimestamp(string value)
         => DateTimeOffset.TryParse(value, out var timestamp)
             ? timestamp.ToString("yyyy-MM-dd HH:mm")

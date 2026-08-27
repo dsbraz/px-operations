@@ -69,10 +69,20 @@
     {
         if (!firstRender) return;
 
-        module = await JSRuntime.InvokeAsync<IJSObjectReference>(
-            "import", "./_content/PxOperations.Ui/Components/Forms/BrqFilterPanel.razor.js");
-        selfReference = DotNetObjectReference.Create(this);
-        await module.InvokeVoidAsync("attach", rootElement, selfReference);
+        try
+        {
+            module = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/PxOperations.Ui/Components/Forms/BrqFilterPanel.razor.js");
+            selfReference = DotNetObjectReference.Create(this);
+            await module.InvokeVoidAsync("attach", rootElement, selfReference);
+        }
+        catch (Exception)
+        {
+            // O módulo só fecha o painel ao clicar fora. Sem ele o botão ainda
+            // abre e fecha, e o Esc do navegador segue valendo — mas uma exceção
+            // solta no ciclo de render derruba o app inteiro, e este painel está
+            // nas três abas. Degradar vale mais do que cair.
+        }
     }
 
     [JSInvokable]

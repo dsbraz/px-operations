@@ -149,7 +149,10 @@
     }
 
     private string LinkUrl
-        => Created is null ? string.Empty : PublicFormUrl(Created.Targets.First().Token);
+        // FirstOrDefault: a API aceita disparo sem contato e sem token genérico.
+        // First() estouraria DENTRO do render, que derruba o app em vez de
+        // mostrar um erro.
+        => Created?.Targets.FirstOrDefault() is { } target ? PublicFormUrl(target.Token) : string.Empty;
 
     /// <summary>F3: a validade vai em destaque, com a data por extenso.</summary>
     private string Expiry
