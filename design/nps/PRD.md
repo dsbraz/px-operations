@@ -346,20 +346,30 @@ definir na revisão deste PRD; baseline = leitura do dashboard atual na ativaç�
 1. ~~**Idiomas**: backend e v1 suportam **espanhol**; o mockup expõe só PT/EN. Mantém ES no
    redesign (custo ~zero) ou corta de propósito?~~ **Decidido: o espanhol fica.** O formulário
    público responde nos três idiomas.
-2. O subtexto do KPI de respostas da v1 ("% de enviados") morre com D1/D2: fica contagem
-   simples ou entra B8?
-3. Filtros na querystring das **rotas do app** (compartilhar visão filtrada)? Natural com D5,
+2. ~~O subtexto do KPI de respostas da v1 ("% de enviados") morre com D1/D2: fica contagem
+   simples ou entra B8?~~ **Respondido por D2**, que aposentou a taxa e definiu o acompanhamento
+   por contagem absoluta mais estágio no quadro. B8 segue como válvula de escape, não como
+   pendência.
+3. **Filtros na querystring das rotas do app** (compartilhar visão filtrada)? Natural com D5,
    mas com multi-seleção (D11) cada faceta vira uma lista na URL; definir o formato
-   (`?empresa=Santander,Itaú`). **Segue em aberto** — a API já usa parâmetro repetido
-   (`?company=Santander&company=Itaú`), mas a rota do app não carrega filtro nenhum ainda.
-4. **Fase futura**: links por contato para nudge individual ("quem não respondeu"), mantém no
-   radar?
-5. **B13/B14**: converter, segregar ou descartar o histórico na virada de escala e do quarto
-   aspecto? É a decisão que trava as duas migrações.
-6. O prazo de 20 dias (D7) é **fixo** ou vira parâmetro por projeto/rodada mais adiante?
+   (`?empresa=Santander,Itaú`). **A única questão de fato aberta desta lista** — a API já usa
+   parâmetro repetido (`?company=Santander&company=Itaú`), mas a rota do app não carrega filtro
+   nenhum, e nenhuma decisão trata disso.
+4. ~~**Fase futura**: links por contato para nudge individual ("quem não respondeu"), mantém no
+   radar?~~ **Respondido por D1**: os links por contato continuam existindo e de uso único. O
+   nudge individual sobre eles fica como evolução, registrada no `FLUXOS.md`.
+5. ~~**B13/B14**: converter, segregar ou descartar o histórico na virada de escala e do quarto
+   aspecto?~~ **Decidido e executado: converter.** A migration `AddNpsPhaseOneCapabilities` leva
+   as notas de 0–10 para 1–10 e os aspectos de 0–10 para 1–5, com o mapeamento escrito no próprio
+   arquivo. A conversão dos aspectos é **lossy e o `Down` não a desfaz**: tirar dump do banco
+   antes de rodar em produção é parte da decisão, não um detalhe operacional.
+6. O prazo de 20 dias (D7) é **fixo** ou vira parâmetro por projeto/rodada mais adiante? **A
+   decisão está tomada** — D7 fixa os 20 dias, e é assim que está implementado. A pergunta é de
+   evolução, e vale o mesmo que a §10 diz dos limiares 45/90: confirmar a política antes de
+   considerar parametrização.
 7. Com D9, o KPI de **vencidos** passa a contar todo projeto sem coleta recente, inclusive os que
-   antes eram descartados por estarem encerrados. Confirmar que é isso mesmo que a liderança quer
-   ver, ou se a régua de "vencido" também precisa mudar.
+   antes eram descartados por estarem encerrados. **A decisão está em D9**; o que falta é a
+   liderança confirmar que é isso que quer ver, ou dizer se a régua de "vencido" também muda.
 
 ## 12. Referências
 
