@@ -79,6 +79,11 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
         var classifications = responses.Select(r => r.Classification).ToList();
         var distribution = NpsCalculator.Distribution(classifications);
 
+        // B11: só o formato Completo coleta aspecto, e o envio já descarta o que
+        // vier num Simplificado — então aspecto não-nulo IMPLICA Completo, e
+        // não é preciso juntar o disparo para saber disso.
+        var complete = responses.Where(HasAnyAspect).ToList();
+
         return new NpsDashboardView(
             projectIds.Count,
             overdueProjects,
@@ -88,7 +93,12 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             responses.Count == 0 ? 0 : Math.Round((decimal)responses.Average(r => r.Score), 1),
             distribution[NpsClassification.Detractor],
             distribution[NpsClassification.Passive],
-            distribution[NpsClassification.Promoter]);
+            distribution[NpsClassification.Promoter],
+            complete.Count,
+            Average(complete, r => r.Quality), Count(complete, r => r.Quality),
+            Average(complete, r => r.Schedule), Count(complete, r => r.Schedule),
+            Average(complete, r => r.Communication), Count(complete, r => r.Communication),
+            Average(complete, r => r.BusinessValue), Count(complete, r => r.BusinessValue));
     }
 
     public async Task<IReadOnlyList<NpsProjectView>> ListProjectsAsync(NpsFilter filter, CancellationToken ct)
@@ -415,6 +425,22 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
             targets.GetValueOrDefault(d.Id),
             responses.GetValueOrDefault(d.Id))).ToList();
     }
+
+    private static bool HasAnyAspect(SurveyResponse response)
+        => response.Quality is not null
+            || response.Schedule is not null
+            || response.Communication is not null
+            || response.BusinessValue is not null;
+
+    /// <summary>Sobre quem respondeu ESTE aspecto, não sobre quem respondeu.</summary>
+    private static decimal? Average(IReadOnlyList<SurveyResponse> responses, Func<SurveyResponse, int?> aspect)
+    {
+        var values = responses.Select(aspect).Where(v => v is not null).Select(v => v!.Value).ToList();
+        return values.Count == 0 ? null : Math.Round((decimal)values.Average(), 1);
+    }
+
+    private static int Count(IReadOnlyList<SurveyResponse> responses, Func<SurveyResponse, int?> aspect)
+        => responses.Count(r => aspect(r) is not null);
 
     private async Task<int> CountOverdueProjectsAsync(IReadOnlyCollection<int> projectIds, CancellationToken ct)
         => (await GetOverdueProjectIdsAsync(projectIds, ct)).Count;

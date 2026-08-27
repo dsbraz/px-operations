@@ -186,6 +186,11 @@ else
                          Promoters="@(dashboard?.Promoters ?? 0)"
                          OfficialNps="@(dashboard?.OfficialNps ?? 0)" />
 
+        @if (dashboard is not null)
+        {
+            <NpsAspectAverages Dashboard="@dashboard" />
+        }
+
         <NpsProjectsTable Projects="@projects"
                           OnGenerateLink="OpenCreateLinkModal"
                           OnOpenDetail="OpenProjectDetailAsync"

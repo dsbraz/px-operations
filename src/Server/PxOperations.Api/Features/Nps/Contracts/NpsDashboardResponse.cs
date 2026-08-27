@@ -9,4 +9,9 @@ public sealed record NpsDashboardResponse(
     decimal AverageScore,
     int Detractors,
     int Passives,
-    int Promoters);
+    int Promoters,
+    int CompleteResponses,
+    decimal? QualityAverage, int QualityCount,
+    decimal? ScheduleAverage, int ScheduleCount,
+    decimal? CommunicationAverage, int CommunicationCount,
+    decimal? BusinessValueAverage, int BusinessValueCount);

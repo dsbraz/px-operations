@@ -8,7 +8,12 @@ namespace PxOperations.Api.Features.Nps;
 public static class NpsMappings
 {
     public static NpsDashboardResponse ToResponse(NpsDashboardView view)
-        => new(view.TotalProjects, view.OverdueProjects, view.ActiveDispatches, view.TotalResponses, view.OfficialNps, view.AverageScore, view.Detractors, view.Passives, view.Promoters);
+        => new(view.TotalProjects, view.OverdueProjects, view.ActiveDispatches, view.TotalResponses, view.OfficialNps, view.AverageScore, view.Detractors, view.Passives, view.Promoters,
+            view.CompleteResponses,
+            view.QualityAverage, view.QualityCount,
+            view.ScheduleAverage, view.ScheduleCount,
+            view.CommunicationAverage, view.CommunicationCount,
+            view.BusinessValueAverage, view.BusinessValueCount);
 
     public static NpsProjectResponse ToResponse(NpsProjectView view)
         => new(view.Id, view.Name, view.Client, view.Dc, view.DeliveryManager, view.ContactsCount, view.ActiveDispatches, view.LinkTargetsCount, view.AnsweredLinkTargetsCount, view.ResponsesCount, view.LastResponseAt, view.LastNps, view.IsOverdue, view.CollectionStatus, view.IsDismissed, view.DismissalReason, view.ActiveDispatchExpiresAt, view.LastDispatchClosedAt);

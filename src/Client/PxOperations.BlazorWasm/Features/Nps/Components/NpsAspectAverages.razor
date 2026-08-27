@@ -1,0 +1,73 @@
+@using System.Globalization
+@using PxOperations.BlazorWasm.Api
+
+@* F9: médias por aspecto, escala de 1 a 5 (D10), só do formato Completo. O
+   recorte fica explícito no subtítulo — sem ele o número parece falar da
+   carteira inteira quando na verdade fala do filtro ativo. *@
+@if (Aspects.Any(a => a.Count > 0))
+{
+    <section class="nps-panel aspects">
+        <div class="nps-panel-head">
+            <div>
+                <h1>Médias por aspecto</h1>
+                <p class="aspects__sub">Formulário completo · @Subtitle · escala de 1 a 5</p>
+            </div>
+        </div>
+
+        <ul class="aspects__list">
+            @foreach (var aspect in Aspects)
+            {
+                <li>
+                    <span class="aspects__label">@aspect.Label</span>
+                    <span class="aspects__track" aria-hidden="true">
+                        @if (aspect.Average is { } average)
+                        {
+                            <span class="aspects__bar" style="@BarWidth(average)"></span>
+                        }
+                    </span>
+                    <span class="aspects__value">
+                        @if (aspect.Average is { } value)
+                        {
+                            <strong>@value.ToString("0.0")</strong>
+                            @* A contagem só aparece quando difere do total: o
+                               aspecto é opcional, e uma média sobre menos gente
+                               não pode passar por média de todos. *@
+                            if (aspect.Count != Dashboard.CompleteResponses)
+                            {
+                                <span>@aspect.Count @(aspect.Count == 1 ? "resposta" : "respostas")</span>
+                            }
+                        }
+                        else
+                        {
+                            <span>sem resposta</span>
+                        }
+                    </span>
+                </li>
+            }
+        </ul>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public NpsDashboardResponse Dashboard { get; set; } = default!;
+
+    private string Subtitle
+        => $"{Dashboard.CompleteResponses} {(Dashboard.CompleteResponses == 1 ? "resposta" : "respostas")}";
+
+    private IReadOnlyList<Aspect> Aspects =>
+    [
+        new("Qualidade técnica", Dashboard.QualityAverage, Dashboard.QualityCount),
+        new("Prazos acordados", Dashboard.ScheduleAverage, Dashboard.ScheduleCount),
+        new("Comunicação", Dashboard.CommunicationAverage, Dashboard.CommunicationCount),
+        new("Valor para o negócio", Dashboard.BusinessValueAverage, Dashboard.BusinessValueCount)
+    ];
+
+    /// <summary>
+    /// Invariant de propósito: sob pt-BR o decimal sai com vírgula e
+    /// "inline-size: 88,0%" não é CSS válido — a barra some sem erro nenhum.
+    /// </summary>
+    private static string BarWidth(double average)
+        => FormattableString.Invariant($"inline-size: {average / 5d * 100d:0.#}%");
+
+    private sealed record Aspect(string Label, double? Average, int Count);
+}
