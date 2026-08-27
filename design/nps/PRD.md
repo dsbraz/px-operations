@@ -343,8 +343,9 @@ definir na revisão deste PRD; baseline = leitura do dashboard atual na ativaç�
 
 ## 11. Questões em aberto
 
-1. **Idiomas**: backend e v1 suportam **espanhol**; o mockup expõe só PT/EN. Mantém ES no
-   redesign (custo ~zero) ou corta de propósito?
+1. ~~**Idiomas**: backend e v1 suportam **espanhol**; o mockup expõe só PT/EN. Mantém ES no
+   redesign (custo ~zero) ou corta de propósito?~~ **Decidido: o espanhol fica.** O formulário
+   público responde nos três idiomas.
 2. O subtexto do KPI de respostas da v1 ("% de enviados") morre com D1/D2: fica contagem
    simples ou entra B8?
 3. Filtros na querystring das **rotas do app** (compartilhar visão filtrada)? Natural com D5,
