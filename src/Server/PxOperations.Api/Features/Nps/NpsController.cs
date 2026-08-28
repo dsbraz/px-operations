@@ -1,294 +1,245 @@
-using System.Net.Mime;
+using System.Globalization;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
-using PxOperations.Api.Features.Nps.Contracts;
+using Microsoft.AspNetCore.RateLimiting;
 using PxOperations.Application.Features.Nps;
 using PxOperations.Application.Features.Nps.UseCases;
-using PxOperations.Domain.Exceptions;
 
 namespace PxOperations.Api.Features.Nps;
 
 [ApiController]
 [Route("api/nps")]
 public sealed class NpsController(
-    GetNpsDashboardUseCase getDashboard,
-    ListNpsProjectsUseCase listProjects,
-    GetNpsProjectUseCase getProject,
-    ListNpsContactsUseCase listContacts,
+    INpsQueries queries,
     CreateNpsContactUseCase createContact,
     UpdateNpsContactUseCase updateContact,
-    DeleteNpsContactUseCase deleteContact,
-    ListNpsDispatchesUseCase listDispatches,
+    ArchiveNpsContactUseCase archiveContact,
     CreateNpsDispatchUseCase createDispatch,
-    GetNpsDispatchUseCase getDispatch,
-    ListNpsResponsesUseCase listResponses,
-    CloseNpsDispatchUseCase closeDispatch,
-    GetNpsPublicSurveyUseCase getPublicSurvey,
-    SubmitNpsPublicResponseUseCase submitPublicResponse) : ControllerBase
+    WaiveNpsCollectionUseCase waiveCollection,
+    ReactivateNpsCollectionUseCase reactivateCollection,
+    SubmitNpsPublicResponseUseCase submitResponse,
+    TimeProvider timeProvider) : ControllerBase
 {
     [HttpGet("dashboard")]
-    public async Task<ActionResult<NpsDashboardResponse>> GetDashboard(
-        [FromQuery] string? search,
-        [FromQuery] string? dc,
-        [FromQuery] string? deliveryManager,
-        [FromQuery] string? projectType,
-        [FromQuery] int? projectId,
-        [FromQuery] string? from,
-        [FromQuery] string? to,
-        [FromQuery] string? classification,
-        CancellationToken ct)
-    {
-        try
-        {
-            var dashboard = await getDashboard.ExecuteAsync(BuildFilter(search, dc, deliveryManager, projectType, projectId, from, to, classification), ct);
-            return Ok(NpsMappings.ToResponse(dashboard));
-        }
-        catch (ArgumentOutOfRangeException ex)
-        {
-            return BadRequest(new ProblemDetails { Detail = ex.Message });
-        }
-    }
+    public async Task<ActionResult<NpsDashboardView>> GetDashboard([FromQuery] NpsQueryRequest request, CancellationToken ct)
+        => Ok(await queries.GetDashboardAsync(BuildFilter(request), timeProvider.GetUtcNow(), ct));
 
     [HttpGet("projects")]
-    public async Task<ActionResult<IEnumerable<NpsProjectResponse>>> ListProjects(
-        [FromQuery] string? search,
-        [FromQuery] string? dc,
-        [FromQuery] string? deliveryManager,
-        [FromQuery] string? projectType,
+    public async Task<ActionResult<IReadOnlyList<NpsProjectView>>> ListProjects(
+        [FromQuery] NpsQueryRequest request,
         CancellationToken ct)
     {
-        var projects = await listProjects.ExecuteAsync(new NpsFilter(search, dc, deliveryManager, projectType, null, null, null, null), ct);
-        return Ok(projects.Select(NpsMappings.ToResponse));
+        var collectionFilter = BuildFilter(request) with
+        {
+            Statuses = [],
+            Formats = [],
+            Classifications = [],
+            From = null,
+            To = null
+        };
+        return Ok(await queries.ListProjectsAsync(collectionFilter, timeProvider.GetUtcNow(), ct));
     }
 
-    [HttpGet("projects/{projectId:int}")]
-    [ProducesResponseType<NpsProjectDetailResponse>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<NpsProjectDetailResponse>> GetProject(int projectId, CancellationToken ct)
+    [HttpGet("projects/{id:int}")]
+    public async Task<ActionResult<NpsProjectDetailView>> GetProject(int id, CancellationToken ct)
     {
-        var project = await getProject.ExecuteAsync(projectId, ct);
-        return project is null ? NotFound() : Ok(NpsMappings.ToResponse(project));
+        var project = await queries.GetProjectAsync(id, timeProvider.GetUtcNow(), ct);
+        return project is null ? NotFoundProblem() : Ok(project);
     }
+
+    [HttpGet("projects/{id:int}/responses")]
+    public async Task<ActionResult<IReadOnlyList<NpsResponseView>>> ListProjectResponses(
+        int id,
+        [FromQuery] string[] format,
+        CancellationToken ct)
+        => Ok(await queries.ListProjectResponsesAsync(id, format, ct));
 
     [HttpGet("projects/{projectId:int}/contacts")]
-    public async Task<ActionResult<IEnumerable<NpsContactResponse>>> ListContacts(
+    public async Task<ActionResult<IReadOnlyList<NpsContactView>>> ListContacts(
         int projectId,
         [FromQuery] bool includeArchived,
         CancellationToken ct)
-    {
-        var contacts = await listContacts.ExecuteAsync(projectId, includeArchived, ct);
-        return Ok(contacts.Select(NpsMappings.ToResponse));
-    }
+        => Ok(await queries.ListContactsAsync(projectId, includeArchived, ct));
 
     [HttpPost("projects/{projectId:int}/contacts")]
-    [ProducesResponseType<NpsContactResponse>(StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<NpsContactResponse>> CreateContact(int projectId, CreateNpsContactRequest request, CancellationToken ct)
+    [ProducesResponseType<NpsContactView>(StatusCodes.Status201Created)]
+    public async Task<ActionResult<NpsContactView>> CreateContact(
+        int projectId,
+        CreateNpsContactRequest request,
+        CancellationToken ct)
     {
-        try
-        {
-            var contact = await createContact.ExecuteAsync(projectId, new CreateNpsContactCommand(request.Name, request.Email, request.Role), ct);
-            return CreatedAtAction(nameof(ListContacts), new { projectId }, NpsMappings.ToResponse(contact));
-        }
-        catch (Exception ex) when (ex is BusinessRuleValidationException or KeyNotFoundException)
-        {
-            return BadRequest(new ProblemDetails { Detail = ex.Message });
-        }
+        var id = await createContact.ExecuteAsync(new CreateNpsContactCommand(
+            projectId,
+            request.Name,
+            request.Email,
+            request.Role), ct);
+        var contact = await queries.GetContactAsync(id, ct);
+        return CreatedAtAction(nameof(ListContacts), new { projectId }, contact);
     }
 
     [HttpPatch("contacts/{id:int}")]
-    [ProducesResponseType<NpsContactResponse>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<NpsContactResponse>> UpdateContact(int id, UpdateNpsContactRequest request, CancellationToken ct)
+    public async Task<ActionResult<NpsContactView>> UpdateContact(
+        int id,
+        UpdateNpsContactRequest request,
+        CancellationToken ct)
     {
-        try
-        {
-            var contact = await updateContact.ExecuteAsync(id, new UpdateNpsContactCommand(request.Name, request.Email, request.Role), ct);
-            return contact is null ? NotFound() : Ok(NpsMappings.ToResponse(contact));
-        }
-        catch (BusinessRuleValidationException ex)
-        {
-            return BadRequest(new ProblemDetails { Detail = ex.Message });
-        }
+        await updateContact.ExecuteAsync(new UpdateNpsContactCommand(id, request.Name, request.Email, request.Role), ct);
+        return Ok(await queries.GetContactAsync(id, ct));
     }
 
     [HttpDelete("contacts/{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteContact(int id, CancellationToken ct)
     {
-        var deleted = await deleteContact.ExecuteAsync(id, ct);
-        return deleted ? NoContent() : NotFound();
+        await archiveContact.ExecuteAsync(id, ct);
+        return NoContent();
     }
 
-    [HttpGet("projects/{projectId:int}/dispatches")]
-    public async Task<ActionResult<IEnumerable<NpsDispatchResponse>>> ListDispatches(int projectId, CancellationToken ct)
-    {
-        var dispatches = await listDispatches.ExecuteAsync(projectId, ct);
-        return Ok(dispatches.Select(NpsMappings.ToResponse));
-    }
-
-    [HttpPost("dispatches")]
-    [ProducesResponseType<NpsDispatchDetailResponse>(StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<NpsDispatchDetailResponse>> CreateDispatch(CreateNpsDispatchRequest request, CancellationToken ct)
-    {
-        try
-        {
-            var dispatch = await createDispatch.ExecuteAsync(new CreateNpsDispatchCommand(
-                request.ProjectId,
-                DateOnly.Parse(request.PeriodStart),
-                DateOnly.Parse(request.PeriodEnd),
-                NpsMappings.ParseFormFormat(request.Format),
-                NpsMappings.ParseLanguage(request.Language),
-                request.CreatedBy,
-                request.ContactIds ?? [],
-                request.CreateGenericToken), ct);
-
-            return CreatedAtAction(nameof(GetDispatch), new { id = dispatch.Dispatch.Id }, NpsMappings.ToResponse(dispatch));
-        }
-        catch (Exception ex) when (ex is BusinessRuleValidationException or KeyNotFoundException or InvalidOperationException or ArgumentOutOfRangeException)
-        {
-            return BadRequest(new ProblemDetails { Detail = ex.Message });
-        }
-    }
+    [HttpGet("projects/{id:int}/dispatches")]
+    public async Task<ActionResult<IReadOnlyList<NpsDispatchView>>> ListDispatches(int id, CancellationToken ct)
+        => Ok(await queries.ListDispatchesAsync(id, timeProvider.GetUtcNow(), ct));
 
     [HttpGet("dispatches/{id:int}")]
-    [ProducesResponseType<NpsDispatchDetailResponse>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<NpsDispatchDetailResponse>> GetDispatch(int id, CancellationToken ct)
+    public async Task<ActionResult<NpsDispatchDetailView>> GetDispatch(int id, CancellationToken ct)
     {
-        var dispatch = await getDispatch.ExecuteAsync(id, ct);
-        return dispatch is null ? NotFound() : Ok(NpsMappings.ToResponse(dispatch));
+        var dispatch = await queries.GetDispatchAsync(id, timeProvider.GetUtcNow(), ct);
+        return dispatch is null ? NotFoundProblem() : Ok(dispatch);
     }
 
     [HttpGet("dispatches/{id:int}/responses")]
-    public async Task<ActionResult<IEnumerable<NpsSurveyResponse>>> ListResponses(int id, CancellationToken ct)
-    {
-        var responses = await listResponses.ExecuteAsync(id, new NpsFilter(null, null, null, null, null, null, null, null), ct);
-        return Ok(responses.Select(NpsMappings.ToResponse));
-    }
+    public async Task<ActionResult<IReadOnlyList<NpsResponseView>>> ListDispatchResponses(int id, CancellationToken ct)
+        => Ok(await queries.ListDispatchResponsesAsync(id, ct));
 
-    [HttpPatch("dispatches/{id:int}/close")]
-    [ProducesResponseType<NpsDispatchDetailResponse>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<NpsDispatchDetailResponse>> CloseDispatch(int id, CancellationToken ct)
-    {
-        var dispatch = await closeDispatch.ExecuteAsync(id, ct);
-        return dispatch is null ? NotFound() : Ok(NpsMappings.ToResponse(dispatch));
-    }
-
-    [HttpGet("responses/export")]
-    public async Task<IActionResult> ExportResponses(
-        [FromQuery] string? search,
-        [FromQuery] string? dc,
-        [FromQuery] string? deliveryManager,
-        [FromQuery] string? projectType,
-        [FromQuery] int? projectId,
-        [FromQuery] string? from,
-        [FromQuery] string? to,
-        [FromQuery] string? classification,
+    [HttpPost("dispatches")]
+    [ProducesResponseType<NpsDispatchDetailView>(StatusCodes.Status201Created)]
+    public async Task<ActionResult<NpsDispatchDetailView>> CreateDispatch(
+        CreateNpsDispatchRequest request,
         CancellationToken ct)
     {
-        var responses = await listResponses.ExecuteAsync(null, BuildFilter(search, dc, deliveryManager, projectType, projectId, from, to, classification), ct);
-        var csv = BuildCsv(responses);
-        return File(Encoding.UTF8.GetBytes(csv), "text/csv", "nps-responses.csv");
+        var id = await createDispatch.ExecuteAsync(new CreateNpsDispatchCommand(
+            request.ProjectId,
+            request.Format,
+            request.Language,
+            request.ContactIds ?? []), ct);
+        var dispatch = await queries.GetDispatchAsync(id, timeProvider.GetUtcNow(), ct);
+        return CreatedAtAction(nameof(GetDispatch), new { id }, dispatch);
+    }
+
+    [HttpPost("projects/{id:int}/waiver")]
+    [ProducesResponseType<NpsProjectDetailView>(StatusCodes.Status201Created)]
+    public async Task<ActionResult<NpsProjectDetailView>> WaiveCollection(
+        int id,
+        WaiveNpsCollectionRequest request,
+        CancellationToken ct)
+    {
+        await waiveCollection.ExecuteAsync(new WaiveNpsCollectionCommand(id, request.Reason), ct);
+        var project = await queries.GetProjectAsync(id, timeProvider.GetUtcNow(), ct);
+        return CreatedAtAction(nameof(GetProject), new { id }, project);
+    }
+
+    [HttpDelete("projects/{id:int}/waiver")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> ReactivateCollection(int id, CancellationToken ct)
+    {
+        await reactivateCollection.ExecuteAsync(id, ct);
+        return NoContent();
     }
 
     [HttpGet("public/{token:guid}")]
-    [ProducesResponseType<NpsPublicSurveyResponse>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<NpsPublicSurveyResponse>> GetPublic(Guid token, CancellationToken ct)
+    public async Task<ActionResult<NpsPublicSurveyView>> GetPublic(Guid token, CancellationToken ct)
     {
-        var survey = await getPublicSurvey.ExecuteAsync(token, ct);
-        return survey is null ? NotFound() : Ok(NpsMappings.ToResponse(survey));
+        var survey = await queries.GetPublicSurveyAsync(token, timeProvider.GetUtcNow(), ct);
+        return survey is null ? NotFoundProblem() : Ok(survey);
     }
 
     [HttpPost("public/{token:guid}/responses")]
-    [ProducesResponseType<NpsSurveyResponse>(StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<NpsSurveyResponse>> SubmitPublic(Guid token, SubmitNpsSurveyResponseRequest request, CancellationToken ct)
+    [EnableRateLimiting("nps-public")]
+    [ProducesResponseType<NpsResponseView>(StatusCodes.Status201Created)]
+    public async Task<ActionResult<NpsResponseView>> SubmitPublic(
+        Guid token,
+        SubmitNpsSurveyResponseRequest request,
+        CancellationToken ct)
     {
-        try
-        {
-            var response = await submitPublicResponse.ExecuteAsync(token, new SubmitNpsPublicResponseCommand(
-                request.Score,
-                request.Scope,
-                request.Schedule,
-                request.Quality,
-                request.Communication,
-                request.Tags,
-                request.Comment,
-                request.RespondentName,
-                request.RespondentEmail), ct);
-
-            return CreatedAtAction(nameof(GetPublic), new { token }, NpsMappings.ToResponse(response));
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new ProblemDetails { Detail = ex.Message });
-        }
-        catch (BusinessRuleValidationException ex)
-        {
-            return BadRequest(new ProblemDetails { Detail = ex.Message });
-        }
+        var id = await submitResponse.ExecuteAsync(new SubmitNpsPublicResponseCommand(
+            token,
+            request.Score,
+            request.Quality,
+            request.Schedule,
+            request.Communication,
+            request.BusinessValue,
+            request.Comment,
+            request.RespondentName,
+            request.RespondentEmail), ct);
+        var response = await queries.GetResponseAsync(id, ct);
+        return CreatedAtAction(nameof(GetPublic), new { token }, response);
     }
 
-    private static NpsFilter BuildFilter(
-        string? search,
-        string? dc,
-        string? deliveryManager,
-        string? projectType,
-        int? projectId,
-        string? from,
-        string? to,
-        string? classification)
+    [HttpGet("responses/export")]
+    public async Task<IActionResult> ExportResponses([FromQuery] NpsQueryRequest request, CancellationToken ct)
+    {
+        var responses = await queries.ListResponsesForExportAsync(
+            BuildFilter(request),
+            timeProvider.GetUtcNow(),
+            ct);
+        return File(
+            Encoding.UTF8.GetBytes(BuildCsv(responses)),
+            "text/csv; charset=utf-8",
+            "nps-responses.csv");
+    }
+
+    private ActionResult NotFoundProblem()
+        => Problem(statusCode: StatusCodes.Status404NotFound, title: "Resource not found");
+
+    private static NpsFilter BuildFilter(NpsQueryRequest request)
         => new(
-            search,
-            dc,
-            deliveryManager,
-            projectType,
-            projectId,
-            string.IsNullOrWhiteSpace(from) ? null : DateOnly.Parse(from),
-            string.IsNullOrWhiteSpace(to) ? null : DateOnly.Parse(to),
-            NpsMappings.ParseClassificationOrNull(classification));
+            request.Search?.Trim(),
+            request.Client,
+            request.Dc,
+            request.ProjectType,
+            request.DeliveryManager,
+            request.Status,
+            request.Format,
+            request.Classification,
+            ParseDate(request.From),
+            ParseDate(request.To),
+            request.IncludeWaived,
+            request.ProjectId);
+
+    private static DateOnly? ParseDate(string? value)
+        => string.IsNullOrWhiteSpace(value)
+            ? null
+            : DateOnly.ParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture);
 
     private static string BuildCsv(IEnumerable<NpsResponseView> responses)
     {
         var builder = new StringBuilder();
-        builder.AppendLine("id,project_id,project_name,dispatch_id,score,classification,submitted_at,contact_email,respondent_email,comment");
+        builder.AppendLine("id,project_id,project_name,dispatch_id,target_id,format,score,classification,quality,schedule,communication,business_value,comment,respondent_name,respondent_email,submitted_at");
         foreach (var response in responses)
         {
-            builder.AppendLine(string.Join(',', [
-                response.Id.ToString(),
-                response.ProjectId.ToString(),
+            builder.AppendLine(string.Join(',', new[]
+            {
+                response.Id.ToString(CultureInfo.InvariantCulture),
+                response.ProjectId.ToString(CultureInfo.InvariantCulture),
                 Csv(response.ProjectName),
-                response.DispatchId.ToString(),
-                response.Score.ToString(),
-                Csv(response.Classification),
-                Csv(response.SubmittedAt),
-                Csv(response.ContactEmail),
+                response.DispatchId.ToString(CultureInfo.InvariantCulture),
+                response.TargetId.ToString(CultureInfo.InvariantCulture),
+                response.Format,
+                response.Score.ToString(CultureInfo.InvariantCulture),
+                response.Classification,
+                response.Quality?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                response.Schedule?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                response.Communication?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                response.BusinessValue?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                Csv(response.Comment),
+                Csv(response.RespondentName),
                 Csv(response.RespondentEmail),
-                Csv(response.Comment)
-            ]));
+                response.SubmittedAt.ToString("O", CultureInfo.InvariantCulture)
+            }));
         }
 
         return builder.ToString();
     }
 
     private static string Csv(string? value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return "";
-        }
-
-        return $"\"{value.Replace("\"", "\"\"")}\"";
-    }
+        => string.IsNullOrEmpty(value) ? string.Empty : $"\"{value.Replace("\"", "\"\"")}\"";
 }

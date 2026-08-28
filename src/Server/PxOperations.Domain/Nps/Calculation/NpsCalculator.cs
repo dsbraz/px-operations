@@ -2,35 +2,42 @@ namespace PxOperations.Domain.Nps.Calculation;
 
 public static class NpsCalculator
 {
-    public static NpsClassification Classify(int score) => score switch
-    {
-        <= 6 => NpsClassification.Detractor,
-        <= 8 => NpsClassification.Passive,
-        _ => NpsClassification.Promoter
-    };
+    public static NpsClassification Classify(int score) => NpsScale.Classify(score);
 
-    public static decimal CalculateOfficialScore(IEnumerable<NpsClassification> classifications)
+    public static NpsMetrics Calculate(IEnumerable<int> scores)
     {
-        var values = classifications.ToList();
-        if (values.Count == 0)
+        var values = scores.ToArray();
+        if (values.Length == 0)
         {
-            return 0;
+            return NpsMetrics.Empty;
         }
 
-        var promoters = values.Count(c => c == NpsClassification.Promoter);
-        var detractors = values.Count(c => c == NpsClassification.Detractor);
+        var classifications = values.Select(NpsScale.Classify).ToArray();
+        var promoters = classifications.Count(value => value == NpsClassification.Promoter);
+        var passives = classifications.Count(value => value == NpsClassification.Passive);
+        var detractors = classifications.Count(value => value == NpsClassification.Detractor);
+        var officialScore = Math.Round(
+            ((decimal)promoters / values.Length * 100m) - ((decimal)detractors / values.Length * 100m),
+            1);
 
-        return Math.Round(((decimal)promoters / values.Count * 100) - ((decimal)detractors / values.Count * 100), 1);
+        return new NpsMetrics(
+            officialScore,
+            Math.Round((decimal)values.Average(), 1),
+            Percentage(detractors, values.Length),
+            Percentage(passives, values.Length),
+            Percentage(promoters, values.Length));
     }
 
-    public static IReadOnlyDictionary<NpsClassification, int> Distribution(IEnumerable<NpsClassification> classifications)
-    {
-        var values = classifications.ToList();
-        return new Dictionary<NpsClassification, int>
-        {
-            [NpsClassification.Detractor] = values.Count(c => c == NpsClassification.Detractor),
-            [NpsClassification.Passive] = values.Count(c => c == NpsClassification.Passive),
-            [NpsClassification.Promoter] = values.Count(c => c == NpsClassification.Promoter)
-        };
-    }
+    private static decimal Percentage(int count, int total)
+        => Math.Round((decimal)count / total * 100m, 1);
+}
+
+public sealed record NpsMetrics(
+    decimal? OfficialScore,
+    decimal? AverageScore,
+    decimal DetractorPercentage,
+    decimal PassivePercentage,
+    decimal PromoterPercentage)
+{
+    public static NpsMetrics Empty { get; } = new(null, null, 0m, 0m, 0m);
 }

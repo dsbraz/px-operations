@@ -4,28 +4,23 @@ using PxOperations.Domain.Nps;
 
 namespace PxOperations.Application.Features.Nps.UseCases;
 
-public sealed record CreateNpsContactCommand(int ProjectId, string Name, string Email, string? Role);
+public sealed record WaiveNpsCollectionCommand(int ProjectId, string Reason);
 
-public sealed class CreateNpsContactUseCase(
+public sealed class WaiveNpsCollectionUseCase(
     INpsRepository repository,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider)
 {
-    public async Task<int> ExecuteAsync(CreateNpsContactCommand command, CancellationToken ct)
+    public async Task<int> ExecuteAsync(WaiveNpsCollectionCommand command, CancellationToken ct)
     {
         if (!await repository.ProjectExistsAsync(command.ProjectId, ct))
         {
             throw new ResourceNotFoundException("Project was not found.");
         }
 
-        var contact = Contact.Create(
-            command.ProjectId,
-            command.Name,
-            command.Email,
-            command.Role,
-            timeProvider.GetUtcNow());
-        repository.AddContact(contact);
+        var collection = await repository.GetOrCreateCollectionAsync(command.ProjectId, ct);
+        collection.Waive(command.Reason, timeProvider.GetUtcNow());
         await unitOfWork.SaveChangesAsync(ct);
-        return contact.Id;
+        return collection.Id;
     }
 }

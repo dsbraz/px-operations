@@ -1,55 +1,42 @@
 using PxOperations.Domain.Abstractions;
-using PxOperations.Domain.Nps.Rules;
-using PxOperations.Domain.Projects;
-using PxOperations.Domain.Rules;
 
 namespace PxOperations.Domain.Nps;
 
-public sealed class Dispatch : AggregateRoot<int>
+public sealed class Dispatch : Entity<int>
 {
     private readonly List<DispatchTarget> _targets = [];
 
     private Dispatch() : base(default) { }
 
-    public int ProjectId { get; private set; }
-    public DateOnly PeriodStart { get; private set; }
-    public DateOnly PeriodEnd { get; private set; }
+    public int CollectionId { get; private set; }
     public NpsFormFormat Format { get; private set; }
     public NpsLanguage Language { get; private set; }
     public NpsDispatchStatus Status { get; private set; }
-    public string CreatedBy { get; private set; } = string.Empty;
     public DateTimeOffset CreatedAt { get; private set; }
+    public DateTimeOffset ExpiresAt { get; private set; }
     public DateTimeOffset? ClosedAt { get; private set; }
-    public Project Project { get; private set; } = default!;
     public IReadOnlyCollection<DispatchTarget> Targets => _targets.AsReadOnly();
+    public bool IsOpen => Status == NpsDispatchStatus.Open;
 
-    public static Dispatch Create(
-        int projectId,
-        DateOnly periodStart,
-        DateOnly periodEnd,
-        NpsFormFormat format,
-        NpsLanguage language,
-        string createdBy,
-        DateTimeOffset now)
-    {
-        RuleChecker.Check(new DispatchPeriodMustBeValidRule(periodStart, periodEnd));
-
-        return new Dispatch
+    internal static Dispatch Create(NpsFormFormat format, NpsLanguage language, DateTimeOffset now)
+        => new()
         {
-            ProjectId = projectId,
-            PeriodStart = periodStart,
-            PeriodEnd = periodEnd,
             Format = format,
             Language = language,
             Status = NpsDispatchStatus.Open,
-            CreatedBy = string.IsNullOrWhiteSpace(createdBy) ? "system" : createdBy.Trim(),
-            CreatedAt = now
+            CreatedAt = now,
+            ExpiresAt = now.AddDays(NpsCollectionPolicy.LinkValidityDays)
         };
-    }
+
+    internal void AddGenericTarget(Guid token, DateTimeOffset now)
+        => _targets.Add(DispatchTarget.CreateGeneric(token, now));
+
+    internal void AddContactTarget(int contactId, Guid token, DateTimeOffset now)
+        => _targets.Add(DispatchTarget.CreateContact(contactId, token, now));
 
     public void Close(DateTimeOffset now)
     {
-        if (Status == NpsDispatchStatus.Closed)
+        if (!IsOpen)
         {
             return;
         }

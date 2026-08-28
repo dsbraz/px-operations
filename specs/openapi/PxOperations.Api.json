@@ -843,36 +843,73 @@
             }
           },
           {
-            "name": "dc",
+            "name": "client",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           {
-            "name": "deliveryManager",
+            "name": "dc",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           {
             "name": "projectType",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           {
-            "name": "projectId",
+            "name": "deliveryManager",
             "in": "query",
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "type": [
-                "integer",
-                "string"
-              ],
-              "format": "int32"
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "classification",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           {
@@ -890,10 +927,22 @@
             }
           },
           {
-            "name": "classification",
+            "name": "includeWaived",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
             }
           }
         ],
@@ -903,17 +952,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/NpsDashboardResponse"
+                  "$ref": "#/components/schemas/NpsDashboardView"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NpsDashboardResponse"
+                  "$ref": "#/components/schemas/NpsDashboardView"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NpsDashboardResponse"
+                  "$ref": "#/components/schemas/NpsDashboardView"
                 }
               }
             }
@@ -936,24 +985,106 @@
             }
           },
           {
-            "name": "dc",
+            "name": "client",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           {
-            "name": "deliveryManager",
+            "name": "dc",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           {
             "name": "projectType",
             "in": "query",
             "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "deliveryManager",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "classification",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeWaived",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
             }
           }
         ],
@@ -965,7 +1096,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/NpsProjectResponse"
+                    "$ref": "#/components/schemas/NpsProjectView"
                   }
                 }
               },
@@ -973,7 +1104,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/NpsProjectResponse"
+                    "$ref": "#/components/schemas/NpsProjectView"
                   }
                 }
               },
@@ -981,7 +1112,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/NpsProjectResponse"
+                    "$ref": "#/components/schemas/NpsProjectView"
                   }
                 }
               }
@@ -990,7 +1121,7 @@
         }
       }
     },
-    "/api/nps/projects/{projectId}": {
+    "/api/nps/projects/{id}": {
       "get": {
         "tags": [
           "Nps"
@@ -998,7 +1129,7 @@
         "operationId": "GetProject",
         "parameters": [
           {
-            "name": "projectId",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
@@ -1014,37 +1145,78 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/NpsProjectDetailResponse"
+                  "$ref": "#/components/schemas/NpsProjectDetailView"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NpsProjectDetailResponse"
+                  "$ref": "#/components/schemas/NpsProjectDetailView"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NpsProjectDetailResponse"
+                  "$ref": "#/components/schemas/NpsProjectDetailView"
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/nps/projects/{id}/responses": {
+      "get": {
+        "tags": [
+          "Nps"
+        ],
+        "operationId": "ListProjectResponses",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int32"
+            }
           },
-          "404": {
-            "description": "Not Found",
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NpsResponseView"
+                  }
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NpsResponseView"
+                  }
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NpsResponseView"
+                  }
                 }
               }
             }
@@ -1085,7 +1257,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/NpsContactResponse"
+                    "$ref": "#/components/schemas/NpsContactView"
                   }
                 }
               },
@@ -1093,7 +1265,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/NpsContactResponse"
+                    "$ref": "#/components/schemas/NpsContactView"
                   }
                 }
               },
@@ -1101,7 +1273,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/NpsContactResponse"
+                    "$ref": "#/components/schemas/NpsContactView"
                   }
                 }
               }
@@ -1152,37 +1324,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/NpsContactResponse"
+                  "$ref": "#/components/schemas/NpsContactView"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NpsContactResponse"
+                  "$ref": "#/components/schemas/NpsContactView"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NpsContactResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
+                  "$ref": "#/components/schemas/NpsContactView"
                 }
               }
             }
@@ -1234,37 +1386,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/NpsContactResponse"
+                  "$ref": "#/components/schemas/NpsContactView"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NpsContactResponse"
+                  "$ref": "#/components/schemas/NpsContactView"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NpsContactResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
+                  "$ref": "#/components/schemas/NpsContactView"
                 }
               }
             }
@@ -1291,31 +1423,11 @@
         "responses": {
           "204": {
             "description": "No Content"
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
           }
         }
       }
     },
-    "/api/nps/projects/{projectId}/dispatches": {
+    "/api/nps/projects/{id}/dispatches": {
       "get": {
         "tags": [
           "Nps"
@@ -1323,7 +1435,7 @@
         "operationId": "ListDispatches",
         "parameters": [
           {
-            "name": "projectId",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
@@ -1341,7 +1453,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/NpsDispatchResponse"
+                    "$ref": "#/components/schemas/NpsDispatchView"
                   }
                 }
               },
@@ -1349,7 +1461,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/NpsDispatchResponse"
+                    "$ref": "#/components/schemas/NpsDispatchView"
                   }
                 }
               },
@@ -1357,7 +1469,100 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/NpsDispatchResponse"
+                    "$ref": "#/components/schemas/NpsDispatchView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/nps/dispatches/{id}": {
+      "get": {
+        "tags": [
+          "Nps"
+        ],
+        "operationId": "GetDispatch",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/NpsDispatchDetailView"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NpsDispatchDetailView"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NpsDispatchDetailView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/nps/dispatches/{id}/responses": {
+      "get": {
+        "tags": [
+          "Nps"
+        ],
+        "operationId": "ListDispatchResponses",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NpsResponseView"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NpsResponseView"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NpsResponseView"
                   }
                 }
               }
@@ -1398,37 +1603,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/NpsDispatchDetailResponse"
+                  "$ref": "#/components/schemas/NpsDispatchDetailView"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NpsDispatchDetailResponse"
+                  "$ref": "#/components/schemas/NpsDispatchDetailView"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NpsDispatchDetailResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
+                  "$ref": "#/components/schemas/NpsDispatchDetailView"
                 }
               }
             }
@@ -1436,12 +1621,72 @@
         }
       }
     },
-    "/api/nps/dispatches/{id}": {
-      "get": {
+    "/api/nps/projects/{id}/waiver": {
+      "post": {
         "tags": [
           "Nps"
         ],
-        "operationId": "GetDispatch",
+        "operationId": "WaiveCollection",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WaiveNpsCollectionRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WaiveNpsCollectionRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/WaiveNpsCollectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/NpsProjectDetailView"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NpsProjectDetailView"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NpsProjectDetailView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Nps"
+        ],
+        "operationId": "ReactivateCollection",
         "parameters": [
           {
             "name": "id",
@@ -1455,234 +1700,8 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/NpsDispatchDetailResponse"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NpsDispatchDetailResponse"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NpsDispatchDetailResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/nps/dispatches/{id}/responses": {
-      "get": {
-        "tags": [
-          "Nps"
-        ],
-        "operationId": "ListResponses",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/NpsSurveyResponse"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/NpsSurveyResponse"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/NpsSurveyResponse"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/nps/dispatches/{id}/close": {
-      "patch": {
-        "tags": [
-          "Nps"
-        ],
-        "operationId": "CloseDispatch",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/NpsDispatchDetailResponse"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NpsDispatchDetailResponse"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NpsDispatchDetailResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/nps/responses/export": {
-      "get": {
-        "tags": [
-          "Nps"
-        ],
-        "operationId": "ExportResponses",
-        "parameters": [
-          {
-            "name": "search",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "dc",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "deliveryManager",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "projectType",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "projectId",
-            "in": "query",
-            "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "type": [
-                "integer",
-                "string"
-              ],
-              "format": "int32"
-            }
-          },
-          {
-            "name": "from",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "to",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "classification",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
+          "204": {
+            "description": "No Content"
           }
         }
       }
@@ -1710,37 +1729,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/NpsPublicSurveyResponse"
+                  "$ref": "#/components/schemas/NpsPublicSurveyView"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NpsPublicSurveyResponse"
+                  "$ref": "#/components/schemas/NpsPublicSurveyView"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NpsPublicSurveyResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
+                  "$ref": "#/components/schemas/NpsPublicSurveyView"
                 }
               }
             }
@@ -1791,80 +1790,145 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/NpsSurveyResponse"
+                  "$ref": "#/components/schemas/NpsResponseView"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NpsSurveyResponse"
+                  "$ref": "#/components/schemas/NpsResponseView"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NpsSurveyResponse"
+                  "$ref": "#/components/schemas/NpsResponseView"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/nps/responses/export": {
+      "get": {
+        "tags": [
+          "Nps"
+        ],
+        "operationId": "ExportResponses",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
               }
             }
           },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
+          {
+            "name": "dc",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
               }
             }
           },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
+          {
+            "name": "projectType",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
               }
             }
           },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
+          {
+            "name": "deliveryManager",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
               }
             }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "classification",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeWaived",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
           }
         }
       }
@@ -2370,13 +2434,9 @@
       "CreateNpsDispatchRequest": {
         "required": [
           "projectId",
-          "periodStart",
-          "periodEnd",
           "format",
           "language",
-          "createdBy",
-          "contactIds",
-          "createGenericToken"
+          "contactIds"
         ],
         "type": "object",
         "properties": {
@@ -2388,19 +2448,10 @@
             ],
             "format": "int32"
           },
-          "periodStart": {
-            "type": "string"
-          },
-          "periodEnd": {
-            "type": "string"
-          },
           "format": {
             "type": "string"
           },
           "language": {
-            "type": "string"
-          },
-          "createdBy": {
             "type": "string"
           },
           "contactIds": {
@@ -2416,9 +2467,6 @@
               ],
               "format": "int32"
             }
-          },
-          "createGenericToken": {
-            "type": "boolean"
           }
         }
       },
@@ -2646,7 +2694,45 @@
           }
         }
       },
-      "NpsContactResponse": {
+      "NpsAspectView": {
+        "required": [
+          "code",
+          "label",
+          "scale"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "scale": {
+            "$ref": "#/components/schemas/NpsScaleView"
+          }
+        }
+      },
+      "NpsBadgeView": {
+        "required": [
+          "code",
+          "label",
+          "tone"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "tone": {
+            "type": "string"
+          }
+        }
+      },
+      "NpsContactView": {
         "required": [
           "id",
           "projectId",
@@ -2691,53 +2777,38 @@
             "type": "boolean"
           },
           "createdAt": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           },
           "archivedAt": {
             "type": [
               "null",
               "string"
-            ]
+            ],
+            "format": "date-time"
           }
         }
       },
-      "NpsDashboardResponse": {
+      "NpsDashboardView": {
         "required": [
-          "totalProjects",
-          "overdueProjects",
-          "activeDispatches",
-          "totalResponses",
           "officialNps",
+          "totalResponses",
           "averageScore",
-          "detractors",
-          "passives",
-          "promoters"
+          "overdueProjects",
+          "scale",
+          "distribution",
+          "filterOptions"
         ],
         "type": "object",
         "properties": {
-          "totalProjects": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "officialNps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
             "type": [
-              "integer",
+              "null",
+              "number",
               "string"
             ],
-            "format": "int32"
-          },
-          "overdueProjects": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "activeDispatches": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
+            "format": "double"
           },
           "totalResponses": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -2747,23 +2818,16 @@
             ],
             "format": "int32"
           },
-          "officialNps": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
           "averageScore": {
             "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
             "type": [
+              "null",
               "number",
               "string"
             ],
             "format": "double"
           },
-          "detractors": {
+          "overdueProjects": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -2771,25 +2835,21 @@
             ],
             "format": "int32"
           },
-          "passives": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
+          "scale": {
+            "$ref": "#/components/schemas/NpsScaleView"
           },
-          "promoters": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
+          "distribution": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NpsDistributionView"
+            }
+          },
+          "filterOptions": {
+            "$ref": "#/components/schemas/NpsFilterOptionsView"
           }
         }
       },
-      "NpsDispatchDetailResponse": {
+      "NpsDispatchDetailView": {
         "required": [
           "dispatch",
           "targets"
@@ -2797,99 +2857,17 @@
         "type": "object",
         "properties": {
           "dispatch": {
-            "$ref": "#/components/schemas/NpsDispatchResponse"
+            "$ref": "#/components/schemas/NpsDispatchView"
           },
           "targets": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/NpsDispatchTargetResponse"
+              "$ref": "#/components/schemas/NpsDispatchTargetView"
             }
           }
         }
       },
-      "NpsDispatchResponse": {
-        "required": [
-          "id",
-          "projectId",
-          "projectName",
-          "periodStart",
-          "periodEnd",
-          "format",
-          "language",
-          "status",
-          "createdBy",
-          "createdAt",
-          "closedAt",
-          "targetsCount",
-          "responsesCount"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "projectId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "projectName": {
-            "type": "string"
-          },
-          "periodStart": {
-            "type": "string"
-          },
-          "periodEnd": {
-            "type": "string"
-          },
-          "format": {
-            "type": "string"
-          },
-          "language": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "createdBy": {
-            "type": "string"
-          },
-          "createdAt": {
-            "type": "string"
-          },
-          "closedAt": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "targetsCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "responsesCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          }
-        }
-      },
-      "NpsDispatchTargetResponse": {
+      "NpsDispatchTargetView": {
         "required": [
           "id",
           "dispatchId",
@@ -2956,53 +2934,376 @@
           }
         }
       },
-      "NpsProjectDetailResponse": {
+      "NpsDispatchView": {
+        "required": [
+          "id",
+          "projectId",
+          "projectName",
+          "format",
+          "formatLabel",
+          "language",
+          "languageLabel",
+          "status",
+          "createdAt",
+          "expiresAt",
+          "closedAt",
+          "targetsCount",
+          "responsesCount",
+          "availability",
+          "availabilityLabel",
+          "tone"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "projectId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "projectName": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "formatLabel": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "languageLabel": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "closedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "targetsCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "responsesCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "availability": {
+            "type": "string"
+          },
+          "availabilityLabel": {
+            "type": "string"
+          },
+          "tone": {
+            "type": "string"
+          }
+        }
+      },
+      "NpsDistributionView": {
+        "required": [
+          "code",
+          "label",
+          "tone",
+          "count",
+          "percentage"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "tone": {
+            "type": "string"
+          },
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "NpsFilterOptionsView": {
+        "required": [
+          "clients",
+          "dcs",
+          "projectTypes",
+          "deliveryManagers",
+          "statuses",
+          "formats",
+          "classifications"
+        ],
+        "type": "object",
+        "properties": {
+          "clients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NpsOptionView"
+            }
+          },
+          "dcs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NpsOptionView"
+            }
+          },
+          "projectTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NpsOptionView"
+            }
+          },
+          "deliveryManagers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NpsOptionView"
+            }
+          },
+          "statuses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NpsOptionView"
+            }
+          },
+          "formats": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NpsOptionView"
+            }
+          },
+          "classifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NpsOptionView"
+            }
+          }
+        }
+      },
+      "NpsLinkView": {
+        "required": [
+          "dispatchId",
+          "token",
+          "format",
+          "formatLabel",
+          "expiresAt",
+          "availability",
+          "availabilityLabel",
+          "tone"
+        ],
+        "type": "object",
+        "properties": {
+          "dispatchId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "token": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "format": {
+            "type": "string"
+          },
+          "formatLabel": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "availability": {
+            "type": "string"
+          },
+          "availabilityLabel": {
+            "type": "string"
+          },
+          "tone": {
+            "type": "string"
+          }
+        }
+      },
+      "NpsOptionView": {
+        "required": [
+          "code",
+          "label"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      },
+      "NpsPrimaryActionView": {
+        "required": [
+          "code",
+          "label",
+          "format",
+          "dispatchId",
+          "token"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "format": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dispatchId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "token": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "NpsProjectDetailView": {
         "required": [
           "project",
-          "contacts",
-          "dispatches",
+          "officialNps",
+          "averageScore",
+          "responsesCount",
+          "promotersCount",
+          "activeLinks",
           "recentResponses"
         ],
         "type": "object",
         "properties": {
           "project": {
-            "$ref": "#/components/schemas/NpsProjectResponse"
+            "$ref": "#/components/schemas/NpsProjectView"
           },
-          "contacts": {
+          "officialNps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "averageScore": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "responsesCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "promotersCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "activeLinks": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/NpsContactResponse"
-            }
-          },
-          "dispatches": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/NpsDispatchResponse"
+              "$ref": "#/components/schemas/NpsLinkView"
             }
           },
           "recentResponses": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/NpsSurveyResponse"
+              "$ref": "#/components/schemas/NpsResponseView"
             }
           }
         }
       },
-      "NpsProjectResponse": {
+      "NpsProjectView": {
         "required": [
           "id",
           "name",
           "client",
           "dc",
           "deliveryManager",
-          "contactsCount",
-          "activeDispatches",
-          "linkTargetsCount",
-          "answeredLinkTargetsCount",
+          "projectType",
           "responsesCount",
-          "lastResponseAt",
-          "lastNps",
-          "isOverdue"
+          "stage",
+          "temporal",
+          "waiver",
+          "activeLinks",
+          "primaryAction",
+          "isOverdue",
+          "lastDispatchClosedAt"
         ],
         "type": "object",
         "properties": {
@@ -3032,37 +3333,8 @@
               "string"
             ]
           },
-          "contactsCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "activeDispatches": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "linkTargetsCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "answeredLinkTargetsCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
+          "projectType": {
+            "type": "string"
           },
           "responsesCount": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -3072,37 +3344,64 @@
             ],
             "format": "int32"
           },
-          "lastResponseAt": {
-            "type": [
-              "null",
-              "string"
+          "stage": {
+            "$ref": "#/components/schemas/NpsBadgeView"
+          },
+          "temporal": {
+            "$ref": "#/components/schemas/NpsTemporalView"
+          },
+          "waiver": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/NpsWaiverView"
+              }
             ]
           },
-          "lastNps": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
-            "type": [
-              "null",
-              "number",
-              "string"
-            ],
-            "format": "double"
+          "activeLinks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NpsLinkView"
+            }
+          },
+          "primaryAction": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/NpsPrimaryActionView"
+              }
+            ]
           },
           "isOverdue": {
             "type": "boolean"
+          },
+          "lastDispatchClosedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
-      "NpsPublicSurveyResponse": {
+      "NpsPublicSurveyView": {
         "required": [
           "token",
           "projectId",
           "projectName",
+          "client",
           "dispatchId",
-          "periodStart",
-          "periodEnd",
           "format",
           "language",
-          "alreadyAnswered"
+          "expiresAt",
+          "availability",
+          "isGeneric",
+          "scoreScale",
+          "aspects"
         ],
         "type": "object",
         "properties": {
@@ -3121,6 +3420,12 @@
           "projectName": {
             "type": "string"
           },
+          "client": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "dispatchId": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
@@ -3129,24 +3434,34 @@
             ],
             "format": "int32"
           },
-          "periodStart": {
-            "type": "string"
-          },
-          "periodEnd": {
-            "type": "string"
-          },
           "format": {
             "type": "string"
           },
           "language": {
             "type": "string"
           },
-          "alreadyAnswered": {
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "availability": {
+            "type": "string"
+          },
+          "isGeneric": {
             "type": "boolean"
+          },
+          "scoreScale": {
+            "$ref": "#/components/schemas/NpsScaleView"
+          },
+          "aspects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NpsAspectView"
+            }
           }
         }
       },
-      "NpsSurveyResponse": {
+      "NpsResponseView": {
         "required": [
           "id",
           "projectId",
@@ -3156,13 +3471,15 @@
           "contactId",
           "contactName",
           "contactEmail",
+          "format",
+          "formatLabel",
           "score",
           "classification",
-          "scope",
-          "schedule",
+          "classificationLabel",
           "quality",
+          "schedule",
           "communication",
-          "tags",
+          "businessValue",
           "comment",
           "respondentName",
           "respondentEmail",
@@ -3226,6 +3543,12 @@
               "string"
             ]
           },
+          "format": {
+            "type": "string"
+          },
+          "formatLabel": {
+            "type": "string"
+          },
           "score": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
@@ -3237,7 +3560,10 @@
           "classification": {
             "type": "string"
           },
-          "scope": {
+          "classificationLabel": {
+            "type": "string"
+          },
+          "quality": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "null",
@@ -3255,15 +3581,6 @@
             ],
             "format": "int32"
           },
-          "quality": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "null",
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
           "communication": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
@@ -3273,11 +3590,14 @@
             ],
             "format": "int32"
           },
-          "tags": {
+          "businessValue": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "null",
+              "integer",
               "string"
-            ]
+            ],
+            "format": "int32"
           },
           "comment": {
             "type": [
@@ -3298,7 +3618,72 @@
             ]
           },
           "submittedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "NpsScaleView": {
+        "required": [
+          "minimum",
+          "maximum"
+        ],
+        "type": "object",
+        "properties": {
+          "minimum": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "maximum": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "NpsTemporalView": {
+        "required": [
+          "label",
+          "tone",
+          "at"
+        ],
+        "type": "object",
+        "properties": {
+          "label": {
             "type": "string"
+          },
+          "tone": {
+            "type": "string"
+          },
+          "at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "NpsWaiverView": {
+        "required": [
+          "reason",
+          "waivedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "waivedAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -3706,11 +4091,10 @@
       "SubmitNpsSurveyResponseRequest": {
         "required": [
           "score",
-          "scope",
-          "schedule",
           "quality",
+          "schedule",
           "communication",
-          "tags",
+          "businessValue",
           "comment",
           "respondentName",
           "respondentEmail"
@@ -3725,7 +4109,7 @@
             ],
             "format": "int32"
           },
-          "scope": {
+          "quality": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "null",
@@ -3743,15 +4127,6 @@
             ],
             "format": "int32"
           },
-          "quality": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "null",
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
           "communication": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
@@ -3761,11 +4136,14 @@
             ],
             "format": "int32"
           },
-          "tags": {
+          "businessValue": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "null",
+              "integer",
               "string"
-            ]
+            ],
+            "format": "int32"
           },
           "comment": {
             "type": [
@@ -3911,6 +4289,17 @@
           },
           "renewalObservation": {
             "$ref": "#/components/schemas/OptionalOfstring"
+          }
+        }
+      },
+      "WaiveNpsCollectionRequest": {
+        "required": [
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
           }
         }
       },

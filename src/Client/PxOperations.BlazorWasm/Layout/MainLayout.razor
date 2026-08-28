@@ -1,8 +1,28 @@
 @inherits LayoutComponentBase
+@inject NavigationManager NavigationManager
 
-<div class="app-shell">
-    <NavMenu />
-    <main class="app-content">
-        @Body
-    </main>
-</div>
+@if (IsPublicNps)
+{
+    <main class="app-content public-content">@Body</main>
+}
+else
+{
+    <div class="app-shell">
+        <NavMenu />
+        <main class="app-content">@Body</main>
+    </div>
+}
+
+@code {
+    private bool IsPublicNps
+    {
+        get
+        {
+            var segments = NavigationManager.ToAbsoluteUri(NavigationManager.Uri).AbsolutePath
+                .Split('/', StringSplitOptions.RemoveEmptyEntries);
+            return segments.Length == 2 &&
+                segments[0] == "nps" &&
+                Guid.TryParse(segments[1], out _);
+        }
+    }
+}

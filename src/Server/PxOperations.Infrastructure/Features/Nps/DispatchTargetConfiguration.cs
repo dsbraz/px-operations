@@ -9,31 +9,15 @@ public sealed class DispatchTargetConfiguration : IEntityTypeConfiguration<Dispa
     public void Configure(EntityTypeBuilder<DispatchTarget> builder)
     {
         builder.ToTable("nps_dispatch_targets");
-
-        builder.HasKey(t => t.Id);
-        builder.Property(t => t.Id).HasColumnName("id").ValueGeneratedOnAdd();
-        builder.Property(t => t.ProjectId).HasColumnName("project_id").IsRequired();
-        builder.Property(t => t.DispatchId).HasColumnName("dispatch_id").IsRequired();
-        builder.Property(t => t.ContactId).HasColumnName("contact_id");
-        builder.Property(t => t.Token).HasColumnName("token").IsRequired();
-        builder.Property(t => t.CreatedAt).HasColumnName("created_at").IsRequired();
-
-        builder.HasOne(t => t.Project)
-            .WithMany()
-            .HasForeignKey(t => t.ProjectId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasOne(t => t.Contact)
-            .WithMany()
-            .HasForeignKey(t => t.ContactId)
-            .OnDelete(DeleteBehavior.SetNull);
-
-        builder.HasMany(t => t.Responses)
-            .WithOne(r => r.Target)
-            .HasForeignKey(r => r.TargetId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasIndex(t => t.Token).IsUnique();
-        builder.HasIndex(t => new { t.DispatchId, t.ContactId }).IsUnique().HasFilter("contact_id IS NOT NULL");
+        builder.HasKey(target => target.Id);
+        builder.Property(target => target.Id).HasColumnName("id").ValueGeneratedOnAdd();
+        builder.Property(target => target.DispatchId).HasColumnName("dispatch_id").IsRequired();
+        builder.Property(target => target.ContactId).HasColumnName("contact_id");
+        builder.Property(target => target.Token).HasColumnName("token").IsRequired();
+        builder.Property(target => target.CreatedAt).HasColumnName("created_at").IsRequired();
+        builder.Ignore(target => target.IsGeneric);
+        builder.HasOne<Contact>().WithMany().HasForeignKey(target => target.ContactId).OnDelete(DeleteBehavior.SetNull);
+        builder.HasIndex(target => target.Token).IsUnique();
+        builder.HasIndex(target => new { target.DispatchId, target.ContactId }).IsUnique().HasFilter("contact_id IS NOT NULL");
     }
 }

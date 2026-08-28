@@ -1,8 +1,5 @@
 using PxOperations.Domain.Abstractions;
-using PxOperations.Domain.Nps.Calculation;
-using PxOperations.Domain.Nps.Rules;
-using PxOperations.Domain.Projects;
-using PxOperations.Domain.Rules;
+using PxOperations.Domain.Exceptions;
 
 namespace PxOperations.Domain.Nps;
 
@@ -14,57 +11,123 @@ public sealed class SurveyResponse : AggregateRoot<int>
     public int DispatchId { get; private set; }
     public int TargetId { get; private set; }
     public int? ContactId { get; private set; }
+    public NpsFormFormat Format { get; private set; }
     public int Score { get; private set; }
     public NpsClassification Classification { get; private set; }
-    public int? Scope { get; private set; }
-    public int? Schedule { get; private set; }
     public int? Quality { get; private set; }
+    public int? Schedule { get; private set; }
     public int? Communication { get; private set; }
-    public string? Tags { get; private set; }
+    public int? BusinessValue { get; private set; }
     public string? Comment { get; private set; }
     public string? RespondentName { get; private set; }
     public string? RespondentEmail { get; private set; }
+    public string? NormalizedRespondentEmail { get; private set; }
     public DateTimeOffset SubmittedAt { get; private set; }
-    public Project Project { get; private set; } = default!;
-    public Dispatch Dispatch { get; private set; } = default!;
-    public DispatchTarget Target { get; private set; } = default!;
-    public Contact? Contact { get; private set; }
 
     public static SurveyResponse Submit(
-        int projectId,
-        int dispatchId,
-        int targetId,
-        int? contactId,
+        SurveyResponseContext context,
         int score,
-        int? scope,
-        int? schedule,
         int? quality,
+        int? schedule,
         int? communication,
-        string? tags,
+        int? businessValue,
         string? comment,
         string? respondentName,
         string? respondentEmail,
         DateTimeOffset now)
     {
-        RuleChecker.Check(new NpsScoreMustBeInRangeRule(score));
+        EnsureAvailable(context, respondentEmail, now);
+        NpsScale.ValidateScore(score);
+
+        var aspects = new[] { quality, schedule, communication, businessValue };
+        if (context.Format == NpsFormFormat.Simplified && aspects.Any(value => value.HasValue))
+        {
+            throw new BusinessRuleValidationException("Simplified NPS responses cannot contain aspects.");
+        }
+
+        foreach (var aspect in aspects)
+        {
+            NpsScale.ValidateAspect(aspect);
+        }
+
+        var trimmedComment = TrimAndValidate(comment, 2000, "Comment");
+        var trimmedName = TrimAndValidate(respondentName, 200, "Respondent name");
+        var trimmedEmail = TrimAndValidate(respondentEmail, 320, "Respondent email");
 
         return new SurveyResponse
         {
-            ProjectId = projectId,
-            DispatchId = dispatchId,
-            TargetId = targetId,
-            ContactId = contactId,
+            ProjectId = context.ProjectId,
+            DispatchId = context.DispatchId,
+            TargetId = context.TargetId,
+            ContactId = context.ContactId,
+            Format = context.Format,
             Score = score,
-            Classification = NpsCalculator.Classify(score),
-            Scope = scope,
-            Schedule = schedule,
+            Classification = NpsScale.Classify(score),
             Quality = quality,
+            Schedule = schedule,
             Communication = communication,
-            Tags = string.IsNullOrWhiteSpace(tags) ? null : tags.Trim(),
-            Comment = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim(),
-            RespondentName = string.IsNullOrWhiteSpace(respondentName) ? null : respondentName.Trim(),
-            RespondentEmail = string.IsNullOrWhiteSpace(respondentEmail) ? null : respondentEmail.Trim(),
+            BusinessValue = businessValue,
+            Comment = trimmedComment,
+            RespondentName = trimmedName,
+            RespondentEmail = trimmedEmail,
+            NormalizedRespondentEmail = trimmedEmail?.ToLowerInvariant(),
             SubmittedAt = now
         };
     }
+
+    private static void EnsureAvailable(SurveyResponseContext context, string? respondentEmail, DateTimeOffset now)
+    {
+        if (context.IsWaived)
+        {
+            throw new BusinessStateConflictException("NPS collection is waived.");
+        }
+
+        if (context.DispatchStatus != NpsDispatchStatus.Open)
+        {
+            throw new BusinessStateConflictException("NPS dispatch is closed.");
+        }
+
+        if (NpsCollectionPolicy.IsExpired(context.ExpiresAt, now))
+        {
+            throw new BusinessStateConflictException("NPS dispatch is expired.");
+        }
+
+        if (context.ContactId.HasValue && context.IsTargetUsed)
+        {
+            throw new BusinessStateConflictException("NPS contact target was already answered.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(respondentEmail) && context.HasDuplicateEmail)
+        {
+            throw new BusinessStateConflictException("This email already answered this NPS link.");
+        }
+    }
+
+    private static string? TrimAndValidate(string? value, int maximumLength, string field)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var trimmed = value.Trim();
+        if (trimmed.Length > maximumLength)
+        {
+            throw new BusinessRuleValidationException($"{field} must not exceed {maximumLength} characters.");
+        }
+
+        return trimmed;
+    }
 }
+
+public sealed record SurveyResponseContext(
+    int ProjectId,
+    int DispatchId,
+    int TargetId,
+    int? ContactId,
+    NpsFormFormat Format,
+    NpsDispatchStatus DispatchStatus,
+    DateTimeOffset ExpiresAt,
+    bool IsWaived,
+    bool IsTargetUsed,
+    bool HasDuplicateEmail);

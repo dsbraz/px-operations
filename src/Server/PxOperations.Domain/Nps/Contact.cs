@@ -1,6 +1,5 @@
 using PxOperations.Domain.Abstractions;
 using PxOperations.Domain.Nps.Rules;
-using PxOperations.Domain.Projects;
 using PxOperations.Domain.Rules;
 
 namespace PxOperations.Domain.Nps;
@@ -16,7 +15,6 @@ public sealed class Contact : AggregateRoot<int>
     public bool IsArchived { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset? ArchivedAt { get; private set; }
-    public Project Project { get; private set; } = default!;
 
     public static Contact Create(int projectId, string name, string email, string? role, DateTimeOffset now)
     {
