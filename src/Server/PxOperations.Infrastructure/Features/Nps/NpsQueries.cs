@@ -15,17 +15,25 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
         DateTimeOffset now,
         CancellationToken ct)
     {
-        var snapshots = await LoadSnapshotsAsync(filter, applyStatusFilter: true, now, ct);
-        var responses = FilterResponses(snapshots.SelectMany(snapshot => snapshot.Responses), filter).ToArray();
+        var results = await ListProjectResultsAsync(filter, ct);
+        var projectIds = results.Select(result => result.Id).ToArray();
+        var responses = await ApplyResponsePeriodFilters(dbContext.NpsSurveyResponses.AsNoTracking(), filter)
+            .Where(response => projectIds.Contains(response.ProjectId))
+            .ToListAsync(ct);
         var metrics = NpsCalculator.Calculate(responses.Select(response => response.Score));
         var counts = responses.GroupBy(response => response.Classification)
             .ToDictionary(group => group.Key, group => group.Count());
+        var snapshots = await LoadSnapshotsAsync(
+            filter with { Statuses = [], Formats = [], Classifications = [], From = null, To = null },
+            now,
+            ct);
+        var resultIds = projectIds.ToHashSet();
 
         return new NpsDashboardView(
             metrics.OfficialScore,
-            responses.Length,
+            responses.Count,
             metrics.AverageScore,
-            snapshots.Count(snapshot => snapshot.IsOverdue(now)),
+            snapshots.Count(snapshot => resultIds.Contains(snapshot.Project.Id) && snapshot.IsOverdue(now)),
             new NpsScaleView(NpsScale.MinimumScore, NpsScale.MaximumScore),
             [
                 Distribution(NpsClassification.Detractor, counts, metrics.DetractorPercentage),
@@ -46,11 +54,9 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
             Options(projects.Select(project => project.DeliveryManager)),
             new[]
             {
-                new NpsOptionView("awaiting_response", "Aguardando resposta"),
-                new NpsOptionView("waived", "Dispensado"),
-                new NpsOptionView("current", "Em dia"),
-                new NpsOptionView("recollection", "Recoleta"),
-                new NpsOptionView("no_link", "Sem link")
+                new NpsOptionView("responded", "Respondido"),
+                new NpsOptionView("link_generated", "Link gerado"),
+                new NpsOptionView("pending", "Pendente")
             },
             new[]
             {
@@ -65,11 +71,101 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
             });
     }
 
+    public async Task<IReadOnlyList<NpsProjectResultView>> ListProjectResultsAsync(
+        NpsFilter filter,
+        CancellationToken ct)
+    {
+        var projectQuery = ApplyProjectFilters(dbContext.Projects.AsNoTracking(), filter);
+        if (!filter.IncludeWaived)
+        {
+            projectQuery = projectQuery.Where(project => !dbContext.NpsCollections.Any(collection =>
+                collection.ProjectId == project.Id && collection.WaivedAt != null));
+        }
+        var allResponseProjectIds = dbContext.NpsSurveyResponses.AsNoTracking()
+            .Select(response => response.ProjectId);
+        var openDispatchProjectIds = dbContext.NpsCollections.AsNoTracking()
+            .Where(collection => collection.Dispatches.Any(dispatch => dispatch.Status == NpsDispatchStatus.Open))
+            .Select(collection => collection.ProjectId);
+
+        projectQuery = ApplyProjectResultStatusFilters(
+            projectQuery,
+            filter.Statuses,
+            allResponseProjectIds,
+            openDispatchProjectIds);
+
+        var periodResponses = ApplyResponsePeriodFilters(dbContext.NpsSurveyResponses.AsNoTracking(), filter);
+        if (filter.From.HasValue || filter.To.HasValue)
+        {
+            var periodProjectIds = periodResponses.Select(response => response.ProjectId);
+            projectQuery = projectQuery.Where(project => periodProjectIds.Contains(project.Id));
+        }
+
+        var projects = await projectQuery.OrderBy(project => project.Name).ToListAsync(ct);
+        var projectIds = projects.Select(project => project.Id).ToArray();
+        var responses = await periodResponses
+            .Where(response => projectIds.Contains(response.ProjectId))
+            .OrderByDescending(response => response.SubmittedAt)
+            .ToListAsync(ct);
+        var openProjectIds = (await openDispatchProjectIds
+            .Where(projectId => projectIds.Contains(projectId))
+            .ToListAsync(ct))
+            .ToHashSet();
+        var respondedProjectIds = (await allResponseProjectIds
+            .Where(projectId => projectIds.Contains(projectId))
+            .Distinct()
+            .ToListAsync(ct))
+            .ToHashSet();
+        var byProject = responses.GroupBy(response => response.ProjectId)
+            .ToDictionary(group => group.Key, group => group.ToArray());
+
+        return projects.Select(project =>
+        {
+            var projectResponses = byProject.GetValueOrDefault(project.Id) ?? [];
+            var metrics = NpsCalculator.Calculate(projectResponses.Select(response => response.Score));
+            var counts = projectResponses.GroupBy(response => response.Classification)
+                .ToDictionary(group => group.Key, group => group.Count());
+            var status = NpsProjectResultPolicy.DetermineStatus(
+                respondedProjectIds.Contains(project.Id),
+                openProjectIds.Contains(project.Id));
+
+            return new NpsProjectResultView(
+                project.Id,
+                project.Name,
+                project.Client,
+                Dc(project.Dc),
+                project.DeliveryManager,
+                projectResponses.Length,
+                metrics.OfficialScore,
+                [
+                    Distribution(NpsClassification.Detractor, counts, metrics.DetractorPercentage),
+                    Distribution(NpsClassification.Passive, counts, metrics.PassivePercentage),
+                    Distribution(NpsClassification.Promoter, counts, metrics.PromoterPercentage)
+                ],
+                [
+                    new NpsFormatCountView("complete", "Completo", projectResponses.Count(response => response.Format == NpsFormFormat.Complete)),
+                    new NpsFormatCountView("simplified", "Simplificado", projectResponses.Count(response => response.Format == NpsFormFormat.Simplified))
+                ],
+                projectResponses.FirstOrDefault()?.SubmittedAt,
+                ProjectResultStatus(status));
+        }).ToArray();
+    }
+
+    public async Task<IReadOnlyList<NpsResponseView>> ListResponsesAsync(
+        NpsFilter filter,
+        CancellationToken ct)
+    {
+        var responses = await ApplyResponseFilters(dbContext.NpsSurveyResponses.AsNoTracking(), filter)
+            .OrderByDescending(response => response.SubmittedAt)
+            .ThenByDescending(response => response.Id)
+            .ToListAsync(ct);
+        return await ToResponseViewsAsync(responses, ct);
+    }
+
     public async Task<IReadOnlyList<NpsProjectView>> ListProjectsAsync(
         NpsFilter filter,
         DateTimeOffset now,
         CancellationToken ct)
-        => (await LoadSnapshotsAsync(filter, applyStatusFilter: false, now, ct))
+        => (await LoadSnapshotsAsync(filter, now, ct))
             .Select(snapshot => ToProjectView(snapshot, now))
             .OrderBy(project => project.Name)
             .ToArray();
@@ -77,7 +173,7 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
     public async Task<NpsProjectDetailView?> GetProjectAsync(int projectId, DateTimeOffset now, CancellationToken ct)
     {
         var filter = NpsFilter.Empty with { ProjectId = projectId, IncludeWaived = true };
-        var snapshot = (await LoadSnapshotsAsync(filter, applyStatusFilter: false, now, ct)).SingleOrDefault();
+        var snapshot = (await LoadSnapshotsAsync(filter, now, ct)).SingleOrDefault();
         if (snapshot is null)
         {
             return null;
@@ -99,22 +195,9 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
 
     public async Task<IReadOnlyList<NpsResponseView>> ListProjectResponsesAsync(
         int projectId,
-        IReadOnlyList<string> formats,
+        NpsFilter filter,
         CancellationToken ct)
-    {
-        var responses = await dbContext.NpsSurveyResponses
-            .AsNoTracking()
-            .Where(response => response.ProjectId == projectId)
-            .OrderByDescending(response => response.SubmittedAt)
-            .ToListAsync(ct);
-        if (formats.Count != 0)
-        {
-            var parsed = formats.Select(NpsCodes.ParseFormat).ToHashSet();
-            responses = responses.Where(response => parsed.Contains(response.Format)).ToList();
-        }
-
-        return await ToResponseViewsAsync(responses, ct);
-    }
+        => await ListResponsesAsync(filter with { ProjectId = projectId }, ct);
 
     public async Task<IReadOnlyList<NpsContactView>> ListContactsAsync(
         int projectId,
@@ -261,21 +344,8 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
         return response is null ? null : (await ToResponseViewsAsync([response], ct)).Single();
     }
 
-    public async Task<IReadOnlyList<NpsResponseView>> ListResponsesForExportAsync(
-        NpsFilter filter,
-        DateTimeOffset now,
-        CancellationToken ct)
-    {
-        var snapshots = await LoadSnapshotsAsync(filter, applyStatusFilter: true, now, ct);
-        var responses = FilterResponses(snapshots.SelectMany(snapshot => snapshot.Responses), filter)
-            .OrderByDescending(response => response.SubmittedAt)
-            .ToArray();
-        return await ToResponseViewsAsync(responses, ct);
-    }
-
     private async Task<IReadOnlyList<ProjectSnapshot>> LoadSnapshotsAsync(
         NpsFilter filter,
-        bool applyStatusFilter,
         DateTimeOffset now,
         CancellationToken ct)
     {
@@ -299,11 +369,6 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
         if (!filter.IncludeWaived)
         {
             snapshots = snapshots.Where(snapshot => !snapshot.IsWaived).ToList();
-        }
-
-        if (applyStatusFilter && filter.Statuses.Count != 0)
-        {
-            snapshots = snapshots.Where(snapshot => filter.Statuses.Contains(StageCode(snapshot.Stage(now)), StringComparer.OrdinalIgnoreCase)).ToList();
         }
 
         return snapshots;
@@ -349,31 +414,83 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
         return query;
     }
 
-    private static IEnumerable<SurveyResponse> FilterResponses(IEnumerable<SurveyResponse> responses, NpsFilter filter)
+    private IQueryable<SurveyResponse> ApplyResponseFilters(
+        IQueryable<SurveyResponse> query,
+        NpsFilter filter)
     {
-        if (filter.From.HasValue)
+        var projectQuery = ApplyProjectFilters(
+            dbContext.Projects.AsNoTracking(),
+            filter with { Search = null });
+        query = query.Where(response => projectQuery.Select(project => project.Id).Contains(response.ProjectId));
+
+        if (!string.IsNullOrWhiteSpace(filter.Search))
         {
-            responses = responses.Where(response => DateOnly.FromDateTime(response.SubmittedAt.UtcDateTime) >= filter.From.Value);
+            var pattern = $"%{filter.Search.Trim()}%";
+            query = query.Where(response =>
+                dbContext.Projects.Any(project =>
+                    project.Id == response.ProjectId && EF.Functions.ILike(project.Name, pattern)) ||
+                (response.RespondentName != null && EF.Functions.ILike(response.RespondentName, pattern)) ||
+                (response.RespondentEmail != null && EF.Functions.ILike(response.RespondentEmail, pattern)) ||
+                (response.Comment != null && EF.Functions.ILike(response.Comment, pattern)) ||
+                (response.ContactId.HasValue && dbContext.NpsContacts.Any(contact =>
+                    contact.Id == response.ContactId.Value &&
+                    (EF.Functions.ILike(contact.Name, pattern) || EF.Functions.ILike(contact.Email, pattern)))));
         }
 
-        if (filter.To.HasValue)
-        {
-            responses = responses.Where(response => DateOnly.FromDateTime(response.SubmittedAt.UtcDateTime) <= filter.To.Value);
-        }
+        query = ApplyResponsePeriodFilters(query, filter);
 
         if (filter.Formats.Count != 0)
         {
-            var values = filter.Formats.Select(NpsCodes.ParseFormat).ToHashSet();
-            responses = responses.Where(response => values.Contains(response.Format));
+            var formats = filter.Formats.Select(NpsCodes.ParseFormat).ToArray();
+            query = query.Where(response => formats.Contains(response.Format));
         }
 
         if (filter.Classifications.Count != 0)
         {
-            var values = filter.Classifications.Select(ParseClassification).ToHashSet();
-            responses = responses.Where(response => values.Contains(response.Classification));
+            var classifications = filter.Classifications.Select(ParseClassification).ToArray();
+            query = query.Where(response => classifications.Contains(response.Classification));
         }
 
-        return responses;
+        return query;
+    }
+
+    private static IQueryable<SurveyResponse> ApplyResponsePeriodFilters(
+        IQueryable<SurveyResponse> query,
+        NpsFilter filter)
+    {
+        if (filter.From.HasValue)
+        {
+            var from = new DateTimeOffset(filter.From.Value.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+            query = query.Where(response => response.SubmittedAt >= from);
+        }
+
+        if (filter.To.HasValue)
+        {
+            var until = new DateTimeOffset(filter.To.Value.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+            query = query.Where(response => response.SubmittedAt < until);
+        }
+
+        return query;
+    }
+
+    private static IQueryable<Project> ApplyProjectResultStatusFilters(
+        IQueryable<Project> query,
+        IReadOnlyList<string> statuses,
+        IQueryable<int> responseProjectIds,
+        IQueryable<int> openDispatchProjectIds)
+    {
+        if (statuses.Count == 0)
+        {
+            return query;
+        }
+
+        var responded = statuses.Contains("responded", StringComparer.OrdinalIgnoreCase);
+        var linkGenerated = statuses.Contains("link_generated", StringComparer.OrdinalIgnoreCase);
+        var pending = statuses.Contains("pending", StringComparer.OrdinalIgnoreCase);
+        return query.Where(project =>
+            (responded && responseProjectIds.Contains(project.Id)) ||
+            (linkGenerated && !responseProjectIds.Contains(project.Id) && openDispatchProjectIds.Contains(project.Id)) ||
+            (pending && !responseProjectIds.Contains(project.Id) && !openDispatchProjectIds.Contains(project.Id)));
     }
 
     private NpsProjectView ToProjectView(ProjectSnapshot snapshot, DateTimeOffset now)
@@ -441,7 +558,12 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
         _ => new("waived", "Dispensado", "neutral")
     };
 
-    private static string StageCode(NpsCollectionStage stage) => Stage(stage).Code;
+    private static NpsBadgeView ProjectResultStatus(NpsProjectResultStatus status) => status switch
+    {
+        NpsProjectResultStatus.Responded => new("responded", "Respondido", "positive"),
+        NpsProjectResultStatus.LinkGenerated => new("link_generated", "Link gerado", "info"),
+        _ => new("pending", "Pendente", "neutral")
+    };
 
     private static NpsTemporalView Temporal(
         ProjectSnapshot snapshot,

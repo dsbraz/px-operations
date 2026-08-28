@@ -24,6 +24,22 @@ public sealed class NpsController(
     public async Task<ActionResult<NpsDashboardView>> GetDashboard([FromQuery] NpsQueryRequest request, CancellationToken ct)
         => Ok(await queries.GetDashboardAsync(BuildFilter(request), timeProvider.GetUtcNow(), ct));
 
+    [HttpGet("filter-options")]
+    public async Task<ActionResult<NpsFilterOptionsView>> GetFilterOptions(CancellationToken ct)
+        => Ok(await queries.GetFilterOptionsAsync(ct));
+
+    [HttpGet("project-results")]
+    public async Task<ActionResult<IReadOnlyList<NpsProjectResultView>>> ListProjectResults(
+        [FromQuery] NpsQueryRequest request,
+        CancellationToken ct)
+        => Ok(await queries.ListProjectResultsAsync(BuildFilter(request), ct));
+
+    [HttpGet("responses")]
+    public async Task<ActionResult<IReadOnlyList<NpsResponseView>>> ListResponses(
+        [FromQuery] NpsQueryRequest request,
+        CancellationToken ct)
+        => Ok(await queries.ListResponsesAsync(BuildFilter(request), ct));
+
     [HttpGet("projects")]
     public async Task<ActionResult<IReadOnlyList<NpsProjectView>>> ListProjects(
         [FromQuery] NpsQueryRequest request,
@@ -50,9 +66,9 @@ public sealed class NpsController(
     [HttpGet("projects/{id:int}/responses")]
     public async Task<ActionResult<IReadOnlyList<NpsResponseView>>> ListProjectResponses(
         int id,
-        [FromQuery] string[] format,
+        [FromQuery] NpsQueryRequest request,
         CancellationToken ct)
-        => Ok(await queries.ListProjectResponsesAsync(id, format, ct));
+        => Ok(await queries.ListProjectResponsesAsync(id, BuildFilter(request), ct));
 
     [HttpGet("projects/{projectId:int}/contacts")]
     public async Task<ActionResult<IReadOnlyList<NpsContactView>>> ListContacts(
@@ -177,10 +193,7 @@ public sealed class NpsController(
     [HttpGet("responses/export")]
     public async Task<IActionResult> ExportResponses([FromQuery] NpsQueryRequest request, CancellationToken ct)
     {
-        var responses = await queries.ListResponsesForExportAsync(
-            BuildFilter(request),
-            timeProvider.GetUtcNow(),
-            ct);
+        var responses = await queries.ListResponsesAsync(BuildFilter(request), ct);
         return File(
             Encoding.UTF8.GetBytes(BuildCsv(responses)),
             "text/csv; charset=utf-8",

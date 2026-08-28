@@ -195,6 +195,67 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
     }
 
     [Fact]
+    public async Task Phase_two_queries_should_reconcile_project_results_responses_and_csv()
+    {
+        var time = new TestTimeProvider(InitialNow);
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString, time);
+        using var client = factory.CreateClient();
+        var responded = await CreateProjectAsync(client, "Result Responded", "Result Client", "DC1");
+        var linked = await CreateProjectAsync(client, "Result Linked", "Result Client", "DC1");
+        var pending = await CreateProjectAsync(client, "Result Pending", "Other Client", "DC2");
+        var complete = await CreateDispatchAsync(client, responded.Id, "complete");
+        await CreateDispatchAsync(client, linked.Id, "simplified");
+        var token = complete.Targets.Single(target => target.IsGeneric).Token;
+
+        await SubmitAsync(client, token, 10, "person@example.com", "excellent response", "Person", 5, 4, 3, 2);
+        time.Set(InitialNow.AddDays(1));
+        await SubmitAsync(client, token, 4, comment: "needs attention");
+
+        var results = await client.GetFromJsonAsync<List<NpsProjectResultView>>(
+            "/api/nps/project-results?client=Result%20Client&client=Other%20Client&dc=DC1&status=responded&status=link_generated");
+        var audit = await client.GetFromJsonAsync<List<NpsResponseView>>(
+            $"/api/nps/responses?projectId={responded.Id}&search=Person&format=complete&classification=promoter&from=2026-08-01&to=2026-08-01");
+        var projectResponses = await client.GetFromJsonAsync<List<NpsResponseView>>(
+            $"/api/nps/projects/{responded.Id}/responses?classification=promoter&from=2026-08-01&to=2026-08-01");
+        var csv = await client.GetStringAsync(
+            $"/api/nps/responses/export?projectId={responded.Id}&search=Person&format=complete&classification=promoter&from=2026-08-01&to=2026-08-01");
+        var options = await client.GetFromJsonAsync<NpsFilterOptionsView>("/api/nps/filter-options");
+
+        Assert.Equal(2, results!.Count);
+        var respondedResult = results.Single(result => result.Id == responded.Id);
+        Assert.Equal(2, respondedResult.ResponsesCount);
+        Assert.Equal(0m, respondedResult.OfficialNps);
+        Assert.Equal(new[] { 1, 0, 1 }, respondedResult.Distribution.Select(item => item.Count));
+        Assert.Equal("responded", respondedResult.Status.Code);
+        Assert.Equal("link_generated", results.Single(result => result.Id == linked.Id).Status.Code);
+        Assert.DoesNotContain(results, result => result.Id == pending.Id);
+        Assert.Equal(audit!.Select(response => response.Id), projectResponses!.Select(response => response.Id));
+        Assert.Contains("excellent response", csv);
+        Assert.DoesNotContain("needs attention", csv);
+        Assert.Equal(new[] { "responded", "link_generated", "pending" }, options!.Statuses.Select(option => option.Code));
+    }
+
+    [Fact]
+    public async Task Project_results_period_should_exclude_projects_without_responses_in_the_utc_interval()
+    {
+        var time = new TestTimeProvider(new DateTimeOffset(2026, 8, 1, 23, 59, 0, TimeSpan.Zero));
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString, time);
+        using var client = factory.CreateClient();
+        var project = await CreateProjectAsync(client, "UTC interval");
+        var dispatch = await CreateDispatchAsync(client, project.Id, "simplified");
+        var token = dispatch.Targets.Single(target => target.IsGeneric).Token;
+        await SubmitAsync(client, token, 9, comment: "inside-inclusive-day");
+
+        var inside = await client.GetFromJsonAsync<List<NpsProjectResultView>>(
+            $"/api/nps/project-results?projectId={project.Id}&from=2026-08-01&to=2026-08-01");
+        var outside = await client.GetFromJsonAsync<List<NpsProjectResultView>>(
+            $"/api/nps/project-results?projectId={project.Id}&from=2026-08-02&to=2026-08-02");
+
+        Assert.Single(inside!);
+        Assert.Empty(outside!);
+    }
+
+    [Fact]
     public async Task Sixty_first_submission_for_the_same_token_and_ip_should_return_problem_details_429()
     {
         await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString, new TestTimeProvider(InitialNow));
@@ -223,11 +284,13 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
         using var client = factory.CreateClient();
 
         var invalid = await client.GetAsync("/api/nps/dashboard?from=2026-09-01&to=2026-08-01");
+        var invalidStatus = await client.GetAsync("/api/nps/project-results?status=awaiting_response");
         var problem = await invalid.Content.ReadFromJsonAsync<ProblemDetails>();
 
         Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
         Assert.Equal(400, problem!.Status);
         Assert.Equal("application/problem+json", invalid.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(HttpStatusCode.BadRequest, invalidStatus.StatusCode);
     }
 
     [Fact]
@@ -386,10 +449,15 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
         Guid token,
         int score,
         string? email = null,
-        string? comment = null)
+        string? comment = null,
+        string? name = null,
+        int? quality = null,
+        int? schedule = null,
+        int? communication = null,
+        int? businessValue = null)
         => client.PostAsJsonAsync(
             $"/api/nps/public/{token}/responses",
-            new SubmitNpsSurveyResponseRequest(score, null, null, null, null, comment, null, email));
+            new SubmitNpsSurveyResponseRequest(score, quality, schedule, communication, businessValue, comment, name, email));
 
     private sealed class TestTimeProvider(DateTimeOffset value) : TimeProvider
     {

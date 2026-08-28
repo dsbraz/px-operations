@@ -31,6 +31,21 @@ public sealed record NpsDashboardView(
 
 public sealed record NpsBadgeView(string Code, string Label, string Tone);
 
+public sealed record NpsFormatCountView(string Code, string Label, int Count);
+
+public sealed record NpsProjectResultView(
+    int Id,
+    string Name,
+    string? Client,
+    string Dc,
+    string? DeliveryManager,
+    int ResponsesCount,
+    decimal? OfficialNps,
+    IReadOnlyList<NpsDistributionView> Distribution,
+    IReadOnlyList<NpsFormatCountView> Formats,
+    DateTimeOffset? LastResponseAt,
+    NpsBadgeView Status);
+
 public sealed record NpsTemporalView(string Label, string Tone, DateTimeOffset? At);
 
 public sealed record NpsLinkView(

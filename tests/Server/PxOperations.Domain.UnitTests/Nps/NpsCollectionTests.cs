@@ -144,6 +144,30 @@ public sealed class NpsCollectionTests
         Assert.Null(NpsCollectionPolicy.DeterminePrimaryAction(NpsCollectionStage.Current, [valid with { HasResponses = true }], null, Now));
     }
 
+    [Theory]
+    [InlineData(true, true, NpsProjectResultStatus.Responded)]
+    [InlineData(true, false, NpsProjectResultStatus.Responded)]
+    [InlineData(false, true, NpsProjectResultStatus.LinkGenerated)]
+    [InlineData(false, false, NpsProjectResultStatus.Pending)]
+    public void Project_result_status_should_prioritize_responses_then_any_open_dispatch(
+        bool hasResponses,
+        bool hasOpenDispatch,
+        NpsProjectResultStatus expected)
+    {
+        Assert.Equal(expected, NpsProjectResultPolicy.DetermineStatus(hasResponses, hasOpenDispatch));
+    }
+
+    [Fact]
+    public void Expired_but_open_dispatch_should_still_be_link_generated()
+    {
+        var collection = NpsCollection.Create(7);
+        var dispatch = CreateDispatch(collection, NpsFormFormat.Complete, Now.AddDays(-21));
+
+        Assert.True(NpsCollectionPolicy.IsExpired(dispatch.ExpiresAt, Now));
+        Assert.True(dispatch.IsOpen);
+        Assert.Equal(NpsProjectResultStatus.LinkGenerated, NpsProjectResultPolicy.DetermineStatus(false, dispatch.IsOpen));
+    }
+
     private static Dispatch CreateDispatch(NpsCollection collection, NpsFormFormat format, DateTimeOffset now)
         => collection.CreateDispatch(format, NpsLanguage.Portuguese, [], Guid.NewGuid(), [], now);
 }

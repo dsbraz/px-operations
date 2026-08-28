@@ -5,7 +5,7 @@ namespace PxOperations.Api.Features.Nps;
 
 public sealed class NpsQueryRequestValidator : AbstractValidator<NpsQueryRequest>
 {
-    private static readonly string[] Statuses = ["no_link", "awaiting_response", "recollection", "current", "waived"];
+    private static readonly string[] Statuses = ["responded", "link_generated", "pending"];
     private static readonly string[] Formats = ["complete", "simplified"];
     private static readonly string[] Classifications = ["detractor", "passive", "promoter"];
     private static readonly string[] ProjectTypes = ["squad", "fixed_scope", "staffing"];
