@@ -43,6 +43,7 @@ public sealed class NpsPageTests : TestContext
             Assert.Equal("NPS", cut.Find("h1").TextContent.Trim());
             Assert.Equal(4, cut.FindAll(".nps-indicators .stat").Count);
             Assert.Equal(4, cut.FindAll(".nps-board-column").Count);
+            Assert.Empty(cut.FindAll(".nps-aspect-summary"));
             Assert.Contains("kb-gray", cut.FindAll(".nps-board-column")[0].ClassList);
             Assert.Contains("kb-orange", cut.FindAll(".nps-board-column")[1].ClassList);
             Assert.Contains("kb-purple", cut.FindAll(".nps-board-column")[2].ClassList);
@@ -150,7 +151,7 @@ public sealed class NpsPageTests : TestContext
     }
 
     [Fact]
-    public void Results_should_keep_indicators_and_executive_panel_then_render_the_project_table()
+    public void Results_should_render_distribution_and_accessible_aspect_averages_side_by_side()
     {
         var handler = RegisterClient();
         handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
@@ -163,16 +164,77 @@ public sealed class NpsPageTests : TestContext
         {
             Assert.Equal(4, cut.FindAll(".nps-indicators .stat").Count);
             Assert.Empty(cut.FindAll(".nps-results .nps-kpi"));
+            var executivePanels = cut.Find(".nps-executive-panels");
+            Assert.Equal(new[] { "nps-results", "nps-aspect-summary" }, executivePanels.Children.Select(child => child.ClassName));
             Assert.Equal("Distribuição das respostas", cut.Find(".nps-results h2").TextContent.Trim());
             Assert.Contains("% promotores − % detratores", cut.Markup);
             var items = cut.FindAll(".nps-distribution-legend li");
             Assert.Equal(new[] { "Detrator", "Neutro", "Promotor" }, items.Select(item => item.QuerySelector("strong")!.TextContent));
             Assert.Equal(3, cut.FindAll(".nps-legend-swatch").Count);
-            Assert.DoesNotContain("Média por aspecto", cut.Markup);
+            var aspectSummary = cut.Find(".nps-aspect-summary");
+            Assert.Equal("Médias por aspecto", aspectSummary.QuerySelector("h2")!.TextContent.Trim());
+            Assert.Contains("4 respostas Completas · escala 1–5", aspectSummary.TextContent);
+            Assert.Equal(
+                new[] { "Qualidade técnica", "Prazos acordados", "Comunicação", "Valor para o negócio" },
+                aspectSummary.QuerySelectorAll(".nps-aspect-label").Select(label => label.TextContent.Trim()));
+            Assert.Equal(new[] { "4,2", "3,5", "4,0", "—" }, aspectSummary.QuerySelectorAll(".nps-aspect-average").Select(value => value.TextContent.Trim()));
+            Assert.Equal(new[] { "n=3", "n=2", "n=4", "n=0" }, aspectSummary.QuerySelectorAll(".nps-aspect-count").Select(value => value.TextContent.Trim()));
+            var meters = aspectSummary.QuerySelectorAll("meter");
+            Assert.Equal(3, meters.Length);
+            Assert.All(meters, meter =>
+            {
+                Assert.Equal("1", meter.GetAttribute("min"));
+                Assert.Equal("5", meter.GetAttribute("max"));
+                Assert.False(string.IsNullOrWhiteSpace(meter.GetAttribute("value")));
+                Assert.Contains("média", meter.GetAttribute("aria-label"));
+                Assert.Contains("respostas", meter.GetAttribute("aria-label"));
+            });
+            Assert.Contains("Sem respostas para Valor para o negócio", aspectSummary.QuerySelector(".nps-aspect-meter-empty")!.GetAttribute("aria-label"));
             var headers = cut.FindAll(".nps-results-table thead th");
             Assert.Equal(new[] { "Projeto", "Cliente", "DC", "DM", "Respostas", "NPS", "Status" }, headers.Select(header => header.TextContent.Trim()));
             Assert.Equal("ascending", headers[0].GetAttribute("aria-sort"));
             Assert.Equal(new[] { "Alpha", "Zulu" }, cut.FindAll(".nps-result-row .nps-result-project").Select(cell => cell.TextContent.Trim()));
+        });
+    }
+
+    [Fact]
+    public void Results_should_show_a_localized_empty_state_without_complete_responses()
+    {
+        var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardWithoutCompleteResponsesJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", "[]", HttpStatusCode.OK);
+        Navigate("/nps/resultados");
+
+        var cut = RenderComponent<NpsPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            var summary = cut.Find(".nps-aspect-summary");
+            Assert.Contains("Nenhuma resposta Completa no recorte atual.", summary.TextContent);
+            Assert.Empty(summary.QuerySelectorAll(".nps-aspect-row"));
+        });
+    }
+
+    [Fact]
+    public void Tabs_should_switch_the_rendered_view_without_reloading_the_page()
+    {
+        var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", ProjectResultsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
+        Navigate("/nps/resultados");
+
+        var cut = RenderComponent<NpsPage>();
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".nps-aspect-summary")));
+
+        cut.Find("a[href='/nps/coleta']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.EndsWith("/nps/coleta", Services.GetRequiredService<NavigationManager>().Uri);
+            Assert.Equal(4, cut.FindAll(".nps-board-column").Count);
+            Assert.Empty(cut.FindAll(".nps-aspect-summary"));
         });
     }
 
@@ -241,6 +303,7 @@ public sealed class NpsPageTests : TestContext
         cut.WaitForAssertion(() =>
         {
             Assert.Empty(cut.FindAll(".nps-indicators"));
+            Assert.Empty(cut.FindAll(".nps-aspect-summary"));
             Assert.Equal("Buscar projeto, pessoa ou comentário", cut.Find(".nps-search input").GetAttribute("placeholder"));
             Assert.Single(cut.FindAll(".fmenu__btn"));
             Assert.Equal(new[] { "Projeto", "Nota", "Classificação", "Formato", "Autor", "Comentário", "Recebida" }, cut.FindAll(".nps-responses-table th").Select(header => header.TextContent.Trim()));
@@ -428,11 +491,42 @@ public sealed class NpsPageTests : TestContext
             {"code":"passive","label":"Neutro","tone":"warning","count":1,"percentage":25.0},
             {"code":"promoter","label":"Promotor","tone":"positive","count":2,"percentage":50.0}
           ],
+          "aspectSummary":{
+            "completeResponsesCount":4,"scale":{"minimum":1,"maximum":5},
+            "aspects":[
+              {"code":"quality","label":"Qualidade técnica","average":4.2,"responsesCount":3},
+              {"code":"schedule","label":"Prazos acordados","average":3.5,"responsesCount":2},
+              {"code":"communication","label":"Comunicação","average":4.0,"responsesCount":4},
+              {"code":"business_value","label":"Valor para o negócio","average":null,"responsesCount":0}
+            ]
+          },
           "filterOptions":{
             "clients":[{"code":"Alpha","label":"Alpha"},{"code":"Beta","label":"Beta"}],
             "dcs":[{"code":"DC1","label":"DC1"}],"projectTypes":[],"deliveryManagers":[],
             "statuses":[],"formats":[],"classifications":[]
           }
+        }
+        """;
+
+    private static string DashboardWithoutCompleteResponsesJson() => """
+        {
+          "officialNps":100.0,"totalResponses":1,"averageScore":9.0,"overdueProjects":0,
+          "scale":{"minimum":1,"maximum":10},
+          "distribution":[
+            {"code":"detractor","label":"Detrator","tone":"critical","count":0,"percentage":0.0},
+            {"code":"passive","label":"Neutro","tone":"warning","count":0,"percentage":0.0},
+            {"code":"promoter","label":"Promotor","tone":"positive","count":1,"percentage":100.0}
+          ],
+          "aspectSummary":{
+            "completeResponsesCount":0,"scale":{"minimum":1,"maximum":5},
+            "aspects":[
+              {"code":"quality","label":"Qualidade técnica","average":null,"responsesCount":0},
+              {"code":"schedule","label":"Prazos acordados","average":null,"responsesCount":0},
+              {"code":"communication","label":"Comunicação","average":null,"responsesCount":0},
+              {"code":"business_value","label":"Valor para o negócio","average":null,"responsesCount":0}
+            ]
+          },
+          "filterOptions":{"clients":[],"dcs":[],"projectTypes":[],"deliveryManagers":[],"statuses":[],"formats":[],"classifications":[]}
         }
         """;
 

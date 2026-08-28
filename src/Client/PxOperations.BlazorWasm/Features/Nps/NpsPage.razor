@@ -129,9 +129,9 @@
         }
 
         <nav class="view-tabs" aria-label="Visões do NPS">
-            <NavLink class="vtab" href="@TabHref("coleta")" Match="NavLinkMatch.Prefix">Coleta</NavLink>
-            <NavLink class="vtab" href="@TabHref("resultados")" Match="NavLinkMatch.Prefix">Resultados</NavLink>
-            <NavLink class="vtab" href="@TabHref("respostas")" Match="NavLinkMatch.Prefix">Respostas</NavLink>
+            <a class="vtab @(ActiveTab == NpsTab.Collection ? "active" : null)" href="@TabHref("coleta")" @onclick="() => ChangeTabAsync(NpsTab.Collection)" @onclick:preventDefault="true">Coleta</a>
+            <a class="vtab @(ActiveTab == NpsTab.Results ? "active" : null)" href="@TabHref("resultados")" @onclick="() => ChangeTabAsync(NpsTab.Results)" @onclick:preventDefault="true">Resultados</a>
+            <a class="vtab @(ActiveTab == NpsTab.Responses ? "active" : null)" href="@TabHref("respostas")" @onclick="() => ChangeTabAsync(NpsTab.Responses)" @onclick:preventDefault="true">Respostas</a>
         </nav>
     </div>
 
@@ -267,30 +267,73 @@
             }
             else if (dashboard is not null)
             {
-                <section class="nps-results" aria-busy="@isLoading">
-                    <header class="nps-results-header">
-                        <div>
-                            <h2>Distribuição das respostas</h2>
-                            <p>Composição executiva da nota oficial do período.</p>
+                <div class="nps-executive-panels">
+                    <section class="nps-results" aria-busy="@isLoading">
+                        <header class="nps-results-header">
+                            <div>
+                                <h2>Distribuição das respostas</h2>
+                                <p>Composição executiva da nota oficial do período.</p>
+                            </div>
+                            <p class="nps-formula">NPS = % promotores − % detratores</p>
+                        </header>
+                        <div class="nps-distribution-bar" aria-label="Distribuição das classificações">
+                            @foreach (var item in dashboard.Distribution)
+                            {
+                                <span class="@($"tone-{item.Tone}")" style="@($"width:{item.Percentage}%")"></span>
+                            }
                         </div>
-                        <p class="nps-formula">NPS = % promotores − % detratores</p>
-                    </header>
-                    <div class="nps-distribution-bar" aria-label="Distribuição das classificações">
-                        @foreach (var item in dashboard.Distribution)
+                        <ul class="nps-distribution-legend">
+                            @foreach (var item in dashboard.Distribution)
+                            {
+                                <li>
+                                    <span class="nps-legend-label"><span class="nps-legend-swatch @($"tone-{item.Tone}")" aria-hidden="true"></span><strong>@item.Label</strong></span>
+                                    <span>@item.Count · @item.Percentage.ToString("0.0")%</span>
+                                </li>
+                            }
+                        </ul>
+                    </section>
+
+                    <section class="nps-aspect-summary" aria-labelledby="nps-aspect-summary-title">
+                        <header class="nps-aspect-header">
+                            <h2 id="nps-aspect-summary-title">Médias por aspecto</h2>
+                            <p>@dashboard.AspectSummary.CompleteResponsesCount respostas Completas · escala @dashboard.AspectSummary.Scale.Minimum–@dashboard.AspectSummary.Scale.Maximum</p>
+                        </header>
+                        @if (dashboard.AspectSummary.CompleteResponsesCount == 0)
                         {
-                            <span class="@($"tone-{item.Tone}")" style="@($"width:{item.Percentage}%")"></span>
+                            <p class="nps-aspect-empty">Nenhuma resposta Completa no recorte atual.</p>
                         }
-                    </div>
-                    <ul class="nps-distribution-legend">
-                        @foreach (var item in dashboard.Distribution)
+                        else
                         {
-                            <li>
-                                <span class="nps-legend-label"><span class="nps-legend-swatch @($"tone-{item.Tone}")" aria-hidden="true"></span><strong>@item.Label</strong></span>
-                                <span>@item.Count · @item.Percentage.ToString("0.0")%</span>
-                            </li>
+                            <ul class="nps-aspect-list">
+                                @foreach (var aspect in dashboard.AspectSummary.Aspects)
+                                {
+                                    <li class="nps-aspect-row" data-aspect="@aspect.Code">
+                                        <div class="nps-aspect-row-header">
+                                            <strong class="nps-aspect-label">@aspect.Label</strong>
+                                            <span class="nps-aspect-value">
+                                                <span class="nps-aspect-average">@DisplayAspectAverage(aspect.Average)</span>
+                                                <span class="nps-aspect-count">n=@aspect.ResponsesCount</span>
+                                            </span>
+                                        </div>
+                                        @if (aspect.Average.HasValue)
+                                        {
+                                            <meter min="@dashboard.AspectSummary.Scale.Minimum"
+                                                   max="@dashboard.AspectSummary.Scale.Maximum"
+                                                   value="@AspectMeterValue(aspect.Average.Value)"
+                                                   aria-label="@AspectMeterLabel(aspect, dashboard.AspectSummary.Scale.Maximum)">
+                                                @DisplayAspectAverage(aspect.Average) de @dashboard.AspectSummary.Scale.Maximum
+                                            </meter>
+                                        }
+                                        else
+                                        {
+                                            <span class="nps-aspect-meter-empty" role="img" aria-label="Sem respostas para @aspect.Label"></span>
+                                        }
+                                    </li>
+                                }
+                            </ul>
                         }
-                    </ul>
-                </section>
+                    </section>
+                </div>
 
                 <section class="nps-results-table" aria-label="Resultados por projeto" @onkeydown="ResultsKeyDown">
                     <BrqTableShell Caption="Resultados NPS por projeto">

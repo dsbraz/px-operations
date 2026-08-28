@@ -653,10 +653,30 @@ public partial class NpsPage : ComponentBase, IDisposable
             : values.Average().ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
     }
 
+    private async Task ChangeTabAsync(NpsTab tab)
+    {
+        if (tab == ActiveTab)
+        {
+            return;
+        }
+
+        CloseResultExpansion();
+        ActiveTab = tab;
+        NavigationManager.NavigateTo(TabHref(TabCode(tab)));
+        ReadQuery();
+        await ReloadAsync();
+    }
+
     private string TabHref(string tab) => $"/nps/{tab}{CurrentRawQuery()}";
     private string PublicUrl(Guid token) => NavigationManager.ToAbsoluteUri($"/nps/{token}").ToString();
     private ValueTask CopyAsync(string value) => JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", value);
     private static string DisplayMetric(double? value) => value?.ToString("0.0") ?? "—";
+    private static string DisplayAspectAverage(double? value)
+        => value?.ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("pt-BR")) ?? "—";
+    private static string AspectMeterValue(double value)
+        => value.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+    private static string AspectMeterLabel(NpsAspectAverageView aspect, int maximum)
+        => $"{aspect.Label}: média {DisplayAspectAverage(aspect.Average)} de {maximum}, {aspect.ResponsesCount} respostas.";
 
     private void ReadQuery()
     {
