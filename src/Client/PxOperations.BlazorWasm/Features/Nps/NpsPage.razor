@@ -9,8 +9,8 @@
 <PageTitle>NPS · Operations PX</PageTitle>
 
 <section class="nps-page">
-    <header class="nps-page-header">
-        <div>
+    <header class="page-actions-bar nps-page-header">
+        <div class="nps-page-title">
             <h1>NPS</h1>
             <p>Coleta e leitura do relacionamento com clientes.</p>
         </div>
@@ -20,19 +20,38 @@
         </div>
     </header>
 
-    <nav class="view-tabs" aria-label="Visões do NPS">
-        <NavLink class="vtab" href="@TabHref("coleta")" Match="NavLinkMatch.Prefix">Coleta</NavLink>
-        <NavLink class="vtab" href="@TabHref("resultados")" Match="NavLinkMatch.Prefix">Resultados</NavLink>
-        <NavLink class="vtab" href="@TabHref("respostas")" Match="NavLinkMatch.Prefix">Respostas</NavLink>
-    </nav>
-
-    @if (ShowsFilters)
+    @if (ShowsIndicators)
     {
-        <div class="nps-filter-toolbar">
-            <label class="nps-search">
-                <span class="sr-only">Buscar projeto ou cliente</span>
+        <section class="stats-bar nps-indicators" aria-label="Indicadores do NPS">
+            <div class="stat p">
+                <div class="sico p" aria-hidden="true">◈</div>
+                <div><div class="sval">@DisplayMetric(dashboard?.OfficialNps)</div><div class="slbl">NPS oficial</div></div>
+            </div>
+            <div class="stat g">
+                <div class="sico g" aria-hidden="true">✓</div>
+                <div><div class="sval">@(dashboard is null ? "—" : dashboard.TotalResponses.ToString())</div><div class="slbl">Respostas</div></div>
+            </div>
+            <div class="stat b">
+                <div class="sico b" aria-hidden="true">◎</div>
+                <div><div class="sval">@DisplayMetric(dashboard?.AverageScore)</div><div class="slbl">Média</div></div>
+            </div>
+            <div class="stat o">
+                <div class="sico o" aria-hidden="true">!</div>
+                <div><div class="sval">@(dashboard is null ? "—" : dashboard.OverdueProjects.ToString())</div><div class="slbl">Vencidos</div></div>
+            </div>
+        </section>
+    }
+
+    <div class="toolbar nps-toolbar">
+        @if (ShowsFilters)
+        {
+            <div class="search-wrap nps-search">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="M21 21l-4.35-4.35" />
+                </svg>
                 <input value="@search" @oninput="SearchChanged" placeholder="Buscar projeto ou cliente" />
-            </label>
+            </div>
             <BrqFilterPanel ActiveFacetCount="@ActiveFacetCount" OnClear="ClearFiltersAsync">
                 <fieldset>
                     <legend>Cliente</legend>
@@ -85,8 +104,17 @@
                     </fieldset>
                 }
             </BrqFilterPanel>
-        </div>
+        }
 
+        <nav class="view-tabs" aria-label="Visões do NPS">
+            <NavLink class="vtab" href="@TabHref("coleta")" Match="NavLinkMatch.Prefix">Coleta</NavLink>
+            <NavLink class="vtab" href="@TabHref("resultados")" Match="NavLinkMatch.Prefix">Resultados</NavLink>
+            <NavLink class="vtab" href="@TabHref("respostas")" Match="NavLinkMatch.Prefix">Respostas</NavLink>
+        </nav>
+    </div>
+
+    @if (ShowsFilters)
+    {
         @if (ActiveChips.Count != 0)
         {
             <div class="nps-filter-chips">
@@ -100,159 +128,301 @@
         }
     }
 
-    @if (ActiveTab == NpsTab.Collection)
-    {
-        @if (loadError is not null)
+    <div class="nps-content">
+        @if (ActiveTab == NpsTab.Collection)
         {
-            <div class="status-card error nps-load-error">
-                <p>@loadError</p>
-                <button type="button" class="btn btn-purple" @onclick="ReloadAsync">Tentar novamente</button>
-            </div>
-        }
-
-        <div class="nps-board" aria-busy="@isLoading">
-            @foreach (var column in BoardColumns)
+            @if (isLoading)
             {
-                <section class="nps-board-column" data-stage="@column.Code">
-                    <header><h2>@column.Label</h2><span>@ProjectsForStage(column.Code).Count</span></header>
-                    <div class="nps-card-list">
-                        @foreach (var project in ProjectsForStage(column.Code))
+                <p class="nps-loading" role="status">Atualizando quadro…</p>
+            }
+            @if (loadError is not null)
+            {
+                <div class="status-card error nps-load-error">
+                    <p>@loadError</p>
+                    <button type="button" class="btn btn-purple" @onclick="ReloadAsync">Tentar novamente</button>
+                </div>
+            }
+
+            <div class="kanban-board nps-board" aria-busy="@isLoading">
+                @foreach (var column in BoardColumns)
+                {
+                    var stageProjects = ProjectsForStage(column.Code);
+                    <section class="kanban-column nps-board-column @column.ColorClass" data-stage="@column.Code">
+                        <header class="kanban-col-header">
+                            <h2 class="kanban-col-title">@column.Label</h2>
+                            <span class="kanban-col-count">@stageProjects.Count</span>
+                        </header>
+                        <div class="kanban-col-body nps-card-list">
+                            @if (stageProjects.Count == 0)
+                            {
+                                <div class="kanban-empty">Nenhum projeto nesta etapa</div>
+                            }
+                            else
+                            {
+                                @foreach (var project in stageProjects)
+                                {
+                                    <article class="kanban-card nps-project-card">
+                                        <div class="nps-card-heading">
+                                            <div>
+                                                <h3 class="kanban-card-name">@project.Name</h3>
+                                                <p class="kanban-card-meta">@project.Client · @project.Dc</p>
+                                            </div>
+                                            <BrqStatusPill Label="@project.Stage.Label" Tone="@Tone(project.Stage.Tone)" Size="BrqSize.Small" />
+                                        </div>
+                                        <div class="nps-temporal">
+                                            <BrqStatusPill Label="@project.Temporal.Label" Tone="@Tone(project.Temporal.Tone)" Size="BrqSize.Small" />
+                                        </div>
+                                        <dl>
+                                            <div><dt>Delivery Manager</dt><dd>@(project.DeliveryManager ?? "—")</dd></div>
+                                            <div><dt>Respostas</dt><dd>@project.ResponsesCount</dd></div>
+                                        </dl>
+                                        @if (project.ActiveLinks.Count != 0)
+                                        {
+                                            <ul class="nps-card-links">
+                                                @foreach (var link in project.ActiveLinks)
+                                                {
+                                                    <li><strong>@link.FormatLabel</strong><span>@link.AvailabilityLabel · até @link.ExpiresAt.ToString("dd/MM/yyyy")</span></li>
+                                                }
+                                            </ul>
+                                        }
+                                        <div class="nps-card-actions">
+                                            @if (project.PrimaryAction is not null)
+                                            {
+                                                <button type="button" class="btn btn-purple nps-primary-action" @onclick="() => RunPrimaryActionAsync(project)">@project.PrimaryAction.Label</button>
+                                            }
+                                            <button type="button"
+                                                    class="ibtn nps-card-icon-action"
+                                                    title="Ver detalhe"
+                                                    aria-label="Ver detalhe de @project.Name"
+                                                    @onclick="() => OpenDetailAsync(project.Id)">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                                    <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+                                                    <circle cx="12" cy="12" r="2.5" />
+                                                </svg>
+                                            </button>
+                                            <button type="button"
+                                                    class="ibtn nps-card-icon-action del"
+                                                    title="Dispensar coleta"
+                                                    aria-label="Dispensar coleta de @project.Name"
+                                                    @onclick="() => OpenWaiverDialog(project.Id)">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                                    <circle cx="12" cy="12" r="8.5" />
+                                                    <path d="m6 6 12 12" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </article>
+                                }
+                            }
+                        </div>
+                    </section>
+                }
+            </div>
+
+            @if (includeWaived)
+            {
+                <section class="nps-waived-section">
+                    <h2>Dispensados</h2>
+                    <div class="nps-waived-grid">
+                        @foreach (var project in WaivedProjects)
                         {
                             <article class="nps-project-card">
-                                <div class="nps-card-heading">
-                                    <div><h3>@project.Name</h3><p>@project.Client · @project.Dc</p></div>
-                                    <BrqStatusPill Label="@project.Stage.Label" Tone="@Tone(project.Stage.Tone)" Size="BrqSize.Small" />
-                                </div>
-                                <dl>
-                                    <div><dt>DM</dt><dd>@(project.DeliveryManager ?? "—")</dd></div>
-                                    <div><dt>Respostas</dt><dd>@project.ResponsesCount</dd></div>
-                                </dl>
-                                <BrqStatusPill Label="@project.Temporal.Label" Tone="@Tone(project.Temporal.Tone)" Size="BrqSize.Small" />
-                                @if (project.ActiveLinks.Count != 0)
-                                {
-                                    <ul class="nps-card-links">
-                                        @foreach (var link in project.ActiveLinks)
-                                        {
-                                            <li><strong>@link.FormatLabel</strong><span>@link.AvailabilityLabel · @link.ExpiresAt.ToString("dd/MM/yyyy")</span></li>
-                                        }
-                                    </ul>
-                                }
-                                <div class="nps-card-actions">
-                                    @if (project.PrimaryAction is not null)
-                                    {
-                                        <button type="button" class="btn btn-purple" @onclick="() => RunPrimaryActionAsync(project)">@project.PrimaryAction.Label</button>
-                                    }
-                                    <button type="button" class="btn btn-ghost" @onclick="() => OpenDetailAsync(project.Id)">Detalhe</button>
-                                    <button type="button" class="btn btn-ghost" @onclick="() => OpenWaiverDialog(project.Id)">Dispensar</button>
-                                </div>
+                                <h3>@project.Name</h3>
+                                <p>@project.Waiver?.Reason</p>
+                                <BrqStatusPill Label="@project.Temporal.Label" Tone="BrqStatusTone.Neutral" Size="BrqSize.Small" />
+                                <button type="button" class="btn btn-purple" @onclick="() => ReactivateAsync(project.Id)">Reativar</button>
                             </article>
                         }
                     </div>
                 </section>
             }
-        </div>
-
-        @if (includeWaived)
-        {
-            <section class="nps-waived-section">
-                <h2>Dispensados</h2>
-                <div class="nps-waived-grid">
-                    @foreach (var project in WaivedProjects)
-                    {
-                        <article class="nps-project-card">
-                            <h3>@project.Name</h3>
-                            <p>@project.Waiver?.Reason</p>
-                            <BrqStatusPill Label="@project.Temporal.Label" Tone="BrqStatusTone.Neutral" Size="BrqSize.Small" />
-                            <button type="button" class="btn btn-purple" @onclick="() => ReactivateAsync(project.Id)">Reativar</button>
-                        </article>
-                    }
-                </div>
-            </section>
         }
-    }
-    else if (ActiveTab == NpsTab.Results)
-    {
-        @if (loadError is not null)
+        else if (ActiveTab == NpsTab.Results)
         {
-            <div class="status-card error nps-load-error"><p>@loadError</p><button class="btn btn-purple" @onclick="ReloadAsync">Tentar novamente</button></div>
+            @if (loadError is not null)
+            {
+                <div class="status-card error nps-load-error"><p>@loadError</p><button type="button" class="btn btn-purple" @onclick="ReloadAsync">Tentar novamente</button></div>
+            }
+            else if (dashboard is not null)
+            {
+                <section class="nps-results" aria-busy="@isLoading">
+                    <header class="nps-results-header">
+                        <div>
+                            <h2>Distribuição das respostas</h2>
+                            <p>Composição executiva da nota oficial do período.</p>
+                        </div>
+                        <p class="nps-formula">NPS = % promotores − % detratores</p>
+                    </header>
+                    <div class="nps-distribution-bar" aria-label="Distribuição das classificações">
+                        @foreach (var item in dashboard.Distribution)
+                        {
+                            <span class="@($"tone-{item.Tone}")" style="@($"width:{item.Percentage}%")"></span>
+                        }
+                    </div>
+                    <ul class="nps-distribution-legend">
+                        @foreach (var item in dashboard.Distribution)
+                        {
+                            <li>
+                                <span class="nps-legend-label"><span class="nps-legend-swatch @($"tone-{item.Tone}")" aria-hidden="true"></span><strong>@item.Label</strong></span>
+                                <span>@item.Count · @item.Percentage.ToString("0.0")%</span>
+                            </li>
+                        }
+                    </ul>
+                </section>
+            }
         }
-        else if (dashboard is not null)
+        else if (ActiveTab == NpsTab.Responses)
         {
-            <section class="nps-results" aria-busy="@isLoading">
-                <div class="nps-kpis">
-                    <article class="nps-kpi"><strong>@DisplayMetric(dashboard.OfficialNps)</strong><span>NPS oficial</span></article>
-                    <article class="nps-kpi"><strong>@dashboard.TotalResponses</strong><span>Respostas</span></article>
-                    <article class="nps-kpi"><strong>@DisplayMetric(dashboard.AverageScore)</strong><span>Score médio</span></article>
-                    <article class="nps-kpi"><strong>@dashboard.OverdueProjects</strong><span>Vencidos</span></article>
-                </div>
-                <p class="nps-formula">NPS = % promotores − % detratores</p>
-                <div class="nps-distribution-bar" aria-label="Distribuição das classificações">
-                    @foreach (var item in dashboard.Distribution)
-                    {
-                        <span class="@($"tone-{item.Tone}")" style="@($"width:{item.Percentage}%")"></span>
-                    }
-                </div>
-                <ul class="nps-distribution-legend">
-                    @foreach (var item in dashboard.Distribution)
-                    {
-                        <li><strong>@item.Label</strong><span>@item.Count · @item.Percentage.ToString("0.0")%</span></li>
-                    }
-                </ul>
-            </section>
+            <div class="nps-empty-delivery">
+                <BrqEmptyState Title="Respostas" Description="A tabela de auditoria chega numa entrega seguinte." />
+            </div>
         }
-    }
-    else if (ActiveTab == NpsTab.Responses)
-    {
-        <p class="nps-next-delivery">A tabela de auditoria chega numa entrega seguinte.</p>
-    }
+    </div>
 </section>
 
-<BrqDialog @bind-Open="createDialogOpen" Title="Gerar link NPS" Description="@CreateDialogDescription">
-    @if (createdDispatch is null)
-    {
-        <div class="nps-create-form">
-            <p><strong>1.</strong> Projeto, formato e idioma</p>
-            <select class="nps-create-project" @bind="createProjectId">
-                <option value="0">Selecione o projeto</option>
-                @foreach (var project in projects.Where(project => project.Stage.Code != "waived"))
-                {
-                    <option value="@project.Id">@project.Name</option>
-                }
-            </select>
-            <select @bind="createFormat"><option value="complete">Completo</option><option value="simplified">Simplificado</option></select>
-            <select @bind="createLanguage"><option value="pt">Português</option><option value="en">Inglês</option><option value="es">Espanhol</option></select>
+<BrqDialog @bind-Open="createDialogOpen"
+           Title="Gerar link NPS"
+           Description="@CreateDialogDescription"
+           CssClass="nps-dialog"
+           AutofocusSelector=".nps-create-project">
+    <ChildContent>
+        @if (createdDispatch is null)
+        {
+            <div class="nps-create-form">
+                <div class="nps-dialog-step">
+                    <span>1</span>
+                    <div><strong>Projeto, formato e idioma</strong><p>Defina como a rodada será compartilhada.</p></div>
+                </div>
+                <div class="nps-form-grid">
+                    <label class="nps-field nps-field-full">
+                        <span>Projeto</span>
+                        <select class="nps-create-project" @bind="createProjectId">
+                            <option value="0">Selecione o projeto</option>
+                            @foreach (var project in projects.Where(project => project.Stage.Code != "waived"))
+                            {
+                                <option value="@project.Id">@project.Name</option>
+                            }
+                        </select>
+                    </label>
+                    <label class="nps-field">
+                        <span>Formato</span>
+                        <select @bind="createFormat"><option value="complete">Completo</option><option value="simplified">Simplificado</option></select>
+                    </label>
+                    <label class="nps-field">
+                        <span>Idioma</span>
+                        <select @bind="createLanguage"><option value="pt">Português</option><option value="en">Inglês</option><option value="es">Espanhol</option></select>
+                    </label>
+                </div>
+            </div>
+        }
+        else
+        {
+            var target = createdDispatch.Targets.Single(target => target.IsGeneric);
+            <div class="nps-created-link">
+                <div class="nps-dialog-step complete">
+                    <span>2</span>
+                    <div><strong>Link pronto · @createdDispatch.Dispatch.FormatLabel</strong><p>Compartilhe o link ou a mensagem sugerida.</p></div>
+                </div>
+                <label class="nps-created-block">
+                    <span>Link</span>
+                    <input readonly value="@PublicUrl(target.Token)" />
+                </label>
+                <div class="nps-created-block nps-created-validity">
+                    <span>Validade</span>
+                    <strong>@createdDispatch.Dispatch.ExpiresAt.ToString("dd/MM/yyyy")</strong>
+                </div>
+                <label class="nps-created-block">
+                    <span>Mensagem sugerida</span>
+                    <textarea readonly>@SuggestedMessage</textarea>
+                </label>
+            </div>
+        }
+    </ChildContent>
+    <Footer>
+        @if (createdDispatch is null)
+        {
+            <button type="button" class="btn btn-ghost" @onclick="CloseCreateDialog">Cancelar</button>
             <button type="button" class="btn btn-purple nps-create-submit" disabled="@(createProjectId == 0)" @onclick="CreateDispatchAsync">Gerar link</button>
-        </div>
-    }
-    else
-    {
-        var target = createdDispatch.Targets.Single(target => target.IsGeneric);
-        <div class="nps-created-link">
-            <p><strong>2.</strong> Link pronto · @createdDispatch.Dispatch.FormatLabel</p>
-            <input readonly value="@PublicUrl(target.Token)" />
-            <p>Expira em <strong>@createdDispatch.Dispatch.ExpiresAt.ToString("dd/MM/yyyy")</strong></p>
-            <textarea readonly>@SuggestedMessage</textarea>
-            <div><button class="btn btn-ghost" @onclick="() => CopyAsync(PublicUrl(target.Token))">Copiar link</button><button class="btn btn-purple" @onclick="() => CopyAsync(SuggestedMessage)">Copiar mensagem</button></div>
-        </div>
-    }
+        }
+        else
+        {
+            <button type="button" class="btn btn-ghost" @onclick="() => CopyAsync(PublicUrl(createdDispatch.Targets.Single(target => target.IsGeneric).Token))">Copiar link</button>
+            <button type="button" class="btn btn-purple" @onclick="() => CopyAsync(SuggestedMessage)">Copiar mensagem</button>
+        }
+    </Footer>
 </BrqDialog>
 
-<BrqDialog @bind-Open="detailDialogOpen" Title="Detalhe da coleta" Description="@selectedDetail?.Project.Name">
-    @if (selectedDetail is not null)
-    {
-        <div class="nps-detail-kpis"><span>NPS <strong>@DisplayMetric(selectedDetail.OfficialNps)</strong></span><span>Respostas <strong>@selectedDetail.ResponsesCount</strong></span><span>Média <strong>@DisplayMetric(selectedDetail.AverageScore)</strong></span><span>Promotores <strong>@selectedDetail.PromotersCount</strong></span></div>
-        <div class="nps-detail-links">
-            @foreach (var link in selectedDetail.ActiveLinks)
-            {
-                <p><strong>@link.FormatLabel</strong> · @link.AvailabilityLabel · @link.ExpiresAt.ToString("dd/MM/yyyy")</p>
-            }
-        </div>
-        <div class="nps-detail-format-filter"><button @onclick="FilterAllDetailResponsesAsync">Todos</button><button @onclick="FilterCompleteDetailResponsesAsync">Completo</button><button @onclick="FilterSimplifiedDetailResponsesAsync">Simplificado</button></div>
-        <ul class="nps-recent-responses">@foreach (var response in detailResponses){<li><strong>@response.Score · @response.ClassificationLabel</strong><span>@response.Comment</span></li>}</ul>
-    }
+<BrqDialog @bind-Open="detailDialogOpen" Title="Detalhe da coleta" Description="@selectedDetail?.Project.Name" CssClass="nps-dialog nps-detail-dialog">
+    <ChildContent>
+        @if (selectedDetail is not null)
+        {
+            <section class="nps-detail-kpis" aria-label="Indicadores da coleta">
+                <article class="nps-detail-kpi"><span>NPS</span><strong>@DisplayMetric(selectedDetail.OfficialNps)</strong></article>
+                <article class="nps-detail-kpi"><span>Respostas</span><strong>@selectedDetail.ResponsesCount</strong></article>
+                <article class="nps-detail-kpi"><span>Média</span><strong>@DisplayMetric(selectedDetail.AverageScore)</strong></article>
+                <article class="nps-detail-kpi"><span>Promotores</span><strong>@selectedDetail.PromotersCount</strong></article>
+            </section>
+            <section class="nps-detail-links">
+                <h3>Links ativos</h3>
+                @if (selectedDetail.ActiveLinks.Count == 0)
+                {
+                    <p class="nps-detail-empty">Nenhum link ativo.</p>
+                }
+                else
+                {
+                    @foreach (var link in selectedDetail.ActiveLinks)
+                    {
+                        <article>
+                            <span><small>Formato</small><strong>@link.FormatLabel</strong></span>
+                            <span><small>Status</small><strong>@link.AvailabilityLabel</strong></span>
+                            <span><small>Validade</small><strong>@link.ExpiresAt.ToString("dd/MM/yyyy")</strong></span>
+                        </article>
+                    }
+                }
+            </section>
+            <section class="nps-detail-responses">
+                <header>
+                    <h3>Respostas recentes</h3>
+                    <div class="nps-detail-format-filter" aria-label="Filtrar respostas por formato">
+                        <button type="button" class="nps-detail-segment @(detailFormat == "all" ? "active" : null)" data-format="all" aria-pressed="@((detailFormat == "all").ToString().ToLowerInvariant())" @onclick="FilterAllDetailResponsesAsync">Todos</button>
+                        <button type="button" class="nps-detail-segment @(detailFormat == "complete" ? "active" : null)" data-format="complete" aria-pressed="@((detailFormat == "complete").ToString().ToLowerInvariant())" @onclick="FilterCompleteDetailResponsesAsync">Completo</button>
+                        <button type="button" class="nps-detail-segment @(detailFormat == "simplified" ? "active" : null)" data-format="simplified" aria-pressed="@((detailFormat == "simplified").ToString().ToLowerInvariant())" @onclick="FilterSimplifiedDetailResponsesAsync">Simplificado</button>
+                    </div>
+                </header>
+                @if (detailResponses.Count == 0)
+                {
+                    <p class="nps-detail-empty">Nenhuma resposta neste formato.</p>
+                }
+                else
+                {
+                    <ul class="nps-recent-responses">
+                        @foreach (var response in detailResponses)
+                        {
+                            <li><strong>@response.Score · @response.ClassificationLabel</strong><span>@(response.Comment ?? "Sem comentário")</span></li>
+                        }
+                    </ul>
+                }
+            </section>
+        }
+    </ChildContent>
+    <Footer>
+        <button type="button" class="btn btn-ghost" @onclick="CloseDetailDialog">Fechar</button>
+    </Footer>
 </BrqDialog>
 
-<BrqDialog @bind-Open="waiverDialogOpen" Title="Dispensar coleta" Description="A dispensa é reversível e fecha os links abertos.">
-    <textarea @bind="waiverReason" maxlength="500" placeholder="Motivo da dispensa"></textarea>
-    <button class="btn btn-purple" disabled="@string.IsNullOrWhiteSpace(waiverReason)" @onclick="WaiveAsync">Confirmar dispensa</button>
+<BrqDialog @bind-Open="waiverDialogOpen"
+           Title="Dispensar coleta"
+           Description="A dispensa é reversível e fecha os links abertos."
+           CssClass="nps-dialog"
+           AutofocusSelector=".nps-waiver-reason">
+    <ChildContent>
+        <label class="nps-field">
+            <span>Motivo da dispensa</span>
+            <textarea class="nps-waiver-reason" @bind="waiverReason" maxlength="500" placeholder="Explique por que este projeto não participará desta coleta"></textarea>
+        </label>
+    </ChildContent>
+    <Footer>
+        <button type="button" class="btn btn-ghost nps-waiver-cancel" @onclick="CloseWaiverDialog">Cancelar</button>
+        <button type="button" class="btn btn-purple nps-waiver-confirm" disabled="@string.IsNullOrWhiteSpace(waiverReason)" @onclick="WaiveAsync">Confirmar dispensa</button>
+    </Footer>
 </BrqDialog>

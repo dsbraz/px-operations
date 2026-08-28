@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using PxOperations.BlazorWasm.Api;
@@ -90,6 +91,26 @@ public sealed class NpsPublicPageTests : TestContext
         cut.WaitForAssertion(() => Assert.Contains("Link inválido", cut.Markup));
     }
 
+    [Fact]
+    public void Public_form_css_should_use_theme_aware_foundation_tokens_for_every_visual_layer()
+    {
+        var css = PublicFormCss();
+
+        Assert.Contains("background: var(--color-bg)", css);
+        Assert.Contains("background: var(--color-surface-2)", css);
+        Assert.Contains("background: var(--color-surface)", css);
+        Assert.Contains("border: 1px solid var(--color-border)", css);
+        Assert.Contains("color: var(--color-text)", css);
+
+        Assert.DoesNotContain("var(--bg)", css);
+        Assert.DoesNotContain("var(--surface)", css);
+        Assert.DoesNotContain("var(--text)", css);
+        Assert.DoesNotContain("var(--border)", css);
+        Assert.DoesNotContain("var(--purple)", css);
+        Assert.DoesNotContain("var(--muted)", css);
+        Assert.DoesNotContain("var(--red)", css);
+    }
+
     private ProjectsTestHelpers.MultiStubHttpMessageHandler RegisterClient(
         string response,
         HttpStatusCode status = HttpStatusCode.OK)
@@ -119,4 +140,27 @@ public sealed class NpsPublicPageTests : TestContext
     private static string ResponseJson() => """
         {"id":1,"projectId":1,"projectName":"Projeto Público","dispatchId":2,"targetId":3,"contactId":null,"contactName":null,"contactEmail":null,"format":"complete","formatLabel":"Completo","score":10,"classification":"promoter","classificationLabel":"Promotor","quality":null,"schedule":null,"communication":null,"businessValue":null,"comment":null,"respondentName":null,"respondentEmail":null,"submittedAt":"2026-08-01T12:00:00Z"}
         """;
+
+    private static string PublicFormCss()
+    {
+        var manifestPath = Path.Combine(
+            AppContext.BaseDirectory,
+            "PxOperations.BlazorWasm.staticwebassets.runtime.json");
+        using var manifest = JsonDocument.Parse(File.ReadAllText(manifestPath));
+        var root = manifest.RootElement;
+        var asset = root
+            .GetProperty("Root")
+            .GetProperty("Children")
+            .GetProperty("PxOperations.BlazorWasm.styles.css")
+            .GetProperty("Asset");
+        var contentRoot = root
+            .GetProperty("ContentRoots")[asset.GetProperty("ContentRootIndex").GetInt32()]
+            .GetString()!;
+        var bundle = File.ReadAllText(Path.Combine(contentRoot, asset.GetProperty("SubPath").GetString()!));
+        const string marker = "/* /Features/Nps/NpsPublicPage.razor.rz.scp.css */";
+        var start = bundle.IndexOf(marker, StringComparison.Ordinal);
+        Assert.True(start >= 0, "Seção CSS do formulário público não encontrada.");
+        var end = bundle.IndexOf("/* /", start + marker.Length, StringComparison.Ordinal);
+        return end < 0 ? bundle[start..] : bundle[start..end];
+    }
 }

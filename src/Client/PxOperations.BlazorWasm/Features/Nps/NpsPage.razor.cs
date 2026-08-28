@@ -40,20 +40,22 @@ public partial class NpsPage : ComponentBase, IDisposable
     private bool detailDialogOpen;
     private NpsProjectDetailView? selectedDetail;
     private List<NpsResponseView> detailResponses = [];
+    private string detailFormat = "all";
     private bool waiverDialogOpen;
     private int waiverProjectId;
     private string waiverReason = string.Empty;
 
     private static readonly IReadOnlyList<BoardColumn> BoardColumns =
     [
-        new("no_link", "Sem link"),
-        new("awaiting_response", "Aguardando resposta"),
-        new("recollection", "Recoleta"),
-        new("current", "Em dia")
+        new("no_link", "Sem link", "kb-gray"),
+        new("awaiting_response", "Aguardando resposta", "kb-orange"),
+        new("recollection", "Recoleta", "kb-purple"),
+        new("current", "Em dia", "kb-green")
     ];
 
     private NpsTab ActiveTab { get; set; }
     private bool ShowsFilters => ActiveTab is NpsTab.Collection or NpsTab.Results;
+    private bool ShowsIndicators => ActiveTab is NpsTab.Collection or NpsTab.Results;
     private NpsFilterOptionsView FilterOptions => dashboard?.FilterOptions ?? new NpsFilterOptionsView();
     private IReadOnlyList<NpsProjectView> WaivedProjects => projects.Where(project => project.Stage.Code == "waived").ToArray();
     private string CreateDialogDescription => createdDispatch is null
@@ -359,24 +361,26 @@ public partial class NpsPage : ComponentBase, IDisposable
     {
         selectedDetail = await NpsClient.GetProjectAsync(projectId);
         detailResponses = selectedDetail.RecentResponses.ToList();
+        detailFormat = "all";
         detailDialogOpen = true;
     }
 
-    private async Task FilterDetailResponsesAsync(IReadOnlyList<string> selectedFormats)
+    private async Task FilterDetailResponsesAsync(string format, IReadOnlyList<string> selectedFormats)
     {
         if (selectedDetail is null)
         {
             return;
         }
 
+        detailFormat = format;
         detailResponses = (await NpsClient.ListProjectResponsesAsync(
             selectedDetail.Project.Id,
             selectedFormats)).ToList();
     }
 
-    private Task FilterAllDetailResponsesAsync() => FilterDetailResponsesAsync([]);
-    private Task FilterCompleteDetailResponsesAsync() => FilterDetailResponsesAsync(["complete"]);
-    private Task FilterSimplifiedDetailResponsesAsync() => FilterDetailResponsesAsync(["simplified"]);
+    private Task FilterAllDetailResponsesAsync() => FilterDetailResponsesAsync("all", []);
+    private Task FilterCompleteDetailResponsesAsync() => FilterDetailResponsesAsync("complete", ["complete"]);
+    private Task FilterSimplifiedDetailResponsesAsync() => FilterDetailResponsesAsync("simplified", ["simplified"]);
 
     private void OpenWaiverDialog(int projectId)
     {
@@ -384,6 +388,10 @@ public partial class NpsPage : ComponentBase, IDisposable
         waiverReason = string.Empty;
         waiverDialogOpen = true;
     }
+
+    private void CloseCreateDialog() => createDialogOpen = false;
+    private void CloseDetailDialog() => detailDialogOpen = false;
+    private void CloseWaiverDialog() => waiverDialogOpen = false;
 
     private async Task WaiveAsync()
     {
@@ -534,7 +542,7 @@ public partial class NpsPage : ComponentBase, IDisposable
         searchCancellation?.Dispose();
     }
 
-    private sealed record BoardColumn(string Code, string Label);
+    private sealed record BoardColumn(string Code, string Label, string ColorClass);
     private sealed record FilterChip(string Key, string Label, string Values);
 }
 
