@@ -150,10 +150,11 @@ public sealed class NpsPageTests : TestContext
     }
 
     [Fact]
-    public void Results_should_use_the_indicator_strip_and_render_only_the_executive_distribution_panel()
+    public void Results_should_keep_indicators_and_executive_panel_then_render_the_project_table()
     {
         var handler = RegisterClient();
         handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", ProjectResultsJson(), HttpStatusCode.OK);
         Navigate("/nps/resultados");
 
         var cut = RenderComponent<NpsPage>();
@@ -168,9 +169,63 @@ public sealed class NpsPageTests : TestContext
             Assert.Equal(new[] { "Detrator", "Neutro", "Promotor" }, items.Select(item => item.QuerySelector("strong")!.TextContent));
             Assert.Equal(3, cut.FindAll(".nps-legend-swatch").Count);
             Assert.DoesNotContain("Média por aspecto", cut.Markup);
-            Assert.DoesNotContain("Drill-down", cut.Markup);
-            Assert.Empty(cut.FindAll("table"));
+            var headers = cut.FindAll(".nps-results-table thead th");
+            Assert.Equal(new[] { "Projeto", "Cliente", "DC", "DM", "Respostas", "NPS", "Status" }, headers.Select(header => header.TextContent.Trim()));
+            Assert.Equal("ascending", headers[0].GetAttribute("aria-sort"));
+            Assert.Equal(new[] { "Alpha", "Zulu" }, cut.FindAll(".nps-result-row .nps-result-project").Select(cell => cell.TextContent.Trim()));
         });
+    }
+
+    [Fact]
+    public void Results_should_sort_accessibly_and_keep_only_one_lazy_expansion_open()
+    {
+        var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", ProjectResultsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects/1/responses", FilteredResponsesJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects/2/responses", FilteredResponsesJson(), HttpStatusCode.OK);
+        Navigate("/nps/resultados?from=2026-08-01&to=2026-08-31");
+
+        var cut = RenderComponent<NpsPage>();
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".nps-result-row").Count));
+
+        cut.Find("[data-sort='responses']").Click();
+        Assert.Equal("ascending", cut.Find("th[data-column='responses']").GetAttribute("aria-sort"));
+        Assert.Equal("Zulu", cut.FindAll(".nps-result-row .nps-result-project")[0].TextContent.Trim());
+
+        cut.Find("[aria-label='Expandir respostas de Zulu']").Click();
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".nps-result-expansion")));
+        Assert.Contains("Resposta completa filtrada", cut.Find(".nps-result-expansion").TextContent);
+        Assert.Contains(handler.RequestUris, uri => uri?.AbsolutePath == "/api/nps/projects/1/responses" && uri.Query.Contains("from=2026-08-01") && uri.Query.Contains("to=2026-08-31"));
+
+        cut.Find("[aria-label='Expandir respostas de Alpha']").Click();
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".nps-result-expansion")));
+        Assert.Equal("2", cut.Find(".nps-result-expansion").GetAttribute("data-project-id"));
+
+        cut.Find(".nps-results-table").KeyDown("Escape");
+        Assert.Empty(cut.FindAll(".nps-result-expansion"));
+    }
+
+    [Fact]
+    public void Result_expansion_failure_should_stay_in_the_row_and_retry_without_hiding_the_page()
+    {
+        var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", ProjectResultsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects/1/responses", "{}", HttpStatusCode.InternalServerError);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects/1/responses", FilteredResponsesJson(), HttpStatusCode.OK);
+        Navigate("/nps/resultados");
+
+        var cut = RenderComponent<NpsPage>();
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".nps-result-row").Count));
+        cut.Find("[aria-label='Expandir respostas de Zulu']").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Não foi possível carregar as respostas deste projeto.", cut.Find(".nps-result-expansion").TextContent));
+        Assert.Equal(4, cut.FindAll(".nps-indicators .stat").Count);
+        Assert.Equal(2, cut.FindAll(".nps-result-row").Count);
+
+        cut.Find(".nps-expansion-error button").Click();
+        cut.WaitForAssertion(() => Assert.Contains("Resposta completa filtrada", cut.Find(".nps-result-expansion").TextContent));
     }
 
     [Fact]
@@ -394,6 +449,23 @@ public sealed class NpsPageTests : TestContext
     private static string FilteredResponsesJson() => """
         [
           {"id":2,"projectId":1,"projectName":"Projeto ativo","dispatchId":10,"targetId":21,"contactId":null,"contactName":null,"contactEmail":null,"format":"complete","formatLabel":"Completo","score":9,"classification":"promoter","classificationLabel":"Promotor","quality":5,"schedule":4,"communication":5,"businessValue":5,"comment":"Resposta completa filtrada","respondentName":null,"respondentEmail":null,"submittedAt":"2026-08-21T12:00:00Z"}
+        ]
+        """;
+
+    private static string ProjectResultsJson() => """
+        [
+          {
+            "id":1,"name":"Zulu","client":"Beta","dc":"DC1","deliveryManager":"Maria","responsesCount":1,"officialNps":100.0,
+            "distribution":[{"code":"detractor","label":"Detrator","tone":"critical","count":0,"percentage":0.0},{"code":"passive","label":"Neutro","tone":"warning","count":0,"percentage":0.0},{"code":"promoter","label":"Promotor","tone":"positive","count":1,"percentage":100.0}],
+            "formats":[{"code":"complete","label":"Completo","count":1},{"code":"simplified","label":"Simplificado","count":0}],
+            "lastResponseAt":"2026-08-21T12:00:00Z","status":{"code":"responded","label":"Respondido","tone":"positive"}
+          },
+          {
+            "id":2,"name":"Alpha","client":"Alpha","dc":"DC2","deliveryManager":"João","responsesCount":2,"officialNps":0.0,
+            "distribution":[{"code":"detractor","label":"Detrator","tone":"critical","count":1,"percentage":50.0},{"code":"passive","label":"Neutro","tone":"warning","count":0,"percentage":0.0},{"code":"promoter","label":"Promotor","tone":"positive","count":1,"percentage":50.0}],
+            "formats":[{"code":"complete","label":"Completo","count":1},{"code":"simplified","label":"Simplificado","count":1}],
+            "lastResponseAt":"2026-08-20T12:00:00Z","status":{"code":"responded","label":"Respondido","tone":"positive"}
+          }
         ]
         """;
 }

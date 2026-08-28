@@ -269,6 +269,99 @@
                         }
                     </ul>
                 </section>
+
+                <section class="nps-results-table" aria-label="Resultados por projeto" @onkeydown="ResultsKeyDown">
+                    <BrqTableShell Caption="Resultados NPS por projeto">
+                        <thead>
+                            <tr>
+                                <th scope="col" data-column="project" aria-sort='@AriaSort("project")'><button type="button" data-sort="project" @onclick='() => SortResults("project")'>Projeto</button></th>
+                                <th scope="col" data-column="client" aria-sort='@AriaSort("client")'><button type="button" data-sort="client" @onclick='() => SortResults("client")'>Cliente</button></th>
+                                <th scope="col" data-column="dc" aria-sort='@AriaSort("dc")'><button type="button" data-sort="dc" @onclick='() => SortResults("dc")'>DC</button></th>
+                                <th scope="col">DM</th>
+                                <th scope="col" data-column="responses" aria-sort='@AriaSort("responses")'><button type="button" data-sort="responses" @onclick='() => SortResults("responses")'>Respostas</button></th>
+                                <th scope="col" data-column="nps" aria-sort='@AriaSort("nps")'><button type="button" data-sort="nps" @onclick='() => SortResults("nps")'>NPS</button></th>
+                                <th scope="col">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var result in SortedProjectResults)
+                            {
+                                <tr class="nps-result-row" data-project-id="@result.Id">
+                                    <td class="data-table__cell-strong nps-result-project">
+                                        @if (result.Status.Code == "responded")
+                                        {
+                                            <button type="button"
+                                                    class="nps-result-toggle"
+                                                    aria-expanded="@((expandedProjectId == result.Id).ToString().ToLowerInvariant())"
+                                                    aria-label="@($"{(expandedProjectId == result.Id ? "Recolher" : "Expandir")} respostas de {result.Name}")"
+                                                    @onclick="() => ToggleResultExpansionAsync(result)">@result.Name</button>
+                                        }
+                                        else
+                                        {
+                                            @result.Name
+                                        }
+                                    </td>
+                                    <td>@(result.Client ?? "—")</td>
+                                    <td>@result.Dc</td>
+                                    <td>@(result.DeliveryManager ?? "—")</td>
+                                    <td>@result.ResponsesCount</td>
+                                    <td>@DisplayMetric(result.OfficialNps)</td>
+                                    <td><BrqStatusPill Label="@result.Status.Label" Tone="@Tone(result.Status.Tone)" Size="BrqSize.Small" /></td>
+                                </tr>
+                                @if (expandedProjectId == result.Id)
+                                {
+                                    <tr class="nps-result-expansion" data-project-id="@result.Id">
+                                        <td colspan="7">
+                                            @if (expansionLoading)
+                                            {
+                                                <p role="status">Carregando respostas de @result.Name…</p>
+                                            }
+                                            else if (expansionError is not null)
+                                            {
+                                                <div class="nps-expansion-error"><p>@expansionError</p><button type="button" class="btn btn-ghost" @onclick="() => RetryResultExpansionAsync(result)">Tentar novamente</button></div>
+                                            }
+                                            else
+                                            {
+                                                <div class="nps-expansion-summary">
+                                                    <dl>
+                                                        @foreach (var item in result.Distribution)
+                                                        {
+                                                            <div><dt>@item.Label</dt><dd>@item.Count</dd></div>
+                                                        }
+                                                        @foreach (var format in result.Formats)
+                                                        {
+                                                            <div><dt>@format.Label</dt><dd>@format.Count</dd></div>
+                                                        }
+                                                        <div><dt>Mais recente</dt><dd>@(result.LastResponseAt?.ToString("dd/MM/yyyy HH:mm") ?? "—")</dd></div>
+                                                    </dl>
+                                                    @if (expandedResponses.Count == 0)
+                                                    {
+                                                        <p>Nenhuma resposta no recorte atual.</p>
+                                                    }
+                                                    else
+                                                    {
+                                                        @foreach (var group in GroupedExpandedResponses)
+                                                        {
+                                                            <section class="nps-expansion-class" data-classification="@group.Key">
+                                                                <h3>@group.First().ClassificationLabel</h3>
+                                                                <ul>
+                                                                    @foreach (var response in group)
+                                                                    {
+                                                                        <li><strong>@response.Score · @response.FormatLabel</strong><span>@(response.Comment ?? "Sem comentário")</span><time datetime='@response.SubmittedAt.ToString("O")'>@response.SubmittedAt.ToString("dd/MM/yyyy HH:mm")</time></li>
+                                                                    }
+                                                                </ul>
+                                                            </section>
+                                                        }
+                                                    }
+                                                </div>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </BrqTableShell>
+                </section>
             }
         }
         else if (ActiveTab == NpsTab.Responses)
