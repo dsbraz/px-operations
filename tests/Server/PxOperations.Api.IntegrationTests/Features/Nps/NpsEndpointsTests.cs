@@ -195,6 +195,67 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
     }
 
     [Fact]
+    public async Task Dashboard_should_reconcile_complete_aspect_averages_with_the_results_filters()
+    {
+        var time = new TestTimeProvider(InitialNow);
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString, time);
+        using var client = factory.CreateClient();
+        var included = await CreateProjectAsync(client, "Aspect Included", "Aspect Client", "DC1");
+        var excluded = await CreateProjectAsync(client, "Aspect Included Excluded", "Other Client", "DC2");
+        var complete = await CreateDispatchAsync(client, included.Id, "complete");
+        var simplified = await CreateDispatchAsync(client, included.Id, "simplified");
+        var excludedComplete = await CreateDispatchAsync(client, excluded.Id, "complete");
+        var completeToken = complete.Targets.Single(target => target.IsGeneric).Token;
+
+        await SubmitAsync(client, completeToken, 10, quality: 1, schedule: 1, communication: 1, businessValue: 1);
+        time.Set(new DateTimeOffset(2026, 8, 2, 12, 0, 0, TimeSpan.Zero));
+        await SubmitAsync(client, completeToken, 10, quality: 5, schedule: 4, businessValue: 2);
+        await SubmitAsync(client, completeToken, 9, quality: 4, communication: 3, businessValue: 3);
+        time.Set(new DateTimeOffset(2026, 8, 3, 12, 0, 0, TimeSpan.Zero));
+        await SubmitAsync(client, completeToken, 8, quality: 2, schedule: 5, communication: 5);
+        await SubmitAsync(client, simplified.Targets.Single(target => target.IsGeneric).Token, 1);
+        await SubmitAsync(client, excludedComplete.Targets.Single(target => target.IsGeneric).Token, 10, quality: 5, schedule: 5, communication: 5, businessValue: 5);
+
+        var dashboard = await client.GetFromJsonAsync<NpsDashboardView>(
+            "/api/nps/dashboard?search=Aspect%20Included&client=Aspect%20Client&dc=DC1&projectType=squad&deliveryManager=Maria&status=responded&from=2026-08-02&to=2026-08-03");
+
+        Assert.NotNull(dashboard);
+        Assert.Equal(4, dashboard.TotalResponses);
+        Assert.Equal(3, dashboard.AspectSummary.CompleteResponsesCount);
+        Assert.Equal(1, dashboard.AspectSummary.Scale.Minimum);
+        Assert.Equal(5, dashboard.AspectSummary.Scale.Maximum);
+        Assert.Equal(
+            new[] { "quality", "schedule", "communication", "business_value" },
+            dashboard.AspectSummary.Aspects.Select(aspect => aspect.Code));
+        Assert.Equal(
+            new[] { "Qualidade técnica", "Prazos acordados", "Comunicação", "Valor para o negócio" },
+            dashboard.AspectSummary.Aspects.Select(aspect => aspect.Label));
+        Assert.Equal(new decimal?[] { 3.7m, 4.5m, 4.0m, 2.5m }, dashboard.AspectSummary.Aspects.Select(aspect => aspect.Average));
+        Assert.Equal(new[] { 3, 2, 2, 2 }, dashboard.AspectSummary.Aspects.Select(aspect => aspect.ResponsesCount));
+    }
+
+    [Fact]
+    public async Task Dashboard_should_return_an_empty_aspect_summary_when_only_simplified_responses_match()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString, new TestTimeProvider(InitialNow));
+        using var client = factory.CreateClient();
+        var project = await CreateProjectAsync(client, "Simplified aspect summary");
+        var dispatch = await CreateDispatchAsync(client, project.Id, "simplified");
+        await SubmitAsync(client, dispatch.Targets.Single(target => target.IsGeneric).Token, 9);
+
+        var dashboard = await client.GetFromJsonAsync<NpsDashboardView>($"/api/nps/dashboard?projectId={project.Id}");
+
+        Assert.NotNull(dashboard);
+        Assert.Equal(1, dashboard.TotalResponses);
+        Assert.Equal(0, dashboard.AspectSummary.CompleteResponsesCount);
+        Assert.All(dashboard.AspectSummary.Aspects, aspect =>
+        {
+            Assert.Null(aspect.Average);
+            Assert.Equal(0, aspect.ResponsesCount);
+        });
+    }
+
+    [Fact]
     public async Task Phase_two_queries_should_reconcile_project_results_responses_and_csv()
     {
         var time = new TestTimeProvider(InitialNow);

@@ -3126,6 +3126,67 @@
           }
         }
       },
+      "NpsAspectAverageView": {
+        "required": [
+          "code",
+          "label",
+          "average",
+          "responsesCount"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "average": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "responsesCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "NpsAspectSummaryView": {
+        "required": [
+          "completeResponsesCount",
+          "scale",
+          "aspects"
+        ],
+        "type": "object",
+        "properties": {
+          "completeResponsesCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "scale": {
+            "$ref": "#/components/schemas/NpsScaleView"
+          },
+          "aspects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NpsAspectAverageView"
+            }
+          }
+        }
+      },
       "NpsAspectView": {
         "required": [
           "code",
@@ -3229,6 +3290,7 @@
           "overdueProjects",
           "scale",
           "distribution",
+          "aspectSummary",
           "filterOptions"
         ],
         "type": "object",
@@ -3275,6 +3337,9 @@
             "items": {
               "$ref": "#/components/schemas/NpsDistributionView"
             }
+          },
+          "aspectSummary": {
+            "$ref": "#/components/schemas/NpsAspectSummaryView"
           },
           "filterOptions": {
             "$ref": "#/components/schemas/NpsFilterOptionsView"

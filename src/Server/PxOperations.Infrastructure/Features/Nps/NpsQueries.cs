@@ -23,6 +23,23 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
         var metrics = NpsCalculator.Calculate(responses.Select(response => response.Score));
         var counts = responses.GroupBy(response => response.Classification)
             .ToDictionary(group => group.Key, group => group.Count());
+        var completeResponses = ApplyResponsePeriodFilters(dbContext.NpsSurveyResponses.AsNoTracking(), filter)
+            .Where(response => projectIds.Contains(response.ProjectId) && response.Format == NpsFormFormat.Complete);
+        var aspectMetrics = await completeResponses
+            .GroupBy(_ => 1)
+            .Select(group => new
+            {
+                CompleteResponsesCount = group.Count(),
+                QualityAverage = group.Average(response => (decimal?)response.Quality),
+                QualityResponsesCount = group.Count(response => response.Quality.HasValue),
+                ScheduleAverage = group.Average(response => (decimal?)response.Schedule),
+                ScheduleResponsesCount = group.Count(response => response.Schedule.HasValue),
+                CommunicationAverage = group.Average(response => (decimal?)response.Communication),
+                CommunicationResponsesCount = group.Count(response => response.Communication.HasValue),
+                BusinessValueAverage = group.Average(response => (decimal?)response.BusinessValue),
+                BusinessValueResponsesCount = group.Count(response => response.BusinessValue.HasValue)
+            })
+            .SingleOrDefaultAsync(ct);
         var snapshots = await LoadSnapshotsAsync(
             filter with { Statuses = [], Formats = [], Classifications = [], From = null, To = null },
             now,
@@ -40,6 +57,15 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
                 Distribution(NpsClassification.Passive, counts, metrics.PassivePercentage),
                 Distribution(NpsClassification.Promoter, counts, metrics.PromoterPercentage)
             ],
+            new NpsAspectSummaryView(
+                aspectMetrics?.CompleteResponsesCount ?? 0,
+                new NpsScaleView(NpsScale.MinimumAspect, NpsScale.MaximumAspect),
+                [
+                    Aspect("quality", "Qualidade técnica", aspectMetrics?.QualityAverage, aspectMetrics?.QualityResponsesCount ?? 0),
+                    Aspect("schedule", "Prazos acordados", aspectMetrics?.ScheduleAverage, aspectMetrics?.ScheduleResponsesCount ?? 0),
+                    Aspect("communication", "Comunicação", aspectMetrics?.CommunicationAverage, aspectMetrics?.CommunicationResponsesCount ?? 0),
+                    Aspect("business_value", "Valor para o negócio", aspectMetrics?.BusinessValueAverage, aspectMetrics?.BusinessValueResponsesCount ?? 0)
+                ]),
             await GetFilterOptionsAsync(ct));
     }
 
@@ -778,6 +804,13 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
             },
             counts.GetValueOrDefault(classification),
             percentage);
+
+    private static NpsAspectAverageView Aspect(string code, string label, decimal? average, int responsesCount)
+        => new(
+            code,
+            label,
+            average.HasValue ? decimal.Round(average.Value, 1, MidpointRounding.AwayFromZero) : null,
+            responsesCount);
 
     private static IReadOnlyList<NpsOptionView> Options(IEnumerable<string?> values)
         => values.Where(value => !string.IsNullOrWhiteSpace(value))

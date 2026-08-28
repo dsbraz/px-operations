@@ -20,6 +20,17 @@ public sealed record NpsDistributionView(
     int Count,
     decimal Percentage);
 
+public sealed record NpsAspectAverageView(
+    string Code,
+    string Label,
+    decimal? Average,
+    int ResponsesCount);
+
+public sealed record NpsAspectSummaryView(
+    int CompleteResponsesCount,
+    NpsScaleView Scale,
+    IReadOnlyList<NpsAspectAverageView> Aspects);
+
 public sealed record NpsDashboardView(
     decimal? OfficialNps,
     int TotalResponses,
@@ -27,6 +38,7 @@ public sealed record NpsDashboardView(
     int OverdueProjects,
     NpsScaleView Scale,
     IReadOnlyList<NpsDistributionView> Distribution,
+    NpsAspectSummaryView AspectSummary,
     NpsFilterOptionsView FilterOptions);
 
 public sealed record NpsBadgeView(string Code, string Label, string Tone);
