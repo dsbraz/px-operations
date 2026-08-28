@@ -229,21 +229,54 @@ public sealed class NpsPageTests : TestContext
     }
 
     [Fact]
-    public void Responses_should_render_the_exact_placeholder_without_calling_a_global_query()
+    public void Responses_should_load_options_and_audit_in_parallel_without_indicators()
     {
         var handler = RegisterClient();
-        Navigate("/nps/respostas?format=complete");
+        handler.AddResponse(HttpMethod.Get, "/api/nps/filter-options", FilterOptionsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/responses", ResponsesJson(), HttpStatusCode.OK);
+        Navigate("/nps/respostas?format=complete&status=responded");
 
         var cut = RenderComponent<NpsPage>();
 
-        Assert.Contains("A tabela de auditoria chega numa entrega seguinte.", cut.Markup);
-        Assert.Equal("A tabela de auditoria chega numa entrega seguinte.", cut.Find(".nps-empty-delivery p").TextContent.Trim());
-        Assert.Empty(cut.FindAll(".nps-indicators"));
-        Assert.Empty(cut.FindAll(".nps-search"));
-        Assert.Empty(cut.FindAll(".fmenu__btn"));
-        Assert.Contains("nps-toolbar", cut.Find(".view-tabs").ParentElement!.ClassList);
-        Assert.Empty(cut.FindAll("table"));
-        Assert.Empty(handler.RequestUris);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll(".nps-indicators"));
+            Assert.Equal("Buscar projeto, pessoa ou comentário", cut.Find(".nps-search input").GetAttribute("placeholder"));
+            Assert.Single(cut.FindAll(".fmenu__btn"));
+            Assert.Equal(new[] { "Projeto", "Nota", "Classificação", "Formato", "Autor", "Comentário", "Recebida" }, cut.FindAll(".nps-responses-table th").Select(header => header.TextContent.Trim()));
+            Assert.Equal(2, cut.FindAll(".nps-response-row").Count);
+        });
+        Assert.Contains(handler.RequestUris, uri => uri?.AbsolutePath == "/api/nps/filter-options");
+        Assert.Contains(handler.RequestUris, uri => uri?.AbsolutePath == "/api/nps/responses" && uri.Query.Contains("format=complete") && !uri.Query.Contains("status="));
+        Assert.DoesNotContain("status=", cut.Find("a[href*='responses/export']").GetAttribute("href"));
+    }
+
+    [Fact]
+    public void Response_dialog_should_show_full_attribution_and_aspects_only_for_complete_format()
+    {
+        var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/filter-options", FilterOptionsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/responses", ResponsesJson(), HttpStatusCode.OK);
+        Navigate("/nps/respostas");
+
+        var cut = RenderComponent<NpsPage>();
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".nps-response-row").Count));
+        Assert.Equal("Resposta anônima", cut.FindAll(".nps-response-author")[1].TextContent.Trim());
+        Assert.Equal("Comentário completo que deve permanecer acessível", cut.FindAll(".nps-response-comment")[0].GetAttribute("title"));
+
+        cut.FindAll(".nps-response-row")[0].Click();
+        var completeDialog = Dialog(cut, "Resposta NPS");
+        Assert.Contains("Pessoa Teste", completeDialog.TextContent);
+        Assert.Contains("Comentário completo que deve permanecer acessível", completeDialog.TextContent);
+        Assert.Equal(new[] { "Qualidade", "Prazo", "Comunicação", "Valor para o negócio" }, completeDialog.QuerySelectorAll(".nps-response-aspect dt").Select(item => item.TextContent.Trim()));
+        Assert.Contains("Média dos aspectos", completeDialog.TextContent);
+        Assert.Contains("3,5", completeDialog.TextContent);
+
+        completeDialog.QuerySelector(".brq-dialog-footer button")!.Click();
+        cut.FindAll(".nps-response-row")[1].KeyDown("Enter");
+        var simplifiedDialog = Dialog(cut, "Resposta NPS");
+        Assert.Contains("Resposta anônima", simplifiedDialog.TextContent);
+        Assert.Empty(simplifiedDialog.QuerySelectorAll(".nps-response-aspects"));
     }
 
     [Fact]
@@ -466,6 +499,23 @@ public sealed class NpsPageTests : TestContext
             "formats":[{"code":"complete","label":"Completo","count":1},{"code":"simplified","label":"Simplificado","count":1}],
             "lastResponseAt":"2026-08-20T12:00:00Z","status":{"code":"responded","label":"Respondido","tone":"positive"}
           }
+        ]
+        """;
+
+    private static string FilterOptionsJson() => """
+        {
+          "clients":[{"code":"Alpha","label":"Alpha"}],"dcs":[{"code":"DC1","label":"DC1"}],
+          "projectTypes":[{"code":"squad","label":"Squad"}],"deliveryManagers":[{"code":"Maria","label":"Maria"}],
+          "statuses":[{"code":"responded","label":"Respondido"}],
+          "formats":[{"code":"complete","label":"Completo"},{"code":"simplified","label":"Simplificado"}],
+          "classifications":[{"code":"detractor","label":"Detrator"},{"code":"passive","label":"Neutro"},{"code":"promoter","label":"Promotor"}]
+        }
+        """;
+
+    private static string ResponsesJson() => """
+        [
+          {"id":1,"projectId":1,"projectName":"Projeto ativo","dispatchId":10,"targetId":20,"contactId":null,"contactName":null,"contactEmail":null,"format":"complete","formatLabel":"Completo","score":10,"classification":"promoter","classificationLabel":"Promotor","quality":5,"schedule":4,"communication":3,"businessValue":2,"comment":"Comentário completo que deve permanecer acessível","respondentName":"Pessoa Teste","respondentEmail":"pessoa@example.com","submittedAt":"2026-08-21T12:00:00Z"},
+          {"id":2,"projectId":2,"projectName":"Projeto simplificado","dispatchId":11,"targetId":21,"contactId":null,"contactName":null,"contactEmail":null,"format":"simplified","formatLabel":"Simplificado","score":4,"classification":"detractor","classificationLabel":"Detrator","quality":null,"schedule":null,"communication":null,"businessValue":null,"comment":null,"respondentName":null,"respondentEmail":null,"submittedAt":"2026-08-20T12:00:00Z"}
         ]
         """;
 }

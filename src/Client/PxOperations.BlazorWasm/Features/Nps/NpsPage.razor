@@ -50,7 +50,7 @@
                     <circle cx="11" cy="11" r="8" />
                     <path d="M21 21l-4.35-4.35" />
                 </svg>
-                <input value="@search" @oninput="SearchChanged" placeholder="Buscar projeto ou cliente" />
+                <input value="@search" @oninput="SearchChanged" placeholder="@(ActiveTab == NpsTab.Responses ? "Buscar projeto, pessoa ou comentário" : "Buscar projeto ou cliente")" />
             </div>
             <BrqFilterPanel ActiveFacetCount="@ActiveFacetCount" OnClear="ClearFiltersAsync">
                 <fieldset>
@@ -99,6 +99,28 @@
                     </fieldset>
                     <fieldset>
                         <legend>Data da coleta</legend>
+                        <label>De <input type="date" value="@from" @onchange="FromChangedAsync" /></label>
+                        <label>Até <input type="date" value="@to" @onchange="ToChangedAsync" /></label>
+                    </fieldset>
+                }
+                @if (ActiveTab == NpsTab.Responses)
+                {
+                    <fieldset>
+                        <legend>Formato</legend>
+                        @foreach (var option in FilterOptions.Formats)
+                        {
+                            <label><input type="checkbox" checked="@formats.Contains(option.Code)" @onchange="() => ToggleFacetAsync(formats, option.Code)" />@option.Label</label>
+                        }
+                    </fieldset>
+                    <fieldset>
+                        <legend>Classificação</legend>
+                        @foreach (var option in FilterOptions.Classifications)
+                        {
+                            <label><input type="checkbox" checked="@classifications.Contains(option.Code)" @onchange="() => ToggleFacetAsync(classifications, option.Code)" />@option.Label</label>
+                        }
+                    </fieldset>
+                    <fieldset>
+                        <legend>Recebida em</legend>
                         <label>De <input type="date" value="@from" @onchange="FromChangedAsync" /></label>
                         <label>Até <input type="date" value="@to" @onchange="ToChangedAsync" /></label>
                     </fieldset>
@@ -366,9 +388,46 @@
         }
         else if (ActiveTab == NpsTab.Responses)
         {
-            <div class="nps-empty-delivery">
-                <BrqEmptyState Title="Respostas" Description="A tabela de auditoria chega numa entrega seguinte." />
-            </div>
+            @if (isLoading)
+            {
+                <p class="nps-loading" role="status">Atualizando respostas…</p>
+            }
+            @if (loadError is not null)
+            {
+                <div class="status-card error nps-load-error"><p>@loadError</p><button type="button" class="btn btn-purple" @onclick="ReloadAsync">Tentar novamente</button></div>
+            }
+            else if (!isLoading && responseAudit.Count == 0)
+            {
+                <div class="nps-empty-delivery"><BrqEmptyState Title="Nenhuma resposta" Description="Ajuste os filtros ou aguarde uma nova coleta." /></div>
+            }
+            else
+            {
+                <section class="nps-responses-table" aria-busy="@isLoading">
+                    <BrqTableShell Caption="Auditoria de respostas NPS">
+                        <thead>
+                            <tr><th scope="col">Projeto</th><th scope="col">Nota</th><th scope="col">Classificação</th><th scope="col">Formato</th><th scope="col">Autor</th><th scope="col">Comentário</th><th scope="col">Recebida</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var response in responseAudit)
+                            {
+                                <tr class="nps-response-row"
+                                    tabindex="0"
+                                    aria-label="@($"Abrir resposta de {response.ProjectName}")"
+                                    @onclick="() => OpenResponseDialog(response)"
+                                    @onkeydown="args => ResponseRowKeyDown(args, response)">
+                                    <td class="data-table__cell-strong"><button type="button" class="nps-response-project" @onclick:stopPropagation="true" @onclick="() => OpenResponseDialog(response)">@response.ProjectName</button></td>
+                                    <td><strong class="nps-response-score">@response.Score</strong></td>
+                                    <td><BrqStatusPill Label="@response.ClassificationLabel" Tone='@Tone(response.Classification == "promoter" ? "positive" : response.Classification == "passive" ? "warning" : "critical")' Size="BrqSize.Small" /></td>
+                                    <td>@response.FormatLabel</td>
+                                    <td class="nps-response-author"><span>@ResponseAuthorName(response)</span>@if (ResponseAuthorDetail(response) is { } detail) { <small>@detail</small> }</td>
+                                    <td><span class="nps-response-comment" title="@response.Comment">@(response.Comment ?? "Sem comentário")</span></td>
+                                    <td><time datetime='@response.SubmittedAt.ToString("O")'>@response.SubmittedAt.ToString("dd/MM/yyyy HH:mm")</time></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </BrqTableShell>
+                </section>
+            }
         }
     </div>
 </section>
@@ -443,6 +502,48 @@
             <button type="button" class="btn btn-purple" @onclick="() => CopyAsync(SuggestedMessage)">Copiar mensagem</button>
         }
     </Footer>
+</BrqDialog>
+
+<BrqDialog @bind-Open="responseDialogOpen"
+           Title="Resposta NPS"
+           Description="@selectedResponse?.ProjectName"
+           CssClass="nps-dialog nps-response-dialog">
+    <ChildContent>
+        @if (selectedResponse is not null)
+        {
+            <section class="nps-response-overview">
+                <div><span>Nota</span><strong>@selectedResponse.Score</strong></div>
+                <div><span>Classificação</span><strong>@selectedResponse.ClassificationLabel</strong></div>
+                <div><span>Formato</span><strong>@selectedResponse.FormatLabel</strong></div>
+                <div><span>Recebida</span><strong>@selectedResponse.SubmittedAt.ToString("dd/MM/yyyy HH:mm")</strong></div>
+            </section>
+            <section class="nps-response-attribution">
+                <h3>Atribuição</h3>
+                <strong>@ResponseAuthorName(selectedResponse)</strong>
+                @if (ResponseAuthorDetail(selectedResponse) is { } detail)
+                {
+                    <span>@detail</span>
+                }
+            </section>
+            <section class="nps-response-full-comment">
+                <h3>Comentário</h3>
+                <p>@(selectedResponse.Comment ?? "Sem comentário")</p>
+            </section>
+            @if (selectedResponse.Format == "complete")
+            {
+                <section class="nps-response-aspects">
+                    <header><h3>Aspectos</h3><span>Média dos aspectos <strong>@ResponseAspectAverage(selectedResponse)</strong></span></header>
+                    <dl>
+                        <div class="nps-response-aspect"><dt>Qualidade</dt><dd>@(selectedResponse.Quality?.ToString() ?? "—")</dd></div>
+                        <div class="nps-response-aspect"><dt>Prazo</dt><dd>@(selectedResponse.Schedule?.ToString() ?? "—")</dd></div>
+                        <div class="nps-response-aspect"><dt>Comunicação</dt><dd>@(selectedResponse.Communication?.ToString() ?? "—")</dd></div>
+                        <div class="nps-response-aspect"><dt>Valor para o negócio</dt><dd>@(selectedResponse.BusinessValue?.ToString() ?? "—")</dd></div>
+                    </dl>
+                </section>
+            }
+        }
+    </ChildContent>
+    <Footer><button type="button" class="btn btn-ghost" @onclick="CloseResponseDialog">Fechar</button></Footer>
 </BrqDialog>
 
 <BrqDialog @bind-Open="detailDialogOpen" Title="Detalhe da coleta" Description="@selectedDetail?.Project.Name" CssClass="nps-dialog nps-detail-dialog">

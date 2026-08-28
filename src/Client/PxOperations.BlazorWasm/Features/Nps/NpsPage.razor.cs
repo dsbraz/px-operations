@@ -31,6 +31,7 @@ public partial class NpsPage : ComponentBase, IDisposable
     private string? to;
     private bool includeWaived;
     private NpsDashboardView? dashboard;
+    private NpsFilterOptionsView? filterOptions;
     private List<NpsProjectView> projects = [];
     private List<NpsProjectResultView> projectResults = [];
     private string resultSort = "project";
@@ -39,6 +40,9 @@ public partial class NpsPage : ComponentBase, IDisposable
     private List<NpsResponseView> expandedResponses = [];
     private bool expansionLoading;
     private string? expansionError;
+    private List<NpsResponseView> responseAudit = [];
+    private bool responseDialogOpen;
+    private NpsResponseView? selectedResponse;
 
     private bool createDialogOpen;
     private int createProjectId;
@@ -62,14 +66,14 @@ public partial class NpsPage : ComponentBase, IDisposable
     ];
 
     private NpsTab ActiveTab { get; set; }
-    private bool ShowsFilters => ActiveTab is NpsTab.Collection or NpsTab.Results;
+    private bool ShowsFilters => true;
     private bool ShowsIndicators => ActiveTab is NpsTab.Collection or NpsTab.Results;
-    private NpsFilterOptionsView FilterOptions => dashboard?.FilterOptions ?? new NpsFilterOptionsView();
+    private NpsFilterOptionsView FilterOptions => filterOptions ?? dashboard?.FilterOptions ?? new NpsFilterOptionsView();
     private IReadOnlyList<NpsProjectView> WaivedProjects => projects.Where(project => project.Stage.Code == "waived").ToArray();
     private string CreateDialogDescription => createdDispatch is null
         ? "Escolha a rodada que será compartilhada."
         : "O link usa a validade devolvida pelo servidor.";
-    private string ExportHref => new Uri(HttpClient.BaseAddress!, $"api/nps/responses/export{BuildQuery()}").ToString();
+    private string ExportHref => new Uri(HttpClient.BaseAddress!, $"api/nps/responses/export{BuildResponseQuery()}").ToString();
     private int ActiveFacetCount => ActiveChips.Count;
 
     private IReadOnlyList<FilterChip> ActiveChips
@@ -84,6 +88,15 @@ public partial class NpsPage : ComponentBase, IDisposable
             if (ActiveTab == NpsTab.Results)
             {
                 AddChip(chips, "status", "Status", statuses);
+                if (from is not null || to is not null)
+                {
+                    chips.Add(new FilterChip("period", "Período", $"{from ?? "…"} a {to ?? "…"}"));
+                }
+            }
+            else if (ActiveTab == NpsTab.Responses)
+            {
+                AddChip(chips, "format", "Formato", formats);
+                AddChip(chips, "classification", "Classificação", classifications);
                 if (from is not null || to is not null)
                 {
                     chips.Add(new FilterChip("period", "Período", $"{from ?? "…"} a {to ?? "…"}"));
@@ -149,7 +162,7 @@ public partial class NpsPage : ComponentBase, IDisposable
 
     private async Task ReloadAsync()
     {
-        if (redirecting || ActiveTab == NpsTab.Responses)
+        if (redirecting)
         {
             return;
         }
@@ -172,7 +185,24 @@ public partial class NpsPage : ComponentBase, IDisposable
                 if (version == loadVersion)
                 {
                     dashboard = dashboardTask.Result;
+                    filterOptions = dashboardTask.Result.FilterOptions;
                     projectResults = resultsTask.Result.ToList();
+                }
+            }
+            else if (ActiveTab == NpsTab.Responses)
+            {
+                var optionsTask = filterOptions is null
+                    ? NpsClient.GetFilterOptionsAsync(ct)
+                    : Task.FromResult(filterOptions);
+                var responsesTask = LoadResponsesAsync(ct);
+                await Task.WhenAll(optionsTask, responsesTask);
+                if (version == loadVersion)
+                {
+                    filterOptions = optionsTask.Result;
+                    responseAudit = responsesTask.Result
+                        .OrderByDescending(response => response.SubmittedAt)
+                        .ThenByDescending(response => response.Id)
+                        .ToList();
                 }
             }
             else
@@ -183,6 +213,7 @@ public partial class NpsPage : ComponentBase, IDisposable
                 if (version == loadVersion)
                 {
                     dashboard = dashboardTask.Result;
+                    filterOptions = dashboardTask.Result.FilterOptions;
                     projects = projectsTask.Result.ToList();
                 }
             }
@@ -198,6 +229,7 @@ public partial class NpsPage : ComponentBase, IDisposable
                 dashboard = null;
                 projects = [];
                 projectResults = [];
+                responseAudit = [];
             }
         }
         finally
@@ -213,8 +245,8 @@ public partial class NpsPage : ComponentBase, IDisposable
         => NpsClient.GetDashboardAsync(
             NullIfEmpty(search), clients, dcs, projectTypes, deliveryManagers,
             ActiveTab == NpsTab.Results ? statuses : [],
-            ActiveTab == NpsTab.Results ? formats : [],
-            ActiveTab == NpsTab.Results ? classifications : [],
+            [],
+            [],
             ActiveTab == NpsTab.Results ? from : null,
             ActiveTab == NpsTab.Results ? to : null,
             includeWaived,
@@ -230,6 +262,11 @@ public partial class NpsPage : ComponentBase, IDisposable
         => NpsClient.ListProjectResultsAsync(
             NullIfEmpty(search), clients, dcs, projectTypes, deliveryManagers,
             statuses, [], [], from, to, false, null, ct);
+
+    private Task<ICollection<NpsResponseView>> LoadResponsesAsync(CancellationToken ct)
+        => NpsClient.ListResponsesAsync(
+            NullIfEmpty(search), clients, dcs, projectTypes, deliveryManagers,
+            [], formats, classifications, from, to, null, null, ct);
 
     private async Task SearchChanged(ChangeEventArgs args)
     {
@@ -303,6 +340,8 @@ public partial class NpsPage : ComponentBase, IDisposable
             case "projectType": projectTypes.Clear(); break;
             case "deliveryManager": deliveryManagers.Clear(); break;
             case "status": statuses.Clear(); break;
+            case "format": formats.Clear(); break;
+            case "classification": classifications.Clear(); break;
             case "period": from = null; to = null; break;
             case "includeWaived": includeWaived = false; break;
         }
@@ -545,6 +584,75 @@ public partial class NpsPage : ComponentBase, IDisposable
         expansionLoading = false;
     }
 
+    private void OpenResponseDialog(NpsResponseView response)
+    {
+        selectedResponse = response;
+        responseDialogOpen = true;
+    }
+
+    private void ResponseRowKeyDown(
+        Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args,
+        NpsResponseView response)
+    {
+        if (args.Key is "Enter" or " ")
+        {
+            OpenResponseDialog(response);
+        }
+    }
+
+    private void CloseResponseDialog() => responseDialogOpen = false;
+
+    private static string ResponseAuthorName(NpsResponseView response)
+    {
+        if (!string.IsNullOrWhiteSpace(response.RespondentName))
+        {
+            return response.RespondentName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(response.RespondentEmail))
+        {
+            return response.RespondentEmail;
+        }
+
+        if (!string.IsNullOrWhiteSpace(response.ContactName))
+        {
+            return response.ContactName;
+        }
+
+        return !string.IsNullOrWhiteSpace(response.ContactEmail)
+            ? response.ContactEmail
+            : "Resposta anônima";
+    }
+
+    private static string? ResponseAuthorDetail(NpsResponseView response)
+    {
+        if (!string.IsNullOrWhiteSpace(response.RespondentName) && !string.IsNullOrWhiteSpace(response.RespondentEmail))
+        {
+            return response.RespondentEmail;
+        }
+
+        if (string.IsNullOrWhiteSpace(response.RespondentName) &&
+            string.IsNullOrWhiteSpace(response.RespondentEmail) &&
+            !string.IsNullOrWhiteSpace(response.ContactName) &&
+            !string.IsNullOrWhiteSpace(response.ContactEmail))
+        {
+            return response.ContactEmail;
+        }
+
+        return null;
+    }
+
+    private static string ResponseAspectAverage(NpsResponseView response)
+    {
+        var values = new[] { response.Quality, response.Schedule, response.Communication, response.BusinessValue }
+            .Where(value => value.HasValue)
+            .Select(value => value!.Value)
+            .ToArray();
+        return values.Length == 0
+            ? "—"
+            : values.Average().ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
+    }
+
     private string TabHref(string tab) => $"/nps/{tab}{CurrentRawQuery()}";
     private string PublicUrl(Guid token) => NavigationManager.ToAbsoluteUri($"/nps/{token}").ToString();
     private ValueTask CopyAsync(string value) => JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", value);
@@ -584,6 +692,23 @@ public partial class NpsPage : ComponentBase, IDisposable
             values.Add(new("includeWaived", "true"));
         }
 
+        return values.Count == 0
+            ? string.Empty
+            : $"?{string.Join('&', values.Select(pair => $"{Uri.EscapeDataString(pair.Key)}={Uri.EscapeDataString(pair.Value)}"))}";
+    }
+
+    private string BuildResponseQuery()
+    {
+        var values = new List<KeyValuePair<string, string>>();
+        Add(values, "search", NullIfEmpty(search));
+        Add(values, "client", clients);
+        Add(values, "dc", dcs);
+        Add(values, "projectType", projectTypes);
+        Add(values, "deliveryManager", deliveryManagers);
+        Add(values, "format", formats);
+        Add(values, "classification", classifications);
+        Add(values, "from", from);
+        Add(values, "to", to);
         return values.Count == 0
             ? string.Empty
             : $"?{string.Join('&', values.Select(pair => $"{Uri.EscapeDataString(pair.Key)}={Uri.EscapeDataString(pair.Value)}"))}";
