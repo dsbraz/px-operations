@@ -12,4 +12,11 @@ public interface INpsRepository
     Task<NpsCollection> GetOrCreateCollectionAsync(int projectId, CancellationToken ct);
     Task<SurveyResponseContext?> GetResponseContextAsync(Guid token, string? normalizedEmail, CancellationToken ct);
     void AddResponse(SurveyResponse response);
+
+    /// <summary>
+    /// Traduz a falha de gravação sem obrigar o Application a conhecer EF ou
+    /// Npgsql: só a Infrastructure sabe quais índices únicos representam uma
+    /// resposta repetida.
+    /// </summary>
+    bool IsDuplicateResponseException(Exception exception);
 }

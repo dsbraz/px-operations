@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using PxOperations.Application.Features.Nps;
 using PxOperations.Domain.Nps;
 using PxOperations.Infrastructure.Persistence;
@@ -79,4 +80,19 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
     }
 
     public void AddResponse(SurveyResponse response) => dbContext.NpsSurveyResponses.Add(response);
+
+    // A disponibilidade é checada lendo o banco antes de gravar, então duas
+    // respostas simultâneas no mesmo link passam as duas pela checagem e a
+    // segunda só é barrada pelo índice único. Quem perde a corrida está em
+    // conflito de estado, não diante de um erro do servidor.
+    public bool IsDuplicateResponseException(Exception exception)
+        => exception is DbUpdateException
+        {
+            InnerException: PostgresException
+            {
+                SqlState: PostgresErrorCodes.UniqueViolation,
+                ConstraintName: "IX_nps_survey_responses_target_id"
+                    or "IX_nps_survey_responses_target_id_normalized_respondent_email"
+            }
+        };
 }

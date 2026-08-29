@@ -41,7 +41,15 @@ public sealed class SubmitNpsPublicResponseUseCase(
             timeProvider.GetUtcNow());
 
         repository.AddResponse(response);
-        await unitOfWork.SaveChangesAsync(ct);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(ct);
+        }
+        catch (Exception exception) when (repository.IsDuplicateResponseException(exception))
+        {
+            throw new BusinessStateConflictException("This NPS link has already been answered.", exception);
+        }
+
         return response.Id;
     }
 }

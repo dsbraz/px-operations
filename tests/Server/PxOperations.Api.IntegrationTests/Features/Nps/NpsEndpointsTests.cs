@@ -9,6 +9,7 @@ using PxOperations.Api.Features.Nps;
 using PxOperations.Api.Features.Projects.Contracts;
 using PxOperations.Api.IntegrationTests.Infrastructure;
 using PxOperations.Application.Features.Nps;
+using PxOperations.Domain.Nps;
 using PxOperations.Infrastructure.Persistence;
 using Testcontainers.PostgreSql;
 
@@ -492,6 +493,41 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
         Assert.DoesNotContain("\"=HYPERLINK", csv, StringComparison.Ordinal);
         Assert.DoesNotContain("\"+49512345", csv, StringComparison.Ordinal);
         Assert.Contains("HYPERLINK", csv, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Repository_should_recognize_the_database_duplicate_response_violation()
+    {
+        var time = new TestTimeProvider(InitialNow);
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString, time);
+        using var client = factory.CreateClient();
+        var project = await CreateProjectAsync(client, "Duplicate race");
+        var dispatch = await CreateDispatchAsync(client, project.Id, "simplified");
+        var target = dispatch.Targets.Single(item => item.IsGeneric);
+        await SubmitAsync(client, target.Token, 9, email: "race@example.com");
+
+        using var scope = factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var repository = scope.ServiceProvider.GetRequiredService<INpsRepository>();
+        // Reproduz a corrida: um contexto que ainda não enxerga a primeira
+        // resposta, exatamente o que a segunda requisição simultânea teria.
+        dbContext.NpsSurveyResponses.Add(SurveyResponse.Submit(
+            new SurveyResponseContext(
+                project.Id,
+                dispatch.Dispatch.Id,
+                target.Id,
+                null,
+                NpsFormFormat.Simplified,
+                NpsDispatchStatus.Open,
+                InitialNow.AddDays(10),
+                false,
+                false,
+                false),
+            9, null, null, null, null, null, null, "race@example.com", InitialNow));
+
+        var exception = await Assert.ThrowsAnyAsync<Exception>(() => dbContext.SaveChangesAsync());
+
+        Assert.True(repository.IsDuplicateResponseException(exception));
     }
 
     private static async Task<ProjectResponse> CreateProjectAsync(
