@@ -15,7 +15,7 @@ public sealed class ApiExceptionHandler(IProblemDetailsService problemDetailsSer
     {
         var status = exception switch
         {
-            ValidationException or BusinessRuleValidationException or ArgumentException => StatusCodes.Status400BadRequest,
+            ValidationException or BusinessRuleValidationException or InvalidRequestValueException => StatusCodes.Status400BadRequest,
             ResourceNotFoundException => StatusCodes.Status404NotFound,
             BusinessStateConflictException => StatusCodes.Status409Conflict,
             _ => 0
