@@ -17,7 +17,11 @@ public static class ApiErrorFormatter
                 return responseMessage;
         }
 
-        return string.IsNullOrWhiteSpace(exception.Message) ? fallbackMessage : exception.Message;
+        // Nunca cair em exception.Message: ele nunca é vazio, então o fallback do
+        // chamador virava código morto e o usuário lia texto de runtime em
+        // inglês ("TypeError: Failed to fetch") no lugar da mensagem em
+        // português. O que o servidor explica sai acima; o resto é ruído interno.
+        return fallbackMessage;
     }
 
     private static string? TryExtractMessage(string? response)
