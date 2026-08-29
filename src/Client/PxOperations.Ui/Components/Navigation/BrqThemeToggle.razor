@@ -1,3 +1,4 @@
+@using Microsoft.JSInterop
 @implements IDisposable
 @inject IThemeService ThemeService
 
@@ -50,13 +51,35 @@
         if (!firstRender)
             return;
 
-        await ThemeService.InitializeAsync();
+        // O toggle vive no shell, então ele renderiza em toda página: uma falha
+        // ao importar theme.js (deploy em curso, asset bloqueado, offline) não
+        // pode virar a tela de erro global do Blazor. O ThemeService esquece a
+        // inicialização com falha, logo o próximo clique tenta de novo.
+        try
+        {
+            await ThemeService.InitializeAsync();
+        }
+        catch (JSException)
+        {
+            return;
+        }
+
         await InvokeAsync(StateHasChanged);
     }
 
     public void Dispose() => ThemeService.Changed -= HandleThemeChanged;
 
-    private async Task ToggleAsync() => await ThemeService.ToggleAsync();
+    private async Task ToggleAsync()
+    {
+        try
+        {
+            await ThemeService.ToggleAsync();
+        }
+        catch (JSException)
+        {
+            // Mesma razão do OnAfterRenderAsync: o tema fica como está.
+        }
+    }
 
     private void HandleThemeChanged() => _ = InvokeAsync(StateHasChanged);
 }
