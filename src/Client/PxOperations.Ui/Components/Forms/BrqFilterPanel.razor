@@ -57,6 +57,7 @@
     private ElementReference rootElement;
     private IJSObjectReference? module;
     private DotNetObjectReference<BrqFilterPanel>? selfReference;
+    private bool disposed;
 
     [Parameter] public string Label { get; set; } = "Filtro";
     [Parameter] public int ActiveFacetCount { get; set; }
@@ -67,10 +68,24 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
+        if (!firstRender || disposed) return;
 
-        module = await JSRuntime.InvokeAsync<IJSObjectReference>(
+        var loaded = await JSRuntime.InvokeAsync<IJSObjectReference>(
             "import", "./_content/PxOperations.Ui/Components/Forms/BrqFilterPanel.razor.js");
+
+        // O import é assíncrono: sair da página antes de ele terminar já rodou
+        // o DisposeAsync, que não tinha módulo para soltar. Sem esta guarda o
+        // attach seguia adiante e registrava no document um listener preso a um
+        // componente descartado — todo clique seguinte estourava pela interop, e
+        // ninguém mais removia o listener.
+        if (disposed)
+        {
+            try { await loaded.DisposeAsync(); }
+            catch (JSDisconnectedException) { }
+            return;
+        }
+
+        module = loaded;
         selfReference = DotNetObjectReference.Create(this);
         await module.InvokeVoidAsync("attach", rootElement, selfReference);
     }
@@ -85,6 +100,9 @@
 
     public async ValueTask DisposeAsync()
     {
+        if (disposed) return;
+
+        disposed = true;
         if (module is not null)
         {
             try { await module.InvokeVoidAsync("detach", rootElement); }
