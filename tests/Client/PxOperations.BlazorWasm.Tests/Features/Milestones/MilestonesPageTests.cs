@@ -7,7 +7,7 @@ using PxOperations.BlazorWasm.Tests.Helpers;
 
 namespace PxOperations.BlazorWasm.Tests.Features.Milestones;
 
-public sealed class MilestonesPageTests : TestContext
+public sealed class MilestonesPageTests : BunitContext
 {
     [Fact]
     public void Page_should_render_week_view_with_loaded_milestones()
@@ -24,7 +24,7 @@ public sealed class MilestonesPageTests : TestContext
         Services.AddScoped<MilestonesClient>();
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<MilestonesPage>();
+        var cut = Render<MilestonesPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -50,7 +50,7 @@ public sealed class MilestonesPageTests : TestContext
         Services.AddScoped<MilestonesClient>();
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<MilestonesPage>();
+        var cut = Render<MilestonesPage>();
 
         cut.WaitForAssertion(() => Assert.Contains("Entrega Beta", cut.Markup));
 
@@ -80,7 +80,7 @@ public sealed class MilestonesPageTests : TestContext
         Services.AddScoped<MilestonesClient>();
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<MilestonesPage>();
+        var cut = Render<MilestonesPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -113,7 +113,7 @@ public sealed class MilestonesPageTests : TestContext
         Services.AddScoped<MilestonesClient>();
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<MilestonesPage>();
+        var cut = Render<MilestonesPage>();
         cut.WaitForAssertion(() => Assert.Contains("Mês", cut.Markup));
 
         cut.FindAll("button.vtab")[1].Click();

@@ -5,12 +5,12 @@ using PxOperations.BlazorWasm.Layout;
 
 namespace PxOperations.BlazorWasm.Tests.Layout;
 
-public sealed class NavMenuTests : TestContext
+public sealed class NavMenuTests : BunitContext
 {
     [Fact]
     public void NavMenu_should_render_milestones_entry()
     {
-        var cut = RenderComponent<NavMenu>();
+        var cut = Render<NavMenu>();
 
         Assert.Contains("Marcos", cut.Markup);
         Assert.Contains("/milestones", cut.Markup);
@@ -24,7 +24,7 @@ public sealed class NavMenuTests : TestContext
         var navigation = Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo($"/nps/{Guid.NewGuid()}");
 
-        var cut = RenderComponent<NavMenu>();
+        var cut = Render<NavMenu>();
 
         Assert.Contains("Operations PX", cut.Markup);
         Assert.Contains("brq-logo", cut.Markup);

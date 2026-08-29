@@ -8,12 +8,12 @@ namespace PxOperations.BlazorWasm.Tests.Features.Projects;
 /// Testes isolados do componente <see cref="WeeklyPulse"/>.
 /// O componente não injeta serviços — recebe apenas a lista de projetos via parâmetro.
 /// </summary>
-public sealed class WeeklyPulseTests : TestContext
+public sealed class WeeklyPulseTests : BunitContext
 {
     [Fact]
     public void Should_render_four_cards_with_labels()
     {
-        var cut = RenderComponent<WeeklyPulse>(p => p
+        var cut = Render<WeeklyPulse>(p => p
             .Add(c => c.Projects, []));
 
         Assert.Contains("Novos programados", cut.Markup);
@@ -31,7 +31,7 @@ public sealed class WeeklyPulseTests : TestContext
             ProjectsTestHelpers.MakeProject(id: 2, status: "Em andamento", name: "Ativo")
         };
 
-        var cut = RenderComponent<WeeklyPulse>(p => p
+        var cut = Render<WeeklyPulse>(p => p
             .Add(c => c.Projects, projects.ToList()));
 
         var counts = cut.FindAll(".pc-new .pc-count");
@@ -48,7 +48,7 @@ public sealed class WeeklyPulseTests : TestContext
             ProjectsTestHelpers.MakeProject(id: 2, name: "Portal Y", renewal: "Pendente")
         };
 
-        var cut = RenderComponent<WeeklyPulse>(p => p
+        var cut = Render<WeeklyPulse>(p => p
             .Add(c => c.Projects, projects.ToList()));
 
         var counts = cut.FindAll(".pc-renew .pc-count");
@@ -64,7 +64,7 @@ public sealed class WeeklyPulseTests : TestContext
             ProjectsTestHelpers.MakeProject(id: 1, status: "Programado", name: "Meu Projeto Novo")
         };
 
-        var cut = RenderComponent<WeeklyPulse>(p => p
+        var cut = Render<WeeklyPulse>(p => p
             .Add(c => c.Projects, projects.ToList()));
 
         Assert.Contains("Meu Projeto Novo", cut.Markup);
@@ -73,7 +73,7 @@ public sealed class WeeklyPulseTests : TestContext
     [Fact]
     public void Should_collapse_and_expand_on_header_click()
     {
-        var cut = RenderComponent<WeeklyPulse>(p => p
+        var cut = Render<WeeklyPulse>(p => p
             .Add(c => c.Projects, []));
 
         Assert.Contains("pulse-body open", cut.Markup);
@@ -91,7 +91,7 @@ public sealed class WeeklyPulseTests : TestContext
     [Fact]
     public void Should_show_empty_message_when_no_projects_in_category()
     {
-        var cut = RenderComponent<WeeklyPulse>(p => p
+        var cut = Render<WeeklyPulse>(p => p
             .Add(c => c.Projects, []));
 
         Assert.Contains("Nenhum esta semana", cut.Markup);

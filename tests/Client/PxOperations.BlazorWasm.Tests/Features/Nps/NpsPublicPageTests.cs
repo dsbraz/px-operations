@@ -9,13 +9,17 @@ using PxOperations.Ui;
 
 namespace PxOperations.BlazorWasm.Tests.Features.Nps;
 
-public sealed class NpsPublicPageTests : TestContext
+public sealed class NpsPublicPageTests : BunitContext, IAsyncLifetime
 {
     public NpsPublicPageTests()
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
         Services.AddPxOperationsUi();
     }
+
+    Task IAsyncLifetime.InitializeAsync() => Task.CompletedTask;
+
+    async Task IAsyncLifetime.DisposeAsync() => await DisposeAsync();
 
     [Fact]
     public void Complete_portuguese_form_should_render_server_scales_in_the_required_order()
@@ -24,7 +28,7 @@ public sealed class NpsPublicPageTests : TestContext
         var handler = RegisterClient(PublicJson(token, "complete", "pt", "open"));
         handler.AddResponse(HttpMethod.Post, ResponseJson(), HttpStatusCode.Created);
 
-        var cut = RenderComponent<NpsPublicPage>(parameters => parameters.Add(page => page.Token, token));
+        var cut = Render<NpsPublicPage>(parameters => parameters.Add(page => page.Token, token));
 
         cut.WaitForAssertion(() =>
         {
@@ -53,7 +57,7 @@ public sealed class NpsPublicPageTests : TestContext
         var token = Guid.NewGuid();
         RegisterClient(PublicJson(token, "simplified", language, "open"));
 
-        var cut = RenderComponent<NpsPublicPage>(parameters => parameters.Add(page => page.Token, token));
+        var cut = Render<NpsPublicPage>(parameters => parameters.Add(page => page.Token, token));
 
         cut.WaitForAssertion(() =>
         {
@@ -74,7 +78,7 @@ public sealed class NpsPublicPageTests : TestContext
         var token = Guid.NewGuid();
         RegisterClient(PublicJson(token, "simplified", "pt", availability));
 
-        var cut = RenderComponent<NpsPublicPage>(parameters => parameters.Add(page => page.Token, token));
+        var cut = Render<NpsPublicPage>(parameters => parameters.Add(page => page.Token, token));
 
         cut.WaitForAssertion(() => Assert.Contains(expected, cut.Markup, StringComparison.OrdinalIgnoreCase));
         Assert.Empty(cut.FindAll(".nps-submit"));
@@ -86,7 +90,7 @@ public sealed class NpsPublicPageTests : TestContext
         var token = Guid.NewGuid();
         RegisterClient("{}", HttpStatusCode.NotFound);
 
-        var cut = RenderComponent<NpsPublicPage>(parameters => parameters.Add(page => page.Token, token));
+        var cut = Render<NpsPublicPage>(parameters => parameters.Add(page => page.Token, token));
 
         cut.WaitForAssertion(() => Assert.Contains("Link inválido", cut.Markup));
     }

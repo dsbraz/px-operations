@@ -8,7 +8,7 @@ using PxOperations.BlazorWasm.Tests.Helpers;
 
 namespace PxOperations.BlazorWasm.Tests.Features.Nps;
 
-public sealed class NpsPageTests : TestContext
+public sealed class NpsPageTests : BunitContext
 {
     public NpsPageTests()
     {
@@ -21,7 +21,7 @@ public sealed class NpsPageTests : TestContext
         var handler = RegisterClient();
         Navigate("/nps?client=Alpha");
 
-        RenderComponent<NpsPage>();
+        Render<NpsPage>();
 
         Assert.EndsWith("/nps/coleta?client=Alpha", Services.GetRequiredService<NavigationManager>().Uri);
         Assert.Empty(handler.RequestUris);
@@ -35,7 +35,7 @@ public sealed class NpsPageTests : TestContext
         handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
         Navigate("/nps/coleta?includeWaived=true");
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = Render<NpsPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -67,7 +67,7 @@ public sealed class NpsPageTests : TestContext
         handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
         Navigate("/nps/coleta");
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = Render<NpsPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -92,7 +92,7 @@ public sealed class NpsPageTests : TestContext
         handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
         Navigate("/nps/coleta");
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = Render<NpsPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -111,7 +111,7 @@ public sealed class NpsPageTests : TestContext
         handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
         Navigate("/nps/coleta");
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = Render<NpsPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -136,7 +136,7 @@ public sealed class NpsPageTests : TestContext
         handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
         Navigate("/nps/coleta?client=Alpha&client=Beta&format=complete");
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = Render<NpsPage>();
         cut.WaitForAssertion(() => Assert.Contains("Alpha, Beta", cut.Find(".nps-filter-chip").TextContent));
 
         Assert.Single(cut.FindAll(".nps-filter-chip"));
@@ -158,7 +158,7 @@ public sealed class NpsPageTests : TestContext
         handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", ProjectResultsJson(), HttpStatusCode.OK);
         Navigate("/nps/resultados");
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = Render<NpsPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -205,7 +205,7 @@ public sealed class NpsPageTests : TestContext
         handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", "[]", HttpStatusCode.OK);
         Navigate("/nps/resultados");
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = Render<NpsPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -225,7 +225,7 @@ public sealed class NpsPageTests : TestContext
         handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
         Navigate("/nps/resultados");
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = Render<NpsPage>();
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".nps-aspect-summary")));
 
         cut.Find("a[href='/nps/coleta']").Click();
@@ -248,7 +248,7 @@ public sealed class NpsPageTests : TestContext
         handler.AddResponse(HttpMethod.Get, "/api/nps/projects/2/responses", FilteredResponsesJson(), HttpStatusCode.OK);
         Navigate("/nps/resultados?from=2026-08-01&to=2026-08-31");
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = Render<NpsPage>();
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".nps-result-row").Count));
 
         cut.Find("[data-sort='responses']").Click();
@@ -278,7 +278,7 @@ public sealed class NpsPageTests : TestContext
         handler.AddResponse(HttpMethod.Get, "/api/nps/projects/1/responses", FilteredResponsesJson(), HttpStatusCode.OK);
         Navigate("/nps/resultados");
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = Render<NpsPage>();
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".nps-result-row").Count));
         cut.Find("[aria-label='Expandir respostas de Zulu']").Click();
 
@@ -298,7 +298,7 @@ public sealed class NpsPageTests : TestContext
         handler.AddResponse(HttpMethod.Get, "/api/nps/responses", ResponsesJson(), HttpStatusCode.OK);
         Navigate("/nps/respostas?format=complete&status=responded");
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = Render<NpsPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -322,7 +322,7 @@ public sealed class NpsPageTests : TestContext
         handler.AddResponse(HttpMethod.Get, "/api/nps/responses", ResponsesJson(), HttpStatusCode.OK);
         Navigate("/nps/respostas");
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = Render<NpsPage>();
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".nps-response-row").Count));
         Assert.Equal("Resposta anônima", cut.FindAll(".nps-response-author")[1].TextContent.Trim());
         Assert.Equal("Comentário completo que deve permanecer acessível", cut.FindAll(".nps-response-comment")[0].GetAttribute("title"));
@@ -352,7 +352,7 @@ public sealed class NpsPageTests : TestContext
         handler.AddResponse(HttpMethod.Post, "/api/nps/dispatches", DispatchJson(token), HttpStatusCode.Created);
         Navigate("/nps/coleta");
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = Render<NpsPage>();
         cut.WaitForAssertion(() => Assert.Contains("Projeto ativo", cut.Markup));
         cut.Find(".nps-page-actions button").Click();
 
@@ -387,7 +387,7 @@ public sealed class NpsPageTests : TestContext
         handler.AddResponse(HttpMethod.Get, "/api/nps/projects/1/responses", FilteredResponsesJson(), HttpStatusCode.OK);
         Navigate("/nps/coleta");
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = Render<NpsPage>();
         cut.WaitForAssertion(() => Assert.Contains("Projeto ativo", cut.Markup));
         cut.Find("[aria-label='Ver detalhe de Projeto ativo']").Click();
 
@@ -425,7 +425,7 @@ public sealed class NpsPageTests : TestContext
         handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
         Navigate("/nps/coleta");
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = Render<NpsPage>();
         cut.WaitForAssertion(() => Assert.Contains("Projeto ativo", cut.Markup));
         cut.Find("[aria-label='Dispensar coleta de Projeto ativo']").Click();
 
@@ -457,7 +457,7 @@ public sealed class NpsPageTests : TestContext
         handler.AddResponse(HttpMethod.Get, "/api/nps/projects", "{}", HttpStatusCode.InternalServerError);
         Navigate("/nps/coleta");
 
-        var cut = RenderComponent<NpsPage>();
+        var cut = Render<NpsPage>();
 
         cut.WaitForAssertion(() =>
         {
