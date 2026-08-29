@@ -14,6 +14,7 @@ public partial class NpsPublicPage : ComponentBase
     private NpsPublicSurveyView? survey;
     private bool isLoading = true;
     private bool invalidToken;
+    private bool loadFailed;
     private bool submitted;
     private bool isSubmitting;
     private int? score;
@@ -44,21 +45,43 @@ public partial class NpsPublicPage : ComponentBase
     {
         isLoading = true;
         invalidToken = false;
+        loadFailed = false;
         try
         {
             survey = await NpsClient.GetPublicAsync(Token);
             if (survey.IsGeneric && survey.Availability == "open")
             {
-                submitted = await JsRuntime.InvokeAsync<string?>("localStorage.getItem", StorageKey) is not null;
+                submitted = await WasAlreadySubmittedAsync();
             }
         }
         catch (ApiException exception) when (exception.StatusCode == 404)
         {
             invalidToken = true;
         }
+        catch (Exception)
+        {
+            // Sem este catch qualquer 500, timeout ou conexão caída escapava do
+            // ciclo de vida: survey ficava nulo, invalidToken falso, e a página
+            // do cliente renderizava só o cabeçalho mais o aviso global de erro.
+            loadFailed = true;
+        }
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private async Task<bool> WasAlreadySubmittedAsync()
+    {
+        try
+        {
+            return await JsRuntime.InvokeAsync<string?>("localStorage.getItem", StorageKey) is not null;
+        }
+        catch (JSException)
+        {
+            // Navegador com storage bloqueado (aba anônima do Safari, por
+            // exemplo): sem memória do envio, mostramos o formulário.
+            return false;
         }
     }
 
@@ -90,12 +113,29 @@ public partial class NpsPublicPage : ComponentBase
             submitted = true;
             if (survey.IsGeneric)
             {
-                await JsRuntime.InvokeVoidAsync("localStorage.setItem", StorageKey, "true");
+                await RememberSubmissionAsync();
             }
         }
         catch (ApiException exception) when (exception.StatusCode == 409)
         {
-            submitError = Texts.DuplicateEmail;
+            // O 409 cobre cinco situações (coleta dispensada, disparo fechado,
+            // link expirado, contato já usado, e-mail repetido) e o detalhe vem
+            // em inglês. Em vez de adivinhar, releia a pesquisa: availability já
+            // classifica o caso e a página tem o texto localizado de cada um.
+            // Sobrando "open", o conflito só pode ser o e-mail repetido.
+            var refreshed = await TryReloadSurveyAsync();
+            if (refreshed is null)
+            {
+                submitError = Texts.SubmitError;
+            }
+            else
+            {
+                survey = refreshed;
+                if (refreshed.Availability == "open")
+                {
+                    submitError = Texts.DuplicateEmail;
+                }
+            }
         }
         catch (ApiException exception) when (exception.StatusCode == 429)
         {
@@ -108,6 +148,31 @@ public partial class NpsPublicPage : ComponentBase
         finally
         {
             isSubmitting = false;
+        }
+    }
+
+    private async Task RememberSubmissionAsync()
+    {
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("localStorage.setItem", StorageKey, "true");
+        }
+        catch (JSException)
+        {
+            // A resposta já está registrada no servidor; não conseguir lembrar
+            // disso localmente não pode virar falha de envio.
+        }
+    }
+
+    private async Task<NpsPublicSurveyView?> TryReloadSurveyAsync()
+    {
+        try
+        {
+            return await NpsClient.GetPublicAsync(Token);
+        }
+        catch (Exception)
+        {
+            return null;
         }
     }
 
@@ -134,6 +199,8 @@ public partial class NpsPublicPage : ComponentBase
         string AnsweredMessage,
         string InvalidTitle,
         string InvalidMessage,
+        string LoadErrorTitle,
+        string LoadErrorMessage,
         string DuplicateEmail,
         string TooManyAttempts,
         string SubmitError)
@@ -151,7 +218,9 @@ public partial class NpsPublicPage : ComponentBase
             "Nome e e-mail são opcionais e usados apenas para contextualizar sua resposta.", "Enviar resposta", "Obrigado!",
             "Sua resposta foi registrada.", "Link expirado", "Este link expirou.", "Link indisponível",
             "Esta pesquisa não está disponível.", "Resposta já registrada", "Este link de contato já foi respondido.",
-            "Link inválido", "Não encontramos esta pesquisa.", "Este e-mail já respondeu a este link.",
+            "Link inválido", "Não encontramos esta pesquisa.",
+            "Não foi possível carregar", "Tente novamente em alguns instantes.",
+            "Este e-mail já respondeu a este link.",
             "Muitas tentativas em pouco tempo. Tente novamente mais tarde.", "Não foi possível enviar sua resposta.");
 
         private static readonly PublicTexts English = new(
@@ -160,7 +229,9 @@ public partial class NpsPublicPage : ComponentBase
             "Name and email are optional and only used to add context to your response.", "Submit response", "Thank you!",
             "Your response has been recorded.", "Expired link", "This link has expired.", "Unavailable link",
             "This survey is unavailable.", "Response already recorded", "This contact link has already been answered.",
-            "Invalid link", "We could not find this survey.", "This email has already answered this link.",
+            "Invalid link", "We could not find this survey.",
+            "We could not load this survey", "Please try again in a moment.",
+            "This email has already answered this link.",
             "Too many attempts. Please try again later.", "We could not submit your response.");
 
         private static readonly PublicTexts Spanish = new(
@@ -169,7 +240,9 @@ public partial class NpsPublicPage : ComponentBase
             "El nombre y el correo son opcionales y solo se usan para contextualizar tu respuesta.", "Enviar respuesta", "¡Gracias!",
             "Tu respuesta fue registrada.", "Enlace expirado", "Este enlace expiró.", "Enlace no disponible",
             "Esta encuesta no está disponible.", "Respuesta ya registrada", "Este enlace de contacto ya fue respondido.",
-            "Enlace inválido", "No encontramos esta encuesta.", "Este correo ya respondió a este enlace.",
+            "Enlace inválido", "No encontramos esta encuesta.",
+            "No fue posible cargar la encuesta", "Inténtalo de nuevo en unos instantes.",
+            "Este correo ya respondió a este enlace.",
             "Demasiados intentos. Inténtalo de nuevo más tarde.", "No fue posible enviar tu respuesta.");
     }
 }

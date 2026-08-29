@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using Bunit;
+using Microsoft.JSInterop;
 using Microsoft.Extensions.DependencyInjection;
 using PxOperations.BlazorWasm.Api;
 using PxOperations.BlazorWasm.Features.Nps;
@@ -93,6 +94,85 @@ public sealed class NpsPublicPageTests : BunitContext, IAsyncLifetime
         var cut = Render<NpsPublicPage>(parameters => parameters.Add(page => page.Token, token));
 
         cut.WaitForAssertion(() => Assert.Contains("Link inválido", cut.Markup));
+    }
+
+    [Fact]
+    public void Conflict_should_render_the_state_the_server_reports()
+    {
+        var token = Guid.NewGuid();
+        var handler = RegisterClient(PublicJson(token, "simplified", "pt", "open"));
+        handler.AddResponse(HttpMethod.Post, """{"detail":"NPS dispatch is expired."}""", HttpStatusCode.Conflict);
+        handler.AddResponse(HttpMethod.Get, PublicJson(token, "simplified", "pt", "expired"), HttpStatusCode.OK);
+
+        var cut = Render<NpsPublicPage>(parameters => parameters.Add(page => page.Token, token));
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find(".nps-submit")));
+
+        cut.Find(".nps-score-scale button").Click();
+        cut.Find(".nps-submit").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("expirou", cut.Markup, StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain("Este e-mail já respondeu", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Conflict_on_a_still_open_survey_should_report_the_duplicate_email()
+    {
+        var token = Guid.NewGuid();
+        var handler = RegisterClient(PublicJson(token, "simplified", "pt", "open"));
+        handler.AddResponse(HttpMethod.Post, """{"detail":"This email already answered this NPS link."}""", HttpStatusCode.Conflict);
+        handler.AddResponse(HttpMethod.Get, PublicJson(token, "simplified", "pt", "open"), HttpStatusCode.OK);
+
+        var cut = Render<NpsPublicPage>(parameters => parameters.Add(page => page.Token, token));
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find(".nps-submit")));
+
+        cut.Find(".nps-score-scale button").Click();
+        cut.Find(".nps-submit").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Este e-mail já respondeu", cut.Markup, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Load_failure_should_have_its_own_state()
+    {
+        var token = Guid.NewGuid();
+        RegisterClient("{}", HttpStatusCode.InternalServerError);
+
+        var cut = Render<NpsPublicPage>(parameters => parameters.Add(page => page.Token, token));
+
+        cut.WaitForAssertion(() => Assert.Contains("Não foi possível carregar", cut.Markup, StringComparison.Ordinal));
+        Assert.Empty(cut.FindAll(".nps-submit"));
+    }
+
+    [Fact]
+    public void Blocked_storage_should_not_keep_the_form_from_rendering()
+    {
+        var token = Guid.NewGuid();
+        RegisterClient(PublicJson(token, "simplified", "pt", "open"));
+        JSInterop.Setup<string?>("localStorage.getItem", _ => true)
+            .SetException(new JSException("Storage bloqueado."));
+
+        var cut = Render<NpsPublicPage>(parameters => parameters.Add(page => page.Token, token));
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find(".nps-submit")));
+    }
+
+    [Fact]
+    public void Blocked_storage_should_not_hide_a_recorded_response()
+    {
+        var token = Guid.NewGuid();
+        var handler = RegisterClient(PublicJson(token, "simplified", "pt", "open"));
+        handler.AddResponse(HttpMethod.Post, ResponseJson(), HttpStatusCode.Created);
+        JSInterop.SetupVoid(invocation => invocation.Identifier == "localStorage.setItem")
+            .SetException(new JSException("Storage bloqueado."));
+
+        var cut = Render<NpsPublicPage>(parameters => parameters.Add(page => page.Token, token));
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find(".nps-submit")));
+
+        cut.Find(".nps-score-scale button").Click();
+        cut.Find(".nps-submit").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Sua resposta foi registrada.", cut.Markup, StringComparison.Ordinal));
+        Assert.DoesNotContain("Não foi possível enviar", cut.Markup, StringComparison.Ordinal);
     }
 
     [Fact]

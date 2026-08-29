@@ -17,6 +17,10 @@
     {
         <section class="nps-public-card nps-final-state"><h1>@Texts.InvalidTitle</h1><p>@Texts.InvalidMessage</p></section>
     }
+    else if (loadFailed)
+    {
+        <section class="nps-public-card nps-final-state"><h1>@Texts.LoadErrorTitle</h1><p>@Texts.LoadErrorMessage</p></section>
+    }
     else if (submitted)
     {
         <section class="nps-public-card nps-final-state"><h1>@Texts.SuccessTitle</h1><p>@Texts.SuccessMessage</p></section>
