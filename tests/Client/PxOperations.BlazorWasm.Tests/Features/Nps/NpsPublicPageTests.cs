@@ -195,6 +195,35 @@ public sealed class NpsPublicPageTests : BunitContext, IAsyncLifetime
         Assert.DoesNotContain("var(--red)", css);
     }
 
+    [Fact]
+    public void Validity_date_should_be_shown_in_the_respondent_timezone()
+    {
+        var original = Environment.GetEnvironmentVariable("TZ");
+        Environment.SetEnvironmentVariable("TZ", "America/Sao_Paulo");
+        TimeZoneInfo.ClearCachedData();
+        try
+        {
+            var token = Guid.NewGuid();
+            // 22/08 01:00Z ainda é 21/08 22:00 em Brasília: sem conversão o
+            // respondente lê um dia a mais de validade do que realmente tem.
+            RegisterClient(PublicJson(token, "simplified", "pt", "open")
+                .Replace("2026-08-21T12:00:00Z", "2026-08-22T01:00:00Z", StringComparison.Ordinal));
+
+            var cut = Render<NpsPublicPage>(parameters => parameters.Add(page => page.Token, token));
+
+            cut.WaitForAssertion(() =>
+            {
+                Assert.Contains("21/08/2026", cut.Markup, StringComparison.Ordinal);
+                Assert.DoesNotContain("22/08/2026", cut.Markup, StringComparison.Ordinal);
+            });
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("TZ", original);
+            TimeZoneInfo.ClearCachedData();
+        }
+    }
+
     private ProjectsTestHelpers.MultiStubHttpMessageHandler RegisterClient(
         string response,
         HttpStatusCode status = HttpStatusCode.OK)

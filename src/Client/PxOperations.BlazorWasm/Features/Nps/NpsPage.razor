@@ -208,7 +208,7 @@
                                             <ul class="nps-card-links">
                                                 @foreach (var link in project.ActiveLinks)
                                                 {
-                                                    <li><strong>@link.FormatLabel</strong><span>@link.AvailabilityLabel · até @link.ExpiresAt.ToString("dd/MM/yyyy")</span></li>
+                                                    <li><strong>@link.FormatLabel</strong><span>@link.AvailabilityLabel · até @NpsTimeDisplay.Date(link.ExpiresAt)</span></li>
                                                 }
                                             </ul>
                                         }
@@ -402,7 +402,7 @@
                                                         {
                                                             <div><dt>@format.Label</dt><dd>@format.Count</dd></div>
                                                         }
-                                                        <div><dt>Mais recente</dt><dd>@(result.LastResponseAt?.ToString("dd/MM/yyyy HH:mm") ?? "—")</dd></div>
+                                                        <div><dt>Mais recente</dt><dd>@NpsTimeDisplay.DateAndTime(result.LastResponseAt)</dd></div>
                                                     </dl>
                                                     @if (expandedResponses.Count == 0)
                                                     {
@@ -417,7 +417,7 @@
                                                                 <ul>
                                                                     @foreach (var response in group)
                                                                     {
-                                                                        <li><strong>@response.Score · @response.FormatLabel</strong><span>@(response.Comment ?? "Sem comentário")</span><time datetime='@response.SubmittedAt.ToString("O")'>@response.SubmittedAt.ToString("dd/MM/yyyy HH:mm")</time></li>
+                                                                        <li><strong>@response.Score · @response.FormatLabel</strong><span>@(response.Comment ?? "Sem comentário")</span><time datetime='@response.SubmittedAt.ToString("O")'>@NpsTimeDisplay.DateAndTime(response.SubmittedAt)</time></li>
                                                                     }
                                                                 </ul>
                                                             </section>
@@ -469,7 +469,7 @@
                                     <td>@response.FormatLabel</td>
                                     <td class="nps-response-author"><span>@ResponseAuthorName(response)</span>@if (ResponseAuthorDetail(response) is { } detail) { <small>@detail</small> }</td>
                                     <td><span class="nps-response-comment" title="@response.Comment">@(response.Comment ?? "Sem comentário")</span></td>
-                                    <td><time datetime='@response.SubmittedAt.ToString("O")'>@response.SubmittedAt.ToString("dd/MM/yyyy HH:mm")</time></td>
+                                    <td><time datetime='@response.SubmittedAt.ToString("O")'>@NpsTimeDisplay.DateAndTime(response.SubmittedAt)</time></td>
                                 </tr>
                             }
                         </tbody>
@@ -529,7 +529,7 @@
                 </label>
                 <div class="nps-created-block nps-created-validity">
                     <span>Validade</span>
-                    <strong>@createdDispatch.Dispatch.ExpiresAt.ToString("dd/MM/yyyy")</strong>
+                    <strong>@NpsTimeDisplay.Date(createdDispatch.Dispatch.ExpiresAt)</strong>
                 </div>
                 <label class="nps-created-block">
                     <span>Mensagem sugerida</span>
@@ -568,7 +568,7 @@
                 <div><span>Nota</span><strong>@selectedResponse.Score</strong></div>
                 <div><span>Classificação</span><strong>@selectedResponse.ClassificationLabel</strong></div>
                 <div><span>Formato</span><strong>@selectedResponse.FormatLabel</strong></div>
-                <div><span>Recebida</span><strong>@selectedResponse.SubmittedAt.ToString("dd/MM/yyyy HH:mm")</strong></div>
+                <div><span>Recebida</span><strong>@NpsTimeDisplay.DateAndTime(selectedResponse.SubmittedAt)</strong></div>
             </section>
             <section class="nps-response-attribution">
                 <h3>Atribuição</h3>
@@ -627,7 +627,7 @@
                         <article>
                             <span><small>Formato</small><strong>@link.FormatLabel</strong></span>
                             <span><small>Status</small><strong>@link.AvailabilityLabel</strong></span>
-                            <span><small>Validade</small><strong>@link.ExpiresAt.ToString("dd/MM/yyyy")</strong></span>
+                            <span><small>Validade</small><strong>@NpsTimeDisplay.Date(link.ExpiresAt)</strong></span>
                         </article>
                     }
                 }

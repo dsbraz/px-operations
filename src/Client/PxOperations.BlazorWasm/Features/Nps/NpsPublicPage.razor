@@ -35,7 +35,7 @@
             <div class="nps-public-intro">
                 <span>@Texts.Introduction</span>
                 <h1>@survey.ProjectName</h1>
-                <p>@survey.Client · @Texts.ValidUntil @survey.ExpiresAt.ToString("dd/MM/yyyy")</p>
+                <p>@survey.Client · @Texts.ValidUntil @NpsTimeDisplay.Date(survey.ExpiresAt)</p>
             </div>
 
             <fieldset class="nps-question-block">
