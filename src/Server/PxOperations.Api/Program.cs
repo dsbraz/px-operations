@@ -3,7 +3,6 @@ using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
-using System.Net;
 using System.Threading.RateLimiting;
 using PxOperations.Api.Errors;
 using PxOperations.Api.Features.Projects;
@@ -55,9 +54,19 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor;
+
+    // A API roda atrás do front-end do Cloud Run, cujo endereço nunca é
+    // loopback. Confiar só em loopback aqui — que já é o padrão do framework —
+    // fazia UseForwardedHeaders descartar o X-Forwarded-For, e o rate limit do
+    // link público passava a particionar pelo endereço compartilhado da
+    // plataforma: um balde por link, não por cliente. O contêiner só recebe
+    // tráfego através desse front-end, que acrescenta o IP real ao cabeçalho,
+    // então confiar nele é seguro. ForwardLimit continua em 1 para ler a
+    // entrada mais à direita, a que a plataforma escreveu e o cliente não
+    // consegue forjar prefixando o próprio X-Forwarded-For.
+    options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
-    options.KnownProxies.Add(IPAddress.Loopback);
-    options.KnownProxies.Add(IPAddress.IPv6Loopback);
+    options.ForwardLimit = 1;
 });
 builder.Services.AddRateLimiter(options =>
 {
