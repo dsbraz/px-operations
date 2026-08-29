@@ -15,42 +15,29 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
         DateTimeOffset now,
         CancellationToken ct)
     {
-        var results = await ListProjectResultsAsync(filter, ct);
+        // As respostas do período já foram materializadas para montar os
+        // resultados por projeto; relê-las aqui, e uma terceira vez para o
+        // agregado de aspectos, custava duas varreduras extras da tabela a cada
+        // toggle de faceta e a cada mudança de data.
+        var (results, responses) = await LoadProjectResultsAsync(filter, ct);
         var projectIds = results.Select(result => result.Id).ToArray();
-        var responses = await ApplyResponsePeriodFilters(dbContext.NpsSurveyResponses.AsNoTracking(), filter)
-            .Where(response => projectIds.Contains(response.ProjectId))
-            .ToListAsync(ct);
         var metrics = NpsCalculator.Calculate(responses.Select(response => response.Score));
         var counts = responses.GroupBy(response => response.Classification)
             .ToDictionary(group => group.Key, group => group.Count());
-        var completeResponses = ApplyResponsePeriodFilters(dbContext.NpsSurveyResponses.AsNoTracking(), filter)
-            .Where(response => projectIds.Contains(response.ProjectId) && response.Format == NpsFormFormat.Complete);
-        var aspectMetrics = await completeResponses
-            .GroupBy(_ => 1)
-            .Select(group => new
-            {
-                CompleteResponsesCount = group.Count(),
-                QualityAverage = group.Average(response => (decimal?)response.Quality),
-                QualityResponsesCount = group.Count(response => response.Quality.HasValue),
-                ScheduleAverage = group.Average(response => (decimal?)response.Schedule),
-                ScheduleResponsesCount = group.Count(response => response.Schedule.HasValue),
-                CommunicationAverage = group.Average(response => (decimal?)response.Communication),
-                CommunicationResponsesCount = group.Count(response => response.Communication.HasValue),
-                BusinessValueAverage = group.Average(response => (decimal?)response.BusinessValue),
-                BusinessValueResponsesCount = group.Count(response => response.BusinessValue.HasValue)
-            })
-            .SingleOrDefaultAsync(ct);
+        var completeResponses = responses
+            .Where(response => response.Format == NpsFormFormat.Complete)
+            .ToArray();
         var snapshots = await LoadSnapshotsAsync(
             filter with { Statuses = [], Formats = [], Classifications = [], From = null, To = null },
             now,
-            ct);
-        var resultIds = projectIds.ToHashSet();
+            ct,
+            projectIds);
 
         return new NpsDashboardView(
             metrics.OfficialScore,
             responses.Count,
             metrics.AverageScore,
-            snapshots.Count(snapshot => resultIds.Contains(snapshot.Project.Id) && snapshot.IsOverdue(now)),
+            snapshots.Count(snapshot => snapshot.IsOverdue(now)),
             new NpsScaleView(NpsScale.MinimumScore, NpsScale.MaximumScore),
             [
                 Distribution(NpsClassification.Detractor, counts, metrics.DetractorPercentage),
@@ -58,20 +45,30 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
                 Distribution(NpsClassification.Promoter, counts, metrics.PromoterPercentage)
             ],
             new NpsAspectSummaryView(
-                aspectMetrics?.CompleteResponsesCount ?? 0,
+                completeResponses.Length,
                 new NpsScaleView(NpsScale.MinimumAspect, NpsScale.MaximumAspect),
                 [
-                    Aspect("quality", "Qualidade técnica", aspectMetrics?.QualityAverage, aspectMetrics?.QualityResponsesCount ?? 0),
-                    Aspect("schedule", "Prazos acordados", aspectMetrics?.ScheduleAverage, aspectMetrics?.ScheduleResponsesCount ?? 0),
-                    Aspect("communication", "Comunicação", aspectMetrics?.CommunicationAverage, aspectMetrics?.CommunicationResponsesCount ?? 0),
-                    Aspect("business_value", "Valor para o negócio", aspectMetrics?.BusinessValueAverage, aspectMetrics?.BusinessValueResponsesCount ?? 0)
+                    Aspect("quality", "Qualidade técnica", completeResponses, response => response.Quality),
+                    Aspect("schedule", "Prazos acordados", completeResponses, response => response.Schedule),
+                    Aspect("communication", "Comunicação", completeResponses, response => response.Communication),
+                    Aspect("business_value", "Valor para o negócio", completeResponses, response => response.BusinessValue)
                 ]),
             await GetFilterOptionsAsync(ct));
     }
 
     public async Task<NpsFilterOptionsView> GetFilterOptionsAsync(CancellationToken ct)
     {
-        var projects = await dbContext.Projects.AsNoTracking().ToListAsync(ct);
+        // Só quatro colunas alimentam as listas de opções; materializar a
+        // entidade inteira trazia todo o resto da tabela junto.
+        var projects = await dbContext.Projects.AsNoTracking()
+            .Select(project => new
+            {
+                project.Client,
+                project.Dc,
+                project.Type,
+                project.DeliveryManager
+            })
+            .ToListAsync(ct);
 
         return new NpsFilterOptionsView(
             Options(projects.Select(project => project.Client)),
@@ -100,6 +97,10 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
     public async Task<IReadOnlyList<NpsProjectResultView>> ListProjectResultsAsync(
         NpsFilter filter,
         CancellationToken ct)
+        => (await LoadProjectResultsAsync(filter, ct)).Results;
+
+    private async Task<(IReadOnlyList<NpsProjectResultView> Results, IReadOnlyList<SurveyResponse> Responses)>
+        LoadProjectResultsAsync(NpsFilter filter, CancellationToken ct)
     {
         var projectQuery = ApplyProjectFilters(dbContext.Projects.AsNoTracking(), filter);
         if (!filter.IncludeWaived)
@@ -144,7 +145,7 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
         var byProject = responses.GroupBy(response => response.ProjectId)
             .ToDictionary(group => group.Key, group => group.ToArray());
 
-        return projects.Select(project =>
+        var results = projects.Select(project =>
         {
             var projectResponses = byProject.GetValueOrDefault(project.Id) ?? [];
             var metrics = NpsCalculator.Calculate(projectResponses.Select(response => response.Score));
@@ -174,6 +175,8 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
                 projectResponses.FirstOrDefault()?.SubmittedAt,
                 ProjectResultStatus(status));
         }).ToArray();
+
+        return (results, responses);
     }
 
     public async Task<IReadOnlyList<NpsResponseView>> ListResponsesAsync(
@@ -373,9 +376,19 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
     private async Task<IReadOnlyList<ProjectSnapshot>> LoadSnapshotsAsync(
         NpsFilter filter,
         DateTimeOffset now,
-        CancellationToken ct)
+        CancellationToken ct,
+        int[]? projectScope = null)
     {
-        var projects = await ApplyProjectFilters(dbContext.Projects.AsNoTracking(), filter).ToListAsync(ct);
+        var projectQuery = ApplyProjectFilters(dbContext.Projects.AsNoTracking(), filter);
+        if (projectScope is not null)
+        {
+            // O dashboard só precisa dos projetos que já entraram no resultado:
+            // sem o recorte, coleções, disparos, alvos e respostas eram
+            // carregados para a carteira inteira só para contar os atrasados.
+            projectQuery = projectQuery.Where(project => projectScope.Contains(project.Id));
+        }
+
+        var projects = await projectQuery.ToListAsync(ct);
         var projectIds = projects.Select(project => project.Id).ToArray();
         var collections = await dbContext.NpsCollections.AsNoTracking()
             .Include(collection => collection.Dispatches)
@@ -805,12 +818,24 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
             counts.GetValueOrDefault(classification),
             percentage);
 
-    private static NpsAspectAverageView Aspect(string code, string label, decimal? average, int responsesCount)
-        => new(
+    private static NpsAspectAverageView Aspect(
+        string code,
+        string label,
+        IReadOnlyList<SurveyResponse> completeResponses,
+        Func<SurveyResponse, int?> aspect)
+    {
+        var values = completeResponses
+            .Select(aspect)
+            .Where(value => value.HasValue)
+            .Select(value => (decimal)value!.Value)
+            .ToArray();
+
+        return new NpsAspectAverageView(
             code,
             label,
-            average.HasValue ? decimal.Round(average.Value, 1, MidpointRounding.AwayFromZero) : null,
-            responsesCount);
+            values.Length == 0 ? null : decimal.Round(values.Average(), 1, MidpointRounding.AwayFromZero),
+            values.Length);
+    }
 
     private static IReadOnlyList<NpsOptionView> Options(IEnumerable<string?> values)
         => values.Where(value => !string.IsNullOrWhiteSpace(value))
