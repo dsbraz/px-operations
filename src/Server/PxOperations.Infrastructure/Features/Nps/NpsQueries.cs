@@ -10,6 +10,15 @@ namespace PxOperations.Infrastructure.Features.Nps;
 
 public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
 {
+    // As datas do filtro chegam sem fuso e precisam virar instantes. Ancorá-las
+    // em UTC divergia do que a tela mostra: uma resposta exibida como 31/08
+    // 21:30 caía fora de "até 31/08" porque, em UTC, ela é 01/09. O cliente
+    // formata no mesmo deslocamento (NpsTimeDisplay), então as duas metades do
+    // recurso concordam por construção. É um deslocamento fixo, não um fuso
+    // completo: o Brasil não observa horário de verão desde 2019 — se voltar a
+    // observar, este é o ponto a revisitar, junto com o par no cliente.
+    private static readonly TimeSpan OperationOffset = TimeSpan.FromHours(-3);
+
     public async Task<NpsDashboardView> GetDashboardAsync(
         NpsFilter filter,
         DateTimeOffset now,
@@ -19,19 +28,22 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
         // resultados por projeto; relê-las aqui, e uma terceira vez para o
         // agregado de aspectos, custava duas varreduras extras da tabela a cada
         // toggle de faceta e a cada mudança de data.
-        var (results, responses) = await LoadProjectResultsAsync(filter, ct);
-        var projectIds = results.Select(result => result.Id).ToArray();
+        var (_, responses) = await LoadProjectResultsAsync(filter, ct);
         var metrics = NpsCalculator.Calculate(responses.Select(response => response.Score));
         var counts = responses.GroupBy(response => response.Classification)
             .ToDictionary(group => group.Key, group => group.Count());
         var completeResponses = responses
             .Where(response => response.Format == NpsFormFormat.Complete)
             .ToArray();
+        // Os vencidos são lidos com o período zerado de propósito: "está sem
+        // coleta há mais de 90 dias" não é um fato da janela escolhida. Recortar
+        // os snapshots pelos projetos do resultado desfazia isso, porque quem
+        // não respondeu dentro da janela já tinha saído do resultado — e o
+        // indicador zerava justamente quando um período era selecionado.
         var snapshots = await LoadSnapshotsAsync(
             filter with { Statuses = [], Formats = [], Classifications = [], From = null, To = null },
             now,
-            ct,
-            projectIds);
+            ct);
 
         return new NpsDashboardView(
             metrics.OfficialScore,
@@ -124,7 +136,23 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
         if (filter.From.HasValue || filter.To.HasValue)
         {
             var periodProjectIds = periodResponses.Select(response => response.ProjectId);
-            projectQuery = projectQuery.Where(project => periodProjectIds.Contains(project.Id));
+
+            // "Pendente" e "Link gerado" significam projeto sem nenhuma
+            // resposta, e o período exige resposta dentro da janela: os dois
+            // predicados se anulavam e a lista voltava vazia sem explicação.
+            // Um projeto que nunca respondeu não é filtrado por um período de
+            // respostas — mas só entra quando o status foi pedido, senão a
+            // visão padrão com período encheria de projeto sem coleta.
+            if (WantsProjectsWithoutResponses(filter.Statuses))
+            {
+                projectQuery = projectQuery.Where(project =>
+                    periodProjectIds.Contains(project.Id) ||
+                    !allResponseProjectIds.Contains(project.Id));
+            }
+            else
+            {
+                projectQuery = projectQuery.Where(project => periodProjectIds.Contains(project.Id));
+            }
         }
 
         var projects = await projectQuery.OrderBy(project => project.Name).ToListAsync(ct);
@@ -209,7 +237,14 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
         }
 
         var metrics = NpsCalculator.Calculate(snapshot.Responses.Select(response => response.Score));
-        var responseViews = await ToResponseViewsAsync(snapshot.Responses.OrderByDescending(response => response.SubmittedAt).Take(20), ct);
+        // O snapshot carrega só as colunas do painel; o detalhe precisa da
+        // resposta inteira, mas de um projeto só e das vinte mais recentes.
+        var recent = await dbContext.NpsSurveyResponses.AsNoTracking()
+            .Where(response => response.ProjectId == projectId)
+            .OrderByDescending(response => response.SubmittedAt)
+            .Take(20)
+            .ToListAsync(ct);
+        var responseViews = await ToResponseViewsAsync(recent, ct);
         var project = ToProjectView(snapshot, now);
 
         return new NpsProjectDetailView(
@@ -376,29 +411,29 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
     private async Task<IReadOnlyList<ProjectSnapshot>> LoadSnapshotsAsync(
         NpsFilter filter,
         DateTimeOffset now,
-        CancellationToken ct,
-        int[]? projectScope = null)
+        CancellationToken ct)
     {
-        var projectQuery = ApplyProjectFilters(dbContext.Projects.AsNoTracking(), filter);
-        if (projectScope is not null)
-        {
-            // O dashboard só precisa dos projetos que já entraram no resultado:
-            // sem o recorte, coleções, disparos, alvos e respostas eram
-            // carregados para a carteira inteira só para contar os atrasados.
-            projectQuery = projectQuery.Where(project => projectScope.Contains(project.Id));
-        }
-
-        var projects = await projectQuery.ToListAsync(ct);
+        var projects = await ApplyProjectFilters(dbContext.Projects.AsNoTracking(), filter).ToListAsync(ct);
         var projectIds = projects.Select(project => project.Id).ToArray();
         var collections = await dbContext.NpsCollections.AsNoTracking()
             .Include(collection => collection.Dispatches)
             .ThenInclude(dispatch => dispatch.Targets)
             .Where(collection => projectIds.Contains(collection.ProjectId))
             .ToDictionaryAsync(collection => collection.ProjectId, ct);
+        // Só estas colunas alimentam o snapshot; materializar a entidade
+        // inteira trazia comentário, nome, e-mail e os quatro aspectos de cada
+        // resposta da carteira a cada recarga da aba Coleta.
         var responses = await dbContext.NpsSurveyResponses.AsNoTracking()
             .Where(response => projectIds.Contains(response.ProjectId))
+            .Select(response => new SnapshotResponse(
+                response.ProjectId,
+                response.DispatchId,
+                response.SubmittedAt,
+                response.Score,
+                response.Classification))
             .ToListAsync(ct);
-        var byProject = responses.GroupBy(response => response.ProjectId).ToDictionary(group => group.Key, group => group.ToList());
+        var byProject = responses.GroupBy(response => response.ProjectId)
+            .ToDictionary(group => group.Key, group => (IReadOnlyList<SnapshotResponse>)group.ToList());
 
         var snapshots = projects.Select(project => new ProjectSnapshot(
             project,
@@ -422,10 +457,10 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
 
         if (!string.IsNullOrWhiteSpace(filter.Search))
         {
-            var pattern = $"%{filter.Search.Trim()}%";
+            var pattern = SearchPattern(filter.Search);
             query = query.Where(project =>
-                EF.Functions.ILike(project.Name, pattern) ||
-                (project.Client != null && EF.Functions.ILike(project.Client, pattern)));
+                EF.Functions.ILike(project.Name, pattern, SearchEscape) ||
+                (project.Client != null && EF.Functions.ILike(project.Client, pattern, SearchEscape)));
         }
 
         if (filter.Clients.Count != 0)
@@ -462,18 +497,28 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
             filter with { Search = null });
         query = query.Where(response => projectQuery.Select(project => project.Id).Contains(response.ProjectId));
 
+        // Sem isto a aba Respostas e o CSV listavam respostas de projetos
+        // dispensados que o dashboard e a tabela de resultados já não contavam,
+        // para exatamente o mesmo estado de filtro.
+        if (!filter.IncludeWaived)
+        {
+            query = query.Where(response => !dbContext.NpsCollections.Any(collection =>
+                collection.ProjectId == response.ProjectId && collection.WaivedAt != null));
+        }
+
         if (!string.IsNullOrWhiteSpace(filter.Search))
         {
-            var pattern = $"%{filter.Search.Trim()}%";
+            var pattern = SearchPattern(filter.Search);
             query = query.Where(response =>
                 dbContext.Projects.Any(project =>
-                    project.Id == response.ProjectId && EF.Functions.ILike(project.Name, pattern)) ||
-                (response.RespondentName != null && EF.Functions.ILike(response.RespondentName, pattern)) ||
-                (response.RespondentEmail != null && EF.Functions.ILike(response.RespondentEmail, pattern)) ||
-                (response.Comment != null && EF.Functions.ILike(response.Comment, pattern)) ||
+                    project.Id == response.ProjectId && EF.Functions.ILike(project.Name, pattern, SearchEscape)) ||
+                (response.RespondentName != null && EF.Functions.ILike(response.RespondentName, pattern, SearchEscape)) ||
+                (response.RespondentEmail != null && EF.Functions.ILike(response.RespondentEmail, pattern, SearchEscape)) ||
+                (response.Comment != null && EF.Functions.ILike(response.Comment, pattern, SearchEscape)) ||
                 (response.ContactId.HasValue && dbContext.NpsContacts.Any(contact =>
                     contact.Id == response.ContactId.Value &&
-                    (EF.Functions.ILike(contact.Name, pattern) || EF.Functions.ILike(contact.Email, pattern)))));
+                    (EF.Functions.ILike(contact.Name, pattern, SearchEscape) ||
+                        EF.Functions.ILike(contact.Email, pattern, SearchEscape)))));
         }
 
         query = ApplyResponsePeriodFilters(query, filter);
@@ -493,19 +538,39 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
         return query;
     }
 
+    // % e _ são curingas do LIKE: sem escapar, buscar "100%" casava qualquer
+    // nome contendo 100, e "a_b" casava "axb". O termo é digitado pelo operador,
+    // então isso é ruído de busca, não brecha — mas o resultado fica errado.
+    private const string SearchEscape = "\\";
+
+    private static string SearchPattern(string search)
+        => $"%{search.Trim()
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("%", "\\%", StringComparison.Ordinal)
+            .Replace("_", "\\_", StringComparison.Ordinal)}%";
+
+    private static bool WantsProjectsWithoutResponses(IReadOnlyList<string> statuses)
+        => statuses.Any(status =>
+            status.Equals("pending", StringComparison.OrdinalIgnoreCase) ||
+            status.Equals("link_generated", StringComparison.OrdinalIgnoreCase));
+
     private static IQueryable<SurveyResponse> ApplyResponsePeriodFilters(
         IQueryable<SurveyResponse> query,
         NpsFilter filter)
     {
         if (filter.From.HasValue)
         {
-            var from = new DateTimeOffset(filter.From.Value.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+            // O Npgsql só aceita offset zero em timestamptz: ancoramos a data no
+            // deslocamento da operação e convertemos o instante resultante.
+            var from = new DateTimeOffset(filter.From.Value.ToDateTime(TimeOnly.MinValue), OperationOffset)
+                .ToUniversalTime();
             query = query.Where(response => response.SubmittedAt >= from);
         }
 
         if (filter.To.HasValue)
         {
-            var until = new DateTimeOffset(filter.To.Value.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+            var until = new DateTimeOffset(filter.To.Value.AddDays(1).ToDateTime(TimeOnly.MinValue), OperationOffset)
+                .ToUniversalTime();
             query = query.Where(response => response.SubmittedAt < until);
         }
 
@@ -889,10 +954,17 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
         _ => throw new BusinessRuleValidationException("Invalid NPS classification.")
     };
 
+    private sealed record SnapshotResponse(
+        int ProjectId,
+        int DispatchId,
+        DateTimeOffset SubmittedAt,
+        int Score,
+        NpsClassification Classification);
+
     private sealed record ProjectSnapshot(
         Project Project,
         NpsCollection? Collection,
-        IReadOnlyList<SurveyResponse> Responses)
+        IReadOnlyList<SnapshotResponse> Responses)
     {
         public bool IsWaived => Collection?.IsWaived == true;
         public IReadOnlyList<Dispatch> OpenDispatches => Collection?.Dispatches.Where(dispatch => dispatch.IsOpen).ToArray() ?? [];

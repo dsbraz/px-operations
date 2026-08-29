@@ -298,7 +298,7 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
     }
 
     [Fact]
-    public async Task Project_results_period_should_exclude_projects_without_responses_in_the_utc_interval()
+    public async Task Project_results_period_should_exclude_projects_without_responses_in_the_operation_interval()
     {
         var time = new TestTimeProvider(new DateTimeOffset(2026, 8, 1, 23, 59, 0, TimeSpan.Zero));
         await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString, time);
@@ -528,6 +528,93 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
         var exception = await Assert.ThrowsAnyAsync<Exception>(() => dbContext.SaveChangesAsync());
 
         Assert.True(repository.IsDuplicateResponseException(exception));
+    }
+
+    [Fact]
+    public async Task Overdue_indicator_should_ignore_the_response_period()
+    {
+        var time = new TestTimeProvider(InitialNow);
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString, time);
+        using var client = factory.CreateClient();
+        // Sem disparo e sem resposta: vencido por definição.
+        await CreateProjectAsync(client, "Overdue never collected", "Overdue Client", "DC1");
+        var answered = await CreateProjectAsync(client, "Overdue answered", "Overdue Client", "DC1");
+        var dispatch = await CreateDispatchAsync(client, answered.Id, "simplified");
+        await SubmitAsync(client, dispatch.Targets.Single(target => target.IsGeneric).Token, 9);
+
+        var dashboard = await client.GetFromJsonAsync<NpsDashboardView>(
+            "/api/nps/dashboard?client=Overdue%20Client&from=2026-08-01&to=2026-08-01");
+
+        Assert.True(
+            dashboard!.OverdueProjects >= 1,
+            "O indicador de vencidos não pode zerar só porque um período foi escolhido.");
+    }
+
+    [Fact]
+    public async Task Pending_status_should_survive_a_date_range()
+    {
+        var time = new TestTimeProvider(InitialNow);
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString, time);
+        using var client = factory.CreateClient();
+        var pending = await CreateProjectAsync(client, "Pending with period", "Pending Client", "DC1");
+
+        var results = await client.GetFromJsonAsync<List<NpsProjectResultView>>(
+            "/api/nps/project-results?client=Pending%20Client&status=pending&from=2026-08-01&to=2026-08-31");
+
+        Assert.Equal(pending.Id, Assert.Single(results!).Id);
+    }
+
+    [Fact]
+    public async Task Responses_should_exclude_waived_projects_unless_asked()
+    {
+        var time = new TestTimeProvider(InitialNow);
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString, time);
+        using var client = factory.CreateClient();
+        var project = await CreateProjectAsync(client, "Waived responses", "Waived Client", "DC1");
+        var dispatch = await CreateDispatchAsync(client, project.Id, "simplified");
+        await SubmitAsync(client, dispatch.Targets.Single(target => target.IsGeneric).Token, 9);
+        await client.PostAsJsonAsync($"/api/nps/projects/{project.Id}/waiver", new { reason = "Sem pesquisa" });
+
+        var hidden = await client.GetFromJsonAsync<List<NpsResponseView>>(
+            $"/api/nps/responses?projectId={project.Id}");
+        var shown = await client.GetFromJsonAsync<List<NpsResponseView>>(
+            $"/api/nps/responses?projectId={project.Id}&includeWaived=true");
+
+        Assert.Empty(hidden!);
+        Assert.Single(shown!);
+    }
+
+    [Fact]
+    public async Task Period_boundaries_should_follow_the_timezone_the_timestamps_are_shown_in()
+    {
+        // 01/09 00:30Z é 31/08 21:30 no horário de operação (UTC-3), e é essa a
+        // data que a auditoria exibe: filtrar até 31/08 precisa incluí-la.
+        var time = new TestTimeProvider(new DateTimeOffset(2026, 9, 1, 0, 30, 0, TimeSpan.Zero));
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString, time);
+        using var client = factory.CreateClient();
+        var project = await CreateProjectAsync(client, "Timezone boundary", "Timezone Client", "DC1");
+        var dispatch = await CreateDispatchAsync(client, project.Id, "simplified");
+        await SubmitAsync(client, dispatch.Targets.Single(target => target.IsGeneric).Token, 9);
+
+        var responses = await client.GetFromJsonAsync<List<NpsResponseView>>(
+            $"/api/nps/responses?projectId={project.Id}&to=2026-08-31");
+
+        Assert.Single(responses!);
+    }
+
+    [Fact]
+    public async Task Search_should_treat_a_percent_sign_as_a_literal()
+    {
+        var time = new TestTimeProvider(InitialNow);
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString, time);
+        using var client = factory.CreateClient();
+        var literal = await CreateProjectAsync(client, "Meta 100% atingida", "Wildcard Client", "DC1");
+        await CreateProjectAsync(client, "Meta 1000 pontos", "Wildcard Client", "DC1");
+
+        var results = await client.GetFromJsonAsync<List<NpsProjectResultView>>(
+            "/api/nps/project-results?client=Wildcard%20Client&search=100%25");
+
+        Assert.Equal(literal.Id, Assert.Single(results!).Id);
     }
 
     private static async Task<ProjectResponse> CreateProjectAsync(

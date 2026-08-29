@@ -661,43 +661,22 @@ public sealed class NpsPageTests : BunitContext
     }
 
     [Fact]
-    public void Response_timestamps_should_be_shown_in_the_viewer_timezone()
+    public void Response_timestamps_should_be_shown_in_the_operation_timezone()
     {
-        RunInBrasilia(() =>
+        var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/filter-options", FilterOptionsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/responses", ResponsesJson(), HttpStatusCode.OK);
+        Navigate("/nps/respostas");
+
+        var cut = Render<NpsPage>();
+
+        cut.WaitForAssertion(() =>
         {
-            var handler = RegisterClient();
-            handler.AddResponse(HttpMethod.Get, "/api/nps/filter-options", FilterOptionsJson(), HttpStatusCode.OK);
-            handler.AddResponse(HttpMethod.Get, "/api/nps/responses", ResponsesJson(), HttpStatusCode.OK);
-            Navigate("/nps/respostas");
-
-            var cut = Render<NpsPage>();
-
-            cut.WaitForAssertion(() =>
-            {
-                var received = cut.FindAll(".nps-response-row td time").Select(cell => cell.TextContent.Trim()).ToArray();
-                // O payload traz 2026-08-21T12:00:00Z, que em Brasília é 09:00.
-                Assert.Contains("21/08/2026 09:00", received);
-                Assert.DoesNotContain("21/08/2026 12:00", received);
-            });
+            var received = cut.FindAll(".nps-response-row td time").Select(cell => cell.TextContent.Trim()).ToArray();
+            // O payload traz 2026-08-21T12:00:00Z, que na operação é 09:00.
+            Assert.Contains("21/08/2026 09:00", received);
+            Assert.DoesNotContain("21/08/2026 12:00", received);
         });
-    }
-
-    // Fixa o fuso do processo para provar a conversão: numa máquina em UTC a
-    // formatação crua e a convertida coincidem e o teste não provaria nada.
-    private static void RunInBrasilia(Action assertion)
-    {
-        var original = Environment.GetEnvironmentVariable("TZ");
-        Environment.SetEnvironmentVariable("TZ", "America/Sao_Paulo");
-        TimeZoneInfo.ClearCachedData();
-        try
-        {
-            assertion();
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("TZ", original);
-            TimeZoneInfo.ClearCachedData();
-        }
     }
 
     private ProjectsTestHelpers.MultiStubHttpMessageHandler RegisterClient()
