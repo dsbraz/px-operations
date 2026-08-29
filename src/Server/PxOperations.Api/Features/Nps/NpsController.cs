@@ -253,6 +253,22 @@ public sealed class NpsController(
         return builder.ToString();
     }
 
+    // O Excel avalia como fórmula um campo que comece com =, +, - ou @, mesmo
+    // entre aspas. Comment e RespondentName chegam do formulário público, que é
+    // anônimo, então um respondente poderia plantar uma fórmula que roda na
+    // máquina de quem abre o export. A apóstrofe inicial desarma a avaliação e
+    // some na exibição da planilha.
     private static string Csv(string? value)
-        => string.IsNullOrEmpty(value) ? string.Empty : $"\"{value.Replace("\"", "\"\"")}\"";
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        var safe = FormulaTriggers.Contains(value[0]) ? $"'{value}" : value;
+        return $"\"{safe.Replace("\"", "\"\"")}\"";
+    }
+
+    private static readonly System.Buffers.SearchValues<char> FormulaTriggers =
+        System.Buffers.SearchValues.Create("=+-@\t\r");
 }

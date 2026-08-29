@@ -471,6 +471,29 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
         Assert.Equal(101, reader.GetInt32(11));
     }
 
+    [Fact]
+    public async Task Csv_export_should_neutralize_spreadsheet_formulas_written_by_respondents()
+    {
+        var time = new TestTimeProvider(InitialNow);
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString, time);
+        using var client = factory.CreateClient();
+        var project = await CreateProjectAsync(client, "Formula export");
+        var dispatch = await CreateDispatchAsync(client, project.Id, "simplified");
+        var token = dispatch.Targets.Single(target => target.IsGeneric).Token;
+        await SubmitAsync(
+            client,
+            token,
+            9,
+            comment: "=HYPERLINK(\"http://evil\",\"clique aqui\")",
+            name: "+49512345");
+
+        var csv = await client.GetStringAsync($"/api/nps/responses/export?projectId={project.Id}");
+
+        Assert.DoesNotContain("\"=HYPERLINK", csv, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"+49512345", csv, StringComparison.Ordinal);
+        Assert.Contains("HYPERLINK", csv, StringComparison.Ordinal);
+    }
+
     private static async Task<ProjectResponse> CreateProjectAsync(
         HttpClient client,
         string name,
