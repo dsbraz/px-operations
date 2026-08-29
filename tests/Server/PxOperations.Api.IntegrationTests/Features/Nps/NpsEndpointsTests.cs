@@ -617,6 +617,34 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
         Assert.Equal(literal.Id, Assert.Single(results!).Id);
     }
 
+    /// <summary>
+    /// Trava a interação entre as duas correções de período: o status sem
+    /// resposta convive com a janela (a tabela lista o pendente) e os vencidos
+    /// seguem contando fora dela. Os KPIs de resposta ficam zerados porque um
+    /// projeto pendente, por definição, não respondeu.
+    /// </summary>
+    [Fact]
+    public async Task Pending_status_with_a_period_should_keep_results_and_overdue_coherent()
+    {
+        var time = new TestTimeProvider(InitialNow);
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString, time);
+        using var client = factory.CreateClient();
+        var pending = await CreateProjectAsync(client, "Combo pending", "Combo Client", "DC1");
+        var answered = await CreateProjectAsync(client, "Combo answered", "Combo Client", "DC1");
+        var dispatch = await CreateDispatchAsync(client, answered.Id, "simplified");
+        await SubmitAsync(client, dispatch.Targets.Single(target => target.IsGeneric).Token, 9);
+
+        var dashboard = await client.GetFromJsonAsync<NpsDashboardView>(
+            "/api/nps/dashboard?client=Combo%20Client&status=pending&from=2026-08-01&to=2026-08-01");
+        var results = await client.GetFromJsonAsync<List<NpsProjectResultView>>(
+            "/api/nps/project-results?client=Combo%20Client&status=pending&from=2026-08-01&to=2026-08-01");
+
+        Assert.Equal(pending.Id, Assert.Single(results!).Id);
+        Assert.Equal(0, dashboard!.TotalResponses);
+        Assert.Null(dashboard.OfficialNps);
+        Assert.True(dashboard.OverdueProjects >= 1);
+    }
+
     private static async Task<ProjectResponse> CreateProjectAsync(
         HttpClient client,
         string name,
