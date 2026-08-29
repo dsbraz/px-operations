@@ -511,6 +511,15 @@
     padding-top: .6rem;
 }
 
+.nps-action-error {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-danger-border, var(--color-border));
+    border-radius: var(--radius-md);
+    color: var(--color-text);
+    margin: 0;
+    padding: var(--space-sm);
+}
+
 .nps-expansion-error {
     align-items: center;
     display: flex;

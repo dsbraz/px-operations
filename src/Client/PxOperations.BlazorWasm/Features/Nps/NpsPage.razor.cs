@@ -26,6 +26,8 @@ public partial class NpsPage : ComponentBase, IDisposable
     private bool redirecting;
     private bool isLoading;
     private string? loadError;
+    private string? actionError;
+    private string? selfNavigatedRoute;
     private string search = string.Empty;
     private string? from;
     private string? to;
@@ -157,6 +159,19 @@ public partial class NpsPage : ComponentBase, IDisposable
 
         ActiveTab = nextTab;
         ReadQuery();
+
+        // NavigateTo dispara LocationChanged, o Router repassa os parâmetros e
+        // este método roda de novo para a mesma rota: sem a guarda, cada troca
+        // de filtro ou de aba disparava todas as requisições duas vezes. Quem
+        // navegou daqui de dentro já recarrega por conta própria.
+        var route = $"{path}{CurrentRawQuery()}";
+        if (selfNavigatedRoute == route)
+        {
+            selfNavigatedRoute = null;
+            return;
+        }
+
+        selfNavigatedRoute = null;
         await ReloadAsync();
     }
 
@@ -261,7 +276,7 @@ public partial class NpsPage : ComponentBase, IDisposable
     private Task<ICollection<NpsProjectResultView>> LoadProjectResultsAsync(CancellationToken ct)
         => NpsClient.ListProjectResultsAsync(
             NullIfEmpty(search), clients, dcs, projectTypes, deliveryManagers,
-            statuses, [], [], from, to, false, null, ct);
+            statuses, [], [], from, to, includeWaived, null, ct);
 
     private Task<ICollection<NpsResponseView>> LoadResponsesAsync(CancellationToken ct)
         => NpsClient.ListResponsesAsync(
@@ -327,7 +342,9 @@ public partial class NpsPage : ComponentBase, IDisposable
         from = null;
         to = null;
         includeWaived = false;
-        NavigationManager.NavigateTo($"/nps/{TabCode(ActiveTab)}", replace: true);
+        var target = $"/nps/{TabCode(ActiveTab)}";
+        selfNavigatedRoute = target;
+        NavigationManager.NavigateTo(target, replace: true);
         await ReloadAsync();
     }
 
@@ -352,7 +369,9 @@ public partial class NpsPage : ComponentBase, IDisposable
     private async Task UpdateUrlAndReloadAsync()
     {
         CloseResultExpansion();
-        NavigationManager.NavigateTo($"/nps/{TabCode(ActiveTab)}{BuildQuery()}", replace: true);
+        var target = $"/nps/{TabCode(ActiveTab)}{BuildQuery()}";
+        selfNavigatedRoute = target;
+        NavigationManager.NavigateTo(target, replace: true);
         await ReloadAsync();
     }
 
@@ -385,13 +404,30 @@ public partial class NpsPage : ComponentBase, IDisposable
             return;
         }
 
-        createdDispatch = await NpsClient.CreateDispatchAsync(new CreateNpsDispatchRequest
+        actionError = null;
+        try
         {
-            ProjectId = createProjectId,
-            Format = createFormat,
-            Language = createLanguage,
-            ContactIds = []
-        });
+            createdDispatch = await NpsClient.CreateDispatchAsync(new CreateNpsDispatchRequest
+            {
+                ProjectId = createProjectId,
+                Format = createFormat,
+                Language = createLanguage,
+                ContactIds = []
+            });
+        }
+        catch (Exception exception)
+        {
+            // O domínio recusa a criação com 409 (coleta dispensada, por
+            // exemplo). Sem este catch a exceção escapava do @onclick e caía na
+            // tela de erro global, com o diálogo aberto e nenhuma explicação.
+            actionError = ApiErrorFormatter.Format(exception, "Não foi possível gerar o link.");
+            return;
+        }
+
+        // O quadro atrás do diálogo ainda mostra o projeto em "Sem link" com a
+        // ação "Gerar link": clicar de novo criaria um segundo disparo e
+        // fecharia justamente o link recém-compartilhado.
+        await ReloadAsync();
     }
 
     private async Task RunPrimaryActionAsync(NpsProjectView project)
@@ -423,7 +459,17 @@ public partial class NpsPage : ComponentBase, IDisposable
 
     private async Task OpenDetailAsync(int projectId)
     {
-        selectedDetail = await NpsClient.GetProjectAsync(projectId);
+        actionError = null;
+        try
+        {
+            selectedDetail = await NpsClient.GetProjectAsync(projectId);
+        }
+        catch (Exception exception)
+        {
+            actionError = ApiErrorFormatter.Format(exception, "Não foi possível abrir o detalhe da coleta.");
+            return;
+        }
+
         detailResponses = selectedDetail.RecentResponses.ToList();
         detailFormat = "all";
         detailDialogOpen = true;
@@ -436,10 +482,18 @@ public partial class NpsPage : ComponentBase, IDisposable
             return;
         }
 
+        actionError = null;
         detailFormat = format;
-        detailResponses = (await NpsClient.ListProjectResponsesAsync(
-            selectedDetail.Project.Id,
-            null, [], [], [], [], [], selectedFormats, [], null, null, null, null)).ToList();
+        try
+        {
+            detailResponses = (await NpsClient.ListProjectResponsesAsync(
+                selectedDetail.Project.Id,
+                null, [], [], [], [], [], selectedFormats, [], null, null, null, null)).ToList();
+        }
+        catch (Exception exception)
+        {
+            actionError = ApiErrorFormatter.Format(exception, "Não foi possível filtrar as respostas.");
+        }
     }
 
     private Task FilterAllDetailResponsesAsync() => FilterDetailResponsesAsync("all", []);
@@ -459,14 +513,36 @@ public partial class NpsPage : ComponentBase, IDisposable
 
     private async Task WaiveAsync()
     {
-        await NpsClient.WaiveCollectionAsync(waiverProjectId, new WaiveNpsCollectionRequest { Reason = waiverReason });
+        actionError = null;
+        try
+        {
+            await NpsClient.WaiveCollectionAsync(waiverProjectId, new WaiveNpsCollectionRequest { Reason = waiverReason });
+        }
+        catch (Exception exception)
+        {
+            // O diálogo continua aberto: o motivo digitado não pode se perder
+            // porque outro operador mexeu no projeto antes.
+            actionError = ApiErrorFormatter.Format(exception, "Não foi possível dispensar a coleta.");
+            return;
+        }
+
         waiverDialogOpen = false;
         await ReloadAsync();
     }
 
     private async Task ReactivateAsync(int projectId)
     {
-        await NpsClient.ReactivateCollectionAsync(projectId);
+        actionError = null;
+        try
+        {
+            await NpsClient.ReactivateCollectionAsync(projectId);
+        }
+        catch (Exception exception)
+        {
+            actionError = ApiErrorFormatter.Format(exception, "Não foi possível reativar a coleta.");
+            return;
+        }
+
         await ReloadAsync();
     }
 
@@ -662,17 +738,38 @@ public partial class NpsPage : ComponentBase, IDisposable
 
         CloseResultExpansion();
         ActiveTab = tab;
-        NavigationManager.NavigateTo(TabHref(TabCode(tab)));
+        var target = TabHref(TabCode(tab));
+        selfNavigatedRoute = target;
+        NavigationManager.NavigateTo(target);
         ReadQuery();
         await ReloadAsync();
     }
 
     private string TabHref(string tab) => $"/nps/{tab}{CurrentRawQuery()}";
     private string PublicUrl(Guid token) => NavigationManager.ToAbsoluteUri($"/nps/{token}").ToString();
-    private ValueTask CopyAsync(string value) => JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", value);
+    // Task, não ValueTask: EventCallbackFactory não tem sobrecarga para
+    // Func<ValueTask>, então um @onclick que devolvia ValueTask caía na
+    // sobrecarga Action e a task era descartada sem ninguém esperar por ela.
+    private async Task CopyAsync(string value)
+    {
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", value);
+            actionError = null;
+        }
+        catch (JSException)
+        {
+            actionError = "Não foi possível copiar. Copie manualmente do campo acima.";
+        }
+    }
     private static string DisplayMetric(double? value) => value?.ToString("0.0") ?? "—";
     private static string DisplayAspectAverage(double? value)
         => value?.ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("pt-BR")) ?? "—";
+    // Interpolar double em cultura corrente gerava "width:33,333%" em pt-BR:
+    // declaração inválida, descartada pelo navegador, barra com largura zero.
+    private static string BarWidth(double percentage)
+        => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"width:{percentage}%");
+
     private static string AspectMeterValue(double value)
         => value.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
     private static string AspectMeterLabel(NpsAspectAverageView aspect, int maximum)

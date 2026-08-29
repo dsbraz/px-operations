@@ -151,6 +151,11 @@
     }
 
     <div class="nps-content">
+        @if (actionError is not null && !createDialogOpen && !waiverDialogOpen && !detailDialogOpen)
+        {
+            <div class="status-card error nps-load-error" role="alert"><p>@actionError</p></div>
+        }
+
         @if (ActiveTab == NpsTab.Collection)
         {
             @if (isLoading)
@@ -279,7 +284,7 @@
                         <div class="nps-distribution-bar" aria-label="Distribuição das classificações">
                             @foreach (var item in dashboard.Distribution)
                             {
-                                <span class="@($"tone-{item.Tone}")" style="@($"width:{item.Percentage}%")"></span>
+                                <span class="@($"tone-{item.Tone}")" style="@BarWidth(item.Percentage)"></span>
                             }
                         </div>
                         <ul class="nps-distribution-legend">
@@ -532,6 +537,11 @@
                 </label>
             </div>
         }
+
+        @if (actionError is not null)
+        {
+            <p class="nps-action-error" role="alert">@actionError</p>
+        }
     </ChildContent>
     <Footer>
         @if (createdDispatch is null)
@@ -591,6 +601,11 @@
 
 <BrqDialog @bind-Open="detailDialogOpen" Title="Detalhe da coleta" Description="@selectedDetail?.Project.Name" CssClass="nps-dialog nps-detail-dialog">
     <ChildContent>
+        @if (actionError is not null)
+        {
+            <p class="nps-action-error" role="alert">@actionError</p>
+        }
+
         @if (selectedDetail is not null)
         {
             <section class="nps-detail-kpis" aria-label="Indicadores da coleta">
@@ -657,6 +672,11 @@
             <span>Motivo da dispensa</span>
             <textarea class="nps-waiver-reason" @bind="waiverReason" maxlength="500" placeholder="Explique por que este projeto não participará desta coleta"></textarea>
         </label>
+
+        @if (actionError is not null)
+        {
+            <p class="nps-action-error" role="alert">@actionError</p>
+        }
     </ChildContent>
     <Footer>
         <button type="button" class="btn btn-ghost nps-waiver-cancel" @onclick="CloseWaiverDialog">Cancelar</button>

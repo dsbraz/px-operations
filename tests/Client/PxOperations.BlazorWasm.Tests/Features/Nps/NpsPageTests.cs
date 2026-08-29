@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Net;
 using Bunit;
+using Microsoft.JSInterop;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using PxOperations.BlazorWasm.Api;
@@ -467,6 +469,197 @@ public sealed class NpsPageTests : BunitContext
         });
     }
 
+    [Fact]
+    public void Distribution_bar_should_size_segments_with_an_invariant_decimal_separator()
+    {
+        var original = CultureInfo.CurrentCulture;
+        var originalDefault = CultureInfo.DefaultThreadCurrentCulture;
+        var brazilian = CultureInfo.GetCultureInfo("pt-BR");
+        CultureInfo.CurrentCulture = brazilian;
+        CultureInfo.DefaultThreadCurrentCulture = brazilian;
+        try
+        {
+            var handler = RegisterClient();
+            handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", FractionalDashboardJson(), HttpStatusCode.OK);
+            handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", ProjectResultsJson(), HttpStatusCode.OK);
+            Navigate("/nps/resultados");
+
+            var cut = Render<NpsPage>();
+
+            cut.WaitForAssertion(() =>
+            {
+                var widths = cut.FindAll(".nps-distribution-bar span")
+                    .Select(span => span.GetAttribute("style") ?? string.Empty)
+                    .ToArray();
+                Assert.Contains("width:33.333%", widths);
+                Assert.DoesNotContain(widths, style => style.Contains(',', StringComparison.Ordinal));
+            });
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+            CultureInfo.DefaultThreadCurrentCulture = originalDefault;
+        }
+    }
+
+    [Fact]
+    public void Results_should_apply_the_waived_filter_to_the_table_and_the_indicators()
+    {
+        var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", ProjectResultsJson(), HttpStatusCode.OK);
+        Navigate("/nps/resultados?includeWaived=true");
+
+        var cut = Render<NpsPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            var results = handler.RequestUris
+                .Single(uri => uri!.AbsolutePath == "/api/nps/project-results");
+            Assert.Contains("includeWaived=true", results!.Query, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public void Generating_a_link_should_refresh_the_board()
+    {
+        var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Post, "/api/nps/dispatches", DispatchJson(Guid.NewGuid()), HttpStatusCode.Created);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
+        Navigate("/nps/coleta");
+
+        var cut = Render<NpsPage>();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".nps-primary-action")));
+
+        cut.Find(".nps-primary-action").Click();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find(".nps-create-submit")));
+        cut.Find(".nps-create-submit").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(
+            2,
+            handler.RequestUris.Count(uri => uri!.AbsolutePath == "/api/nps/projects")));
+    }
+
+    [Fact]
+    public void Failed_link_generation_should_report_the_reason_the_server_gave()
+    {
+        var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(
+            HttpMethod.Post,
+            "/api/nps/dispatches",
+            """{"detail":"Waived NPS collections cannot create dispatches."}""",
+            HttpStatusCode.Conflict);
+        Navigate("/nps/coleta");
+
+        var cut = Render<NpsPage>();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".nps-primary-action")));
+
+        cut.Find(".nps-primary-action").Click();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find(".nps-create-submit")));
+        cut.Find(".nps-create-submit").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains(
+            "Waived NPS collections cannot create dispatches.",
+            Dialog(cut, "Gerar link NPS").TextContent,
+            StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Failed_waiver_should_report_the_reason_the_server_gave()
+    {
+        var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(
+            HttpMethod.Post,
+            "/api/nps/projects/1/waiver",
+            """{"detail":"NPS collection is already waived."}""",
+            HttpStatusCode.Conflict);
+        Navigate("/nps/coleta");
+
+        var cut = Render<NpsPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Projeto ativo", cut.Markup));
+
+        cut.Find("[aria-label='Dispensar coleta de Projeto ativo']").Click();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find(".nps-waiver-reason")));
+        cut.Find(".nps-waiver-reason").Change("Cliente pediu pausa");
+        cut.Find(".nps-waiver-confirm").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains(
+            "NPS collection is already waived.",
+            Dialog(cut, "Dispensar coleta").TextContent,
+            StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Clipboard_failure_should_be_reported_instead_of_failing_silently()
+    {
+        var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Post, "/api/nps/dispatches", DispatchJson(Guid.NewGuid()), HttpStatusCode.Created);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
+        JSInterop.SetupVoid(invocation => invocation.Identifier == "navigator.clipboard.writeText")
+            .SetException(new JSException("Clipboard indisponível."));
+        Navigate("/nps/coleta");
+
+        var cut = Render<NpsPage>();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".nps-primary-action")));
+
+        cut.Find(".nps-primary-action").Click();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find(".nps-create-submit")));
+        cut.Find(".nps-create-submit").Click();
+        cut.WaitForAssertion(() => Assert.Contains(
+            "Copiar link",
+            Dialog(cut, "Gerar link NPS").TextContent,
+            StringComparison.Ordinal));
+
+        Dialog(cut, "Gerar link NPS")
+            .QuerySelectorAll(".brq-dialog-footer button")
+            .Single(button => button.TextContent.Trim() == "Copiar link")
+            .Click();
+
+        cut.WaitForAssertion(() => Assert.Contains(
+            "Não foi possível copiar",
+            Dialog(cut, "Gerar link NPS").TextContent,
+            StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Router_reentry_after_a_filter_change_should_not_load_the_same_page_twice()
+    {
+        var handler = RegisterClient();
+        for (var round = 0; round < 4; round++)
+        {
+            handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
+            handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
+        }
+
+        Navigate("/nps/coleta");
+        var cut = Render<NpsPage>();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".nps-board-column")));
+
+        cut.Find(".nps-toolbar .fmenu__btn").Click();
+        cut.FindAll(".fmenu__pop input[type=checkbox]").Last().Change(true);
+        cut.WaitForAssertion(() => Assert.Equal(
+            2,
+            handler.RequestUris.Count(uri => uri!.AbsolutePath == "/api/nps/projects")));
+
+        // O NavigateTo do filtro dispara LocationChanged, o Router repassa os
+        // parâmetros e OnParametersSetAsync roda de novo para a mesma rota.
+        cut.Render(ParameterView.Empty);
+
+        cut.WaitForAssertion(() => Assert.Equal(
+            2,
+            handler.RequestUris.Count(uri => uri!.AbsolutePath == "/api/nps/projects")));
+    }
+
     private ProjectsTestHelpers.MultiStubHttpMessageHandler RegisterClient()
     {
         var handler = new ProjectsTestHelpers.MultiStubHttpMessageHandler();
@@ -505,6 +698,28 @@ public sealed class NpsPageTests : BunitContext
             "dcs":[{"code":"DC1","label":"DC1"}],"projectTypes":[],"deliveryManagers":[],
             "statuses":[],"formats":[],"classifications":[]
           }
+        }
+        """;
+
+    private static string FractionalDashboardJson() => """
+        {
+          "officialNps":0.0,"totalResponses":3,"averageScore":7.0,"overdueProjects":0,
+          "scale":{"minimum":1,"maximum":10},
+          "distribution":[
+            {"code":"detractor","label":"Detrator","tone":"critical","count":1,"percentage":33.333},
+            {"code":"passive","label":"Neutro","tone":"warning","count":1,"percentage":33.333},
+            {"code":"promoter","label":"Promotor","tone":"positive","count":1,"percentage":33.334}
+          ],
+          "aspectSummary":{
+            "completeResponsesCount":0,"scale":{"minimum":1,"maximum":5},
+            "aspects":[
+              {"code":"quality","label":"Qualidade técnica","average":null,"responsesCount":0},
+              {"code":"schedule","label":"Prazos acordados","average":null,"responsesCount":0},
+              {"code":"communication","label":"Comunicação","average":null,"responsesCount":0},
+              {"code":"business_value","label":"Valor para o negócio","average":null,"responsesCount":0}
+            ]
+          },
+          "filterOptions":{"clients":[],"dcs":[],"projectTypes":[],"deliveryManagers":[],"statuses":[],"formats":[],"classifications":[]}
         }
         """;
 
