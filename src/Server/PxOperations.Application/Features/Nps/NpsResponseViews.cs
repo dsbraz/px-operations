@@ -21,7 +21,8 @@ public sealed record NpsResponseView(
     string? Comment,
     string? RespondentName,
     string? RespondentEmail,
-    DateTimeOffset SubmittedAt);
+    DateTimeOffset SubmittedAt,
+    string ClassificationTone);
 
 public sealed record NpsAspectView(string Code, string Label, NpsScaleView Scale);
 

@@ -209,12 +209,7 @@ internal static class NpsViewMappings
         => new(
             NpsCodes.Classification(classification),
             NpsCodes.ClassificationLabel(classification),
-            classification switch
-            {
-                NpsClassification.Detractor => "critical",
-                NpsClassification.Passive => "warning",
-                _ => "positive"
-            },
+            NpsCodes.ClassificationTone(classification),
             counts.GetValueOrDefault(classification),
             percentage);
 

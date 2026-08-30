@@ -562,7 +562,8 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
                 response.Comment,
                 response.RespondentName,
                 response.RespondentEmail,
-                response.SubmittedAt);
+                response.SubmittedAt,
+                NpsCodes.ClassificationTone(response.Classification));
         }).ToArray();
     }
 }

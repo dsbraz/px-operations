@@ -45,6 +45,16 @@ public static class NpsCodes
         _ => "promoter"
     };
 
+    // O tom da classificação é faixa de negócio, não estilo: quem decide é o
+    // servidor, e a tela só pinta. Serve tanto a distribuição do painel quanto
+    // cada linha da auditoria.
+    public static string ClassificationTone(NpsClassification value) => value switch
+    {
+        NpsClassification.Detractor => "critical",
+        NpsClassification.Passive => "warning",
+        _ => "positive"
+    };
+
     public static string ClassificationLabel(NpsClassification value) => value switch
     {
         NpsClassification.Detractor => "Detrator",

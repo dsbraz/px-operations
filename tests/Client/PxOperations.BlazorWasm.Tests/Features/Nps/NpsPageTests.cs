@@ -679,6 +679,25 @@ public sealed class NpsPageTests : BunitContext
         });
     }
 
+    [Fact]
+    public void Response_row_should_take_the_tone_the_server_sent()
+    {
+        var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/filter-options", FilterOptionsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/responses", ResponsesJson(), HttpStatusCode.OK);
+        Navigate("/nps/respostas");
+
+        var cut = Render<NpsPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            // A primeira resposta é "promoter" mas o servidor mandou tom de
+            // atenção: derivar da classificação daria "good" e o teste cairia.
+            var pill = cut.FindAll(".nps-response-row td .pill")[0];
+            Assert.Contains("pill--warn", pill.ClassList);
+        });
+    }
+
     private ProjectsTestHelpers.MultiStubHttpMessageHandler RegisterClient()
     {
         var handler = new ProjectsTestHelpers.MultiStubHttpMessageHandler();
@@ -842,8 +861,8 @@ public sealed class NpsPageTests : BunitContext
 
     private static string ResponsesJson() => """
         [
-          {"id":1,"projectId":1,"projectName":"Projeto ativo","dispatchId":10,"targetId":20,"contactId":null,"contactName":null,"contactEmail":null,"format":"complete","formatLabel":"Completo","score":10,"classification":"promoter","classificationLabel":"Promotor","quality":5,"schedule":4,"communication":3,"businessValue":2,"comment":"Comentário completo que deve permanecer acessível","respondentName":"Pessoa Teste","respondentEmail":"pessoa@example.com","submittedAt":"2026-08-21T12:00:00Z"},
-          {"id":2,"projectId":2,"projectName":"Projeto simplificado","dispatchId":11,"targetId":21,"contactId":null,"contactName":null,"contactEmail":null,"format":"simplified","formatLabel":"Simplificado","score":4,"classification":"detractor","classificationLabel":"Detrator","quality":null,"schedule":null,"communication":null,"businessValue":null,"comment":null,"respondentName":null,"respondentEmail":null,"submittedAt":"2026-08-20T12:00:00Z"}
+          {"id":1,"projectId":1,"projectName":"Projeto ativo","dispatchId":10,"targetId":20,"contactId":null,"contactName":null,"contactEmail":null,"format":"complete","formatLabel":"Completo","score":10,"classification":"promoter","classificationLabel":"Promotor","quality":5,"schedule":4,"communication":3,"businessValue":2,"comment":"Comentário completo que deve permanecer acessível","respondentName":"Pessoa Teste","respondentEmail":"pessoa@example.com","submittedAt":"2026-08-21T12:00:00Z","classificationTone":"warning"},
+          {"id":2,"projectId":2,"projectName":"Projeto simplificado","dispatchId":11,"targetId":21,"contactId":null,"contactName":null,"contactEmail":null,"format":"simplified","formatLabel":"Simplificado","score":4,"classification":"detractor","classificationLabel":"Detrator","quality":null,"schedule":null,"communication":null,"businessValue":null,"comment":null,"respondentName":null,"respondentEmail":null,"submittedAt":"2026-08-20T12:00:00Z","classificationTone":"critical"}
         ]
         """;
 }

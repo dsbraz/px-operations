@@ -4147,7 +4147,8 @@
           "comment",
           "respondentName",
           "respondentEmail",
-          "submittedAt"
+          "submittedAt",
+          "classificationTone"
         ],
         "type": "object",
         "properties": {
@@ -4284,6 +4285,9 @@
           "submittedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "classificationTone": {
+            "type": "string"
           }
         }
       },

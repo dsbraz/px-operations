@@ -646,6 +646,30 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
         Assert.True(dashboard.OverdueProjects >= 1);
     }
 
+    [Fact]
+    public async Task Responses_should_carry_the_classification_tone_from_the_server()
+    {
+        var time = new TestTimeProvider(InitialNow);
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString, time);
+        using var client = factory.CreateClient();
+        var project = await CreateProjectAsync(client, "Tone from server", "Tone Client", "DC1");
+        var dispatch = await CreateDispatchAsync(client, project.Id, "simplified");
+        var token = dispatch.Targets.Single(target => target.IsGeneric).Token;
+        await SubmitAsync(client, token, 10, email: "promoter@example.com");
+        await SubmitAsync(client, token, 8, email: "passive@example.com");
+        await SubmitAsync(client, token, 3, email: "detractor@example.com");
+
+        var responses = await client.GetFromJsonAsync<List<NpsResponseView>>(
+            $"/api/nps/responses?projectId={project.Id}");
+
+        var byClassification = responses!.ToDictionary(
+            response => response.Classification,
+            response => response.ClassificationTone);
+        Assert.Equal("positive", byClassification["promoter"]);
+        Assert.Equal("warning", byClassification["passive"]);
+        Assert.Equal("critical", byClassification["detractor"]);
+    }
+
     private static async Task<ProjectResponse> CreateProjectAsync(
         HttpClient client,
         string name,
