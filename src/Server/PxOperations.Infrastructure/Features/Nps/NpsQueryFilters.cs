@@ -21,6 +21,10 @@ internal static class NpsQueryFilters
     // observar, este é o ponto a revisitar, junto com o par no cliente.
     internal static readonly TimeSpan OperationOffset = TimeSpan.FromHours(-3);
 
+    // Mesma normalização que NpsViewMappings.Options aplica ao montar a lista.
+    private static string[] Normalize(IReadOnlyList<string> values)
+        => values.Select(value => value.Trim().ToLowerInvariant()).ToArray();
+
     internal static IQueryable<Project> ApplyProjectFilters(IQueryable<Project> query, NpsFilter filter)
     {
         if (filter.ProjectId.HasValue)
@@ -38,7 +42,13 @@ internal static class NpsQueryFilters
 
         if (filter.Clients.Count != 0)
         {
-            query = query.Where(project => project.Client != null && filter.Clients.Contains(project.Client));
+            // A lista de opções é montada com Trim e comparação sem caixa, então
+            // uma opção só pode representar linhas gravadas como "BRQ" e "brq ".
+            // Comparar exato aqui fazia o operador escolher o próprio cliente do
+            // projeto e o projeto sumir do quadro, dos resultados e do export.
+            var clients = Normalize(filter.Clients);
+            query = query.Where(project =>
+                project.Client != null && clients.Contains(project.Client.Trim().ToLower()));
         }
 
         if (filter.Dcs.Count != 0)
@@ -55,7 +65,9 @@ internal static class NpsQueryFilters
 
         if (filter.DeliveryManagers.Count != 0)
         {
-            query = query.Where(project => project.DeliveryManager != null && filter.DeliveryManagers.Contains(project.DeliveryManager));
+            var deliveryManagers = Normalize(filter.DeliveryManagers);
+            query = query.Where(project =>
+                project.DeliveryManager != null && deliveryManagers.Contains(project.DeliveryManager.Trim().ToLower()));
         }
 
         return query;

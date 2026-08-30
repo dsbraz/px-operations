@@ -705,6 +705,28 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
         Assert.True(repository.IsDuplicateDispatchException(exception));
     }
 
+    /// <summary>
+    /// A lista de opções normaliza espaços e caixa antes de oferecer o cliente,
+    /// então o filtro precisa casar do mesmo jeito: senão o operador escolhe o
+    /// próprio cliente do projeto e o projeto some da tela.
+    /// </summary>
+    [Fact]
+    public async Task Client_facet_should_match_the_way_the_option_list_normalises()
+    {
+        var time = new TestTimeProvider(InitialNow);
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString, time);
+        using var client = factory.CreateClient();
+        var exact = await CreateProjectAsync(client, "Normalise exact", "Normalise Co", "DC1");
+        var padded = await CreateProjectAsync(client, "Normalise padded", " normalise co ", "DC1");
+
+        var results = await client.GetFromJsonAsync<List<NpsProjectResultView>>(
+            "/api/nps/project-results?client=Normalise%20Co");
+
+        var ids = results!.Select(result => result.Id).ToArray();
+        Assert.Contains(exact.Id, ids);
+        Assert.Contains(padded.Id, ids);
+    }
+
     private static async Task<ProjectResponse> CreateProjectAsync(
         HttpClient client,
         string name,
