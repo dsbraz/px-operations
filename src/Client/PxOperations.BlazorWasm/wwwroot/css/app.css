@@ -1327,3 +1327,53 @@ textarea.fi { resize: vertical; min-height: 90px; line-height: 1.65; }
     margin: 0 0 1rem;
     padding: 1rem;
 }
+
+/* Campos e alerta dos diálogos do NPS. Qualificados por .nps-dialog de
+   propósito: o formulário público usa as mesmas classes com estilo
+   próprio, e sem o contexto a cor dos rótulos vazaria para lá. */
+.nps-dialog .nps-action-error {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-danger-border, var(--color-border));
+    border-radius: var(--radius-md);
+    color: var(--color-text);
+    margin: 0;
+    padding: var(--space-sm);
+}
+
+.nps-dialog .nps-field,
+.nps-dialog .nps-created-block {
+    display: grid;
+    gap: .4rem;
+}
+
+.nps-dialog .nps-field > span,
+.nps-dialog .nps-created-block > span {
+    color: var(--color-text-muted);
+    font-size: var(--fs-body-xs);
+    font-weight: var(--fw-semibold);
+}
+
+.nps-dialog .nps-field select,
+.nps-dialog .nps-field textarea,
+.nps-dialog .nps-created-link input,
+.nps-dialog .nps-created-link textarea {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text);
+    font: inherit;
+    padding: .7rem .8rem;
+    width: 100%;
+}
+
+.nps-dialog .nps-field select:focus,
+.nps-dialog .nps-field textarea:focus,
+.nps-dialog .nps-created-link input:focus,
+.nps-dialog .nps-created-link textarea:focus {
+    border-color: var(--color-focus);
+    outline: none;
+}
+
+.nps-dialog .nps-field-full {
+    grid-column: 1 / -1;
+}

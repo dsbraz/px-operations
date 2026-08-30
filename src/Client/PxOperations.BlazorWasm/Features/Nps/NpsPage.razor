@@ -187,47 +187,9 @@
     </Footer>
 </BrqDialog>
 
-<BrqDialog @bind-Open="responseDialogOpen"
-           Title="Resposta NPS"
-           Description="@selectedResponse?.ProjectName"
-           CssClass="nps-dialog nps-response-dialog">
-    <ChildContent>
-        @if (selectedResponse is not null)
-        {
-            <section class="nps-response-overview">
-                <div><span>Nota</span><strong>@selectedResponse.Score</strong></div>
-                <div><span>Classificação</span><strong>@selectedResponse.ClassificationLabel</strong></div>
-                <div><span>Formato</span><strong>@selectedResponse.FormatLabel</strong></div>
-                <div><span>Recebida</span><strong>@NpsTimeDisplay.DateAndTime(selectedResponse.SubmittedAt)</strong></div>
-            </section>
-            <section class="nps-response-attribution">
-                <h3>Atribuição</h3>
-                <strong>@NpsDisplay.AuthorName(selectedResponse)</strong>
-                @if (NpsDisplay.AuthorDetail(selectedResponse) is { } detail)
-                {
-                    <span>@detail</span>
-                }
-            </section>
-            <section class="nps-response-full-comment">
-                <h3>Comentário</h3>
-                <p>@(selectedResponse.Comment ?? "Sem comentário")</p>
-            </section>
-            @if (selectedResponse.Format == "complete")
-            {
-                <section class="nps-response-aspects">
-                    <header><h3>Aspectos</h3><span>Média dos aspectos <strong>@ResponseAspectAverage(selectedResponse)</strong></span></header>
-                    <dl>
-                        <div class="nps-response-aspect"><dt>Qualidade</dt><dd>@(selectedResponse.Quality?.ToString() ?? "—")</dd></div>
-                        <div class="nps-response-aspect"><dt>Prazo</dt><dd>@(selectedResponse.Schedule?.ToString() ?? "—")</dd></div>
-                        <div class="nps-response-aspect"><dt>Comunicação</dt><dd>@(selectedResponse.Communication?.ToString() ?? "—")</dd></div>
-                        <div class="nps-response-aspect"><dt>Valor para o negócio</dt><dd>@(selectedResponse.BusinessValue?.ToString() ?? "—")</dd></div>
-                    </dl>
-                </section>
-            }
-        }
-    </ChildContent>
-    <Footer><button type="button" class="btn btn-ghost" @onclick="CloseResponseDialog">Fechar</button></Footer>
-</BrqDialog>
+<NpsResponseModal @bind-Open="responseDialogOpen"
+                  Response="@selectedResponse"
+                  OnClose="CloseResponseDialog" />
 
 <BrqDialog @bind-Open="detailDialogOpen" Title="Detalhe da coleta" Description="@selectedDetail?.Project.Name" CssClass="nps-dialog nps-detail-dialog">
     <ChildContent>
@@ -292,24 +254,8 @@
     </Footer>
 </BrqDialog>
 
-<BrqDialog @bind-Open="waiverDialogOpen"
-           Title="Dispensar coleta"
-           Description="A dispensa é reversível e fecha os links abertos."
-           CssClass="nps-dialog"
-           AutofocusSelector=".nps-waiver-reason">
-    <ChildContent>
-        <label class="nps-field">
-            <span>Motivo da dispensa</span>
-            <textarea class="nps-waiver-reason" @bind="waiverReason" maxlength="500" placeholder="Explique por que este projeto não participará desta coleta"></textarea>
-        </label>
-
-        @if (actionError is not null)
-        {
-            <p class="nps-action-error" role="alert">@actionError</p>
-        }
-    </ChildContent>
-    <Footer>
-        <button type="button" class="btn btn-ghost nps-waiver-cancel" @onclick="CloseWaiverDialog">Cancelar</button>
-        <button type="button" class="btn btn-purple nps-waiver-confirm" disabled="@string.IsNullOrWhiteSpace(waiverReason)" @onclick="WaiveAsync">Confirmar dispensa</button>
-    </Footer>
-</BrqDialog>
+<NpsWaiverModal @bind-Open="waiverDialogOpen"
+                @bind-Reason="waiverReason"
+                ActionError="@actionError"
+                OnCancel="CloseWaiverDialog"
+                OnConfirm="WaiveAsync" />

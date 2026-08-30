@@ -55,4 +55,15 @@ internal static class NpsDisplay
 
         return null;
     }
+
+    internal static string AspectAverage(NpsResponseView response)
+    {
+        var values = new[] { response.Quality, response.Schedule, response.Communication, response.BusinessValue }
+            .Where(value => value.HasValue)
+            .Select(value => value!.Value)
+            .ToArray();
+        return values.Length == 0
+            ? "—"
+            : values.Average().ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
+    }
 }

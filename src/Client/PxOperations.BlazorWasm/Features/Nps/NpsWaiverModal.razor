@@ -1,0 +1,28 @@
+@using PxOperations.Ui.Components.Overlays
+
+<BrqDialog Open="@Open"
+           OpenChanged="OpenChanged"
+           Title="Dispensar coleta"
+           Description="A dispensa é reversível e fecha os links abertos."
+           CssClass="nps-dialog"
+           AutofocusSelector=".nps-waiver-reason">
+    <ChildContent>
+        <label class="nps-field">
+            <span>Motivo da dispensa</span>
+            <textarea class="nps-waiver-reason"
+                      value="@Reason"
+                      @onchange="args => ReasonChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty)"
+                      maxlength="500"
+                      placeholder="Explique por que este projeto não participará desta coleta"></textarea>
+        </label>
+
+        @if (ActionError is not null)
+        {
+            <p class="nps-action-error" role="alert">@ActionError</p>
+        }
+    </ChildContent>
+    <Footer>
+        <button type="button" class="btn btn-ghost nps-waiver-cancel" @onclick="OnCancel">Cancelar</button>
+        <button type="button" class="btn btn-purple nps-waiver-confirm" disabled="@string.IsNullOrWhiteSpace(Reason)" @onclick="OnConfirm">Confirmar dispensa</button>
+    </Footer>
+</BrqDialog>
