@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace PxOperations.Api.Features.Nps;
+namespace PxOperations.Api.Features.Nps.Contracts;
 
 public sealed class NpsQueryRequest
 {
@@ -40,17 +40,3 @@ public sealed class NpsQueryRequest
     [FromQuery(Name = "projectId")]
     public int? ProjectId { get; init; }
 }
-
-public sealed record CreateNpsContactRequest(string Name, string Email, string? Role);
-public sealed record UpdateNpsContactRequest(string Name, string Email, string? Role);
-public sealed record CreateNpsDispatchRequest(int ProjectId, string Format, string Language, IReadOnlyList<int>? ContactIds);
-public sealed record WaiveNpsCollectionRequest(string Reason);
-public sealed record SubmitNpsSurveyResponseRequest(
-    int Score,
-    int? Quality,
-    int? Schedule,
-    int? Communication,
-    int? BusinessValue,
-    string? Comment,
-    string? RespondentName,
-    string? RespondentEmail);

@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using PxOperations.Api.Features.Nps;
+using PxOperations.Api.Features.Nps.Contracts;
 using PxOperations.Api.Features.Projects.Contracts;
 using PxOperations.Api.IntegrationTests.Infrastructure;
 using PxOperations.Application.Features.Nps;

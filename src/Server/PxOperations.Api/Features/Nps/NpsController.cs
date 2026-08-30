@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using PxOperations.Application.Features.Nps;
 using PxOperations.Application.Features.Nps.UseCases;
+using PxOperations.Api.Features.Nps.Contracts;
 
 namespace PxOperations.Api.Features.Nps;
 
