@@ -670,6 +670,41 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
         Assert.Equal("critical", byClassification["detractor"]);
     }
 
+    /// <summary>
+    /// Dois operadores gerando link ao mesmo tempo: cada contexto lê a coleção
+    /// sem enxergar o disparo do outro, os dois abrem o mesmo formato e o índice
+    /// único barra o segundo. Isso é conflito de estado, não erro do servidor.
+    /// </summary>
+    [Fact]
+    public async Task Repository_should_recognize_the_database_duplicate_dispatch_violation()
+    {
+        var time = new TestTimeProvider(InitialNow);
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString, time);
+        using var client = factory.CreateClient();
+        var project = await CreateProjectAsync(client, "Duplicate dispatch race");
+        await CreateDispatchAsync(client, project.Id, "complete");
+
+        using var scope = factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var repository = scope.ServiceProvider.GetRequiredService<INpsRepository>();
+        // Sem o Include, este contexto não enxerga o disparo já aberto — é
+        // exatamente o que a segunda requisição simultânea teria em mãos.
+        var collection = await dbContext.NpsCollections
+            .SingleAsync(item => item.ProjectId == project.Id);
+
+        collection.CreateDispatch(
+            NpsFormFormat.Complete,
+            NpsLanguage.Portuguese,
+            [],
+            Guid.NewGuid(),
+            [],
+            InitialNow);
+
+        var exception = await Assert.ThrowsAnyAsync<Exception>(() => dbContext.SaveChangesAsync());
+
+        Assert.True(repository.IsDuplicateDispatchException(exception));
+    }
+
     private static async Task<ProjectResponse> CreateProjectAsync(
         HttpClient client,
         string name,

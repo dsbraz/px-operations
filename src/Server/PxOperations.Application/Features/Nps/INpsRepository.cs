@@ -19,4 +19,10 @@ public interface INpsRepository
     /// resposta repetida.
     /// </summary>
     bool IsDuplicateResponseException(Exception exception);
+
+    /// <summary>
+    /// Mesmo motivo do irmão acima, para o índice que impede dois disparos
+    /// abertos do mesmo formato na mesma coleção.
+    /// </summary>
+    bool IsDuplicateDispatchException(Exception exception);
 }

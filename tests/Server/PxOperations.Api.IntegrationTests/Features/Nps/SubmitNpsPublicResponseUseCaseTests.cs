@@ -57,6 +57,8 @@ public sealed class SubmitNpsPublicResponseUseCaseTests
         public bool IsDuplicateResponseException(Exception exception)
             => RecognizesDuplicate && exception is SaveFailure;
 
+        public bool IsDuplicateDispatchException(Exception exception) => false;
+
         public Task<SurveyResponseContext?> GetResponseContextAsync(
             Guid token,
             string? normalizedEmail,

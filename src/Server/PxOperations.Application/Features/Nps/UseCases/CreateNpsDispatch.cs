@@ -40,7 +40,16 @@ public sealed class CreateNpsDispatchUseCase(
             contactIds.Select(_ => Guid.NewGuid()).ToArray(),
             timeProvider.GetUtcNow());
 
-        await unitOfWork.SaveChangesAsync(ct);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(ct);
+        }
+        catch (Exception exception) when (repository.IsDuplicateDispatchException(exception))
+        {
+            throw new BusinessStateConflictException(
+                "An open NPS dispatch already exists for this format.", exception);
+        }
+
         return dispatch.Id;
     }
 }

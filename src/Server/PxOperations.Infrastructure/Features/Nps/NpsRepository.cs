@@ -29,15 +29,37 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
 
     public async Task<NpsCollection> GetOrCreateCollectionAsync(int projectId, CancellationToken ct)
     {
-        await dbContext.Database.ExecuteSqlInterpolatedAsync($"""
-            INSERT INTO nps_collections (project_id)
-            VALUES ({projectId})
-            ON CONFLICT (project_id) DO NOTHING;
-            """, ct);
+        var existing = await GetCollectionAsync(projectId, ct);
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        // Dois pedidos podem chegar aqui juntos e os dois verem a coleção
+        // ausente. O índice único de project_id decide quem cria; quem perde
+        // solta a própria tentativa do rastreador e relê o que o outro gravou.
+        var created = NpsCollection.Create(projectId);
+        dbContext.NpsCollections.Add(created);
+        try
+        {
+            await dbContext.SaveChangesAsync(ct);
+            return created;
+        }
+        catch (DbUpdateException exception) when (IsDuplicateCollectionException(exception))
+        {
+            dbContext.Entry(created).State = EntityState.Detached;
+        }
 
         return await GetCollectionAsync(projectId, ct)
             ?? throw new InvalidOperationException("The NPS collection could not be persisted.");
     }
+
+    private static bool IsDuplicateCollectionException(DbUpdateException exception)
+        => exception.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: "IX_nps_collections_project_id"
+        };
 
     public async Task<SurveyResponseContext?> GetResponseContextAsync(
         Guid token,
@@ -85,6 +107,19 @@ public sealed class NpsRepository(AppDbContext dbContext) : INpsRepository
     // respostas simultâneas no mesmo link passam as duas pela checagem e a
     // segunda só é barrada pelo índice único. Quem perde a corrida está em
     // conflito de estado, não diante de um erro do servidor.
+    // O disparo é fechado e reaberto na mesma transação, mas dois operadores
+    // gerando link ao mesmo tempo leem a coleção antes de o outro gravar: cada
+    // um abre o seu, e o índice filtrado por status barra o segundo.
+    public bool IsDuplicateDispatchException(Exception exception)
+        => exception is DbUpdateException
+        {
+            InnerException: PostgresException
+            {
+                SqlState: PostgresErrorCodes.UniqueViolation,
+                ConstraintName: "IX_nps_dispatches_collection_id_format"
+            }
+        };
+
     public bool IsDuplicateResponseException(Exception exception)
         => exception is DbUpdateException
         {
