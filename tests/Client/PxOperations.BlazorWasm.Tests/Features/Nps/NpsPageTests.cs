@@ -412,7 +412,10 @@ public sealed class NpsPageTests : BunitContext
             var dialog = Dialog(cut, "Detalhe da coleta");
             Assert.Equal("true", dialog.QuerySelector("[data-format='complete']")!.GetAttribute("aria-pressed"));
             Assert.Contains("Resposta completa filtrada", dialog.TextContent);
-            Assert.Contains(handler.RequestUris, uri => uri?.Query == "?format=complete");
+            Assert.Contains(handler.RequestUris, uri =>
+                uri?.AbsolutePath == "/api/nps/projects/1/responses" &&
+                uri.Query.Contains("format=complete", StringComparison.Ordinal) &&
+                uri.Query.Contains("includeWaived=true", StringComparison.Ordinal));
         });
     }
 
@@ -696,6 +699,53 @@ public sealed class NpsPageTests : BunitContext
             var pill = cut.FindAll(".nps-response-row td .pill")[0];
             Assert.Contains("pill--warn", pill.ClassList);
         });
+    }
+
+    /// <summary>
+    /// O detalhe é aberto com o projeto dispensado incluído; filtrar por formato
+    /// dentro dele não pode aplicar um recorte que o próprio modal ignora, senão
+    /// a lista esvazia e não volta.
+    /// </summary>
+    [Fact]
+    public void Filtering_the_detail_by_format_should_keep_waived_projects_in_scope()
+    {
+        var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects/1", NpsTestHelpers.DetailJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects/1/responses", NpsTestHelpers.FilteredResponsesJson(), HttpStatusCode.OK);
+        Navigate("/nps/coleta?includeWaived=true");
+
+        var cut = Render<NpsPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Projeto ativo", cut.Markup));
+        cut.Find("[aria-label='Ver detalhe de Projeto ativo']").Click();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-format='complete']")));
+
+        cut.Find("[data-format='complete']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var request = handler.RequestUris.Last(uri => uri!.AbsolutePath == "/api/nps/projects/1/responses");
+            Assert.Contains("includeWaived=true", request!.Query, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public void Responses_tab_and_export_should_carry_the_waived_filter()
+    {
+        var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/filter-options", NpsTestHelpers.FilterOptionsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/responses", NpsTestHelpers.ResponsesJson(), HttpStatusCode.OK);
+        Navigate("/nps/respostas?includeWaived=true");
+
+        var cut = Render<NpsPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            var request = handler.RequestUris.Single(uri => uri!.AbsolutePath == "/api/nps/responses");
+            Assert.Contains("includeWaived=true", request!.Query, StringComparison.Ordinal);
+        });
+        Assert.Contains("includeWaived=true", cut.Find("a.btn-ghost").GetAttribute("href")!, StringComparison.Ordinal);
     }
 
     private ProjectsTestHelpers.MultiStubHttpMessageHandler RegisterClient()

@@ -270,7 +270,7 @@ public partial class NpsPage : ComponentBase, IDisposable
     private Task<ICollection<NpsResponseView>> LoadResponsesAsync(CancellationToken ct)
         => NpsClient.ListResponsesAsync(
             NullIfEmpty(search), clients, dcs, projectTypes, deliveryManagers,
-            [], formats, classifications, from, to, null, null, ct);
+            [], formats, classifications, from, to, includeWaived, null, ct);
 
     private async Task SearchChanged(ChangeEventArgs args)
     {
@@ -495,7 +495,7 @@ public partial class NpsPage : ComponentBase, IDisposable
         {
             detailResponses = (await NpsClient.ListProjectResponsesAsync(
                 selectedDetail.Project.Id,
-                null, [], [], [], [], [], selectedFormats, [], null, null, null, null)).ToList();
+                null, [], [], [], [], [], selectedFormats, [], null, null, true, null)).ToList();
         }
         catch (Exception exception)
         {
@@ -644,6 +644,11 @@ public partial class NpsPage : ComponentBase, IDisposable
         Add(values, "classification", classifications);
         Add(values, "from", from);
         Add(values, "to", to);
+        if (includeWaived)
+        {
+            values.Add(new("includeWaived", "true"));
+        }
+
         return values.Count == 0
             ? string.Empty
             : $"?{string.Join('&', values.Select(pair => $"{Uri.EscapeDataString(pair.Key)}={Uri.EscapeDataString(pair.Value)}"))}";
