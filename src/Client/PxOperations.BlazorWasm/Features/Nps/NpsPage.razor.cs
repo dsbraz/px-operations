@@ -21,8 +21,8 @@ public partial class NpsPage : ComponentBase, IDisposable
     private readonly HashSet<string> classifications = new(StringComparer.OrdinalIgnoreCase);
     private CancellationTokenSource? loadCancellation;
     private CancellationTokenSource? searchCancellation;
-    private CancellationTokenSource? expansionCancellation;
     private int loadVersion;
+    private NpsResultsView? resultsView;
     private bool redirecting;
     private bool isLoading;
     private string? loadError;
@@ -36,12 +36,6 @@ public partial class NpsPage : ComponentBase, IDisposable
     private NpsFilterOptionsView? filterOptions;
     private List<NpsProjectView> projects = [];
     private List<NpsProjectResultView> projectResults = [];
-    private string resultSort = "project";
-    private bool resultSortDescending;
-    private int? expandedProjectId;
-    private List<NpsResponseView> expandedResponses = [];
-    private bool expansionLoading;
-    private string? expansionError;
     private List<NpsResponseView> responseAudit = [];
     private bool responseDialogOpen;
     private NpsResponseView? selectedResponse;
@@ -145,7 +139,7 @@ public partial class NpsPage : ComponentBase, IDisposable
                 : NpsTab.Collection;
         if (nextTab != ActiveTab)
         {
-            CloseResultExpansion();
+            resultsView?.CloseExpansion();
         }
 
         ActiveTab = nextTab;
@@ -339,7 +333,7 @@ public partial class NpsPage : ComponentBase, IDisposable
 
     private async Task ClearFiltersAsync()
     {
-        CloseResultExpansion();
+        resultsView?.CloseExpansion();
         search = string.Empty;
         clients.Clear();
         dcs.Clear();
@@ -377,7 +371,7 @@ public partial class NpsPage : ComponentBase, IDisposable
 
     private async Task UpdateUrlAndReloadAsync()
     {
-        CloseResultExpansion();
+        resultsView?.CloseExpansion();
         var target = $"/nps/{TabCode(ActiveTab)}{BuildQuery()}";
         selfNavigatedRoute = target;
         NavigationManager.NavigateTo(target, replace: true);
@@ -555,117 +549,6 @@ public partial class NpsPage : ComponentBase, IDisposable
         await ReloadAsync();
     }
 
-    private IEnumerable<NpsProjectResultView> SortedProjectResults => resultSort switch
-    {
-        "client" => OrderProjectResults(result => result.Client ?? string.Empty),
-        "dc" => OrderProjectResults(result => result.Dc),
-        "responses" => OrderProjectResults(result => result.ResponsesCount),
-        "nps" => OrderProjectResults(result => result.OfficialNps ?? double.MinValue),
-        _ => OrderProjectResults(result => result.Name)
-    };
-
-    private IEnumerable<NpsProjectResultView> OrderProjectResults<TKey>(Func<NpsProjectResultView, TKey> key)
-        => resultSortDescending
-            ? projectResults.OrderByDescending(key).ThenBy(result => result.Name, StringComparer.CurrentCultureIgnoreCase)
-            : projectResults.OrderBy(key).ThenBy(result => result.Name, StringComparer.CurrentCultureIgnoreCase);
-
-    private void SortResults(string column)
-    {
-        if (resultSort == column)
-        {
-            resultSortDescending = !resultSortDescending;
-        }
-        else
-        {
-            resultSort = column;
-            resultSortDescending = false;
-        }
-
-        CloseResultExpansion();
-    }
-
-    private string AriaSort(string column)
-        => resultSort != column ? "none" : resultSortDescending ? "descending" : "ascending";
-
-    private async Task ToggleResultExpansionAsync(NpsProjectResultView result)
-    {
-        if (expandedProjectId == result.Id)
-        {
-            CloseResultExpansion();
-            return;
-        }
-
-        expansionCancellation?.Cancel();
-        expansionCancellation?.Dispose();
-        var expansion = new CancellationTokenSource();
-        expansionCancellation = expansion;
-        expandedProjectId = result.Id;
-        expandedResponses = [];
-        expansionError = null;
-        expansionLoading = true;
-
-        try
-        {
-            expandedResponses = (await NpsClient.ListProjectResponsesAsync(
-                result.Id,
-                null, [], [], [], [], [], [], [], from, to, null, null,
-                expansion.Token)).ToList();
-        }
-        catch (OperationCanceledException) when (expansion.IsCancellationRequested)
-        {
-        }
-        catch (Exception)
-        {
-            if (expandedProjectId == result.Id)
-            {
-                expansionError = "Não foi possível carregar as respostas deste projeto.";
-            }
-        }
-        finally
-        {
-            if (expandedProjectId == result.Id)
-            {
-                expansionLoading = false;
-            }
-        }
-    }
-
-    private Task RetryResultExpansionAsync(NpsProjectResultView result)
-    {
-        expandedProjectId = null;
-        return ToggleResultExpansionAsync(result);
-    }
-
-    private IEnumerable<IGrouping<string, NpsResponseView>> GroupedExpandedResponses
-        => expandedResponses
-            .OrderBy(response => ClassificationOrder(response.Classification))
-            .ThenByDescending(response => response.SubmittedAt)
-            .GroupBy(response => response.Classification);
-
-    private static int ClassificationOrder(string classification) => classification switch
-    {
-        "detractor" => 0,
-        "passive" => 1,
-        _ => 2
-    };
-
-    private void ResultsKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args)
-    {
-        if (args.Key == "Escape")
-        {
-            CloseResultExpansion();
-        }
-    }
-
-    private void CloseResultExpansion()
-    {
-        expansionCancellation?.Cancel();
-        expandedProjectId = null;
-        expandedResponses = [];
-        expansionError = null;
-        expansionLoading = false;
-    }
-
     private void OpenResponseDialog(NpsResponseView response)
     {
         selectedResponse = response;
@@ -742,7 +625,7 @@ public partial class NpsPage : ComponentBase, IDisposable
             return;
         }
 
-        CloseResultExpansion();
+        resultsView?.CloseExpansion();
         ActiveTab = tab;
         var target = TabHref(TabCode(tab));
         selfNavigatedRoute = target;
@@ -768,18 +651,6 @@ public partial class NpsPage : ComponentBase, IDisposable
             actionError = "Não foi possível copiar. Copie manualmente do campo acima.";
         }
     }
-    private static string DisplayAspectAverage(double? value)
-        => value?.ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("pt-BR")) ?? "—";
-    // Interpolar double em cultura corrente gerava "width:33,333%" em pt-BR:
-    // declaração inválida, descartada pelo navegador, barra com largura zero.
-    private static string BarWidth(double percentage)
-        => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"width:{percentage}%");
-
-    private static string AspectMeterValue(double value)
-        => value.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
-    private static string AspectMeterLabel(NpsAspectAverageView aspect, int maximum)
-        => $"{aspect.Label}: média {DisplayAspectAverage(aspect.Average)} de {maximum}, {aspect.ResponsesCount} respostas.";
-
     private void ReadQuery()
     {
         var query = ParseQuery(CurrentRawQuery());
@@ -914,8 +785,6 @@ public partial class NpsPage : ComponentBase, IDisposable
         loadCancellation?.Dispose();
         searchCancellation?.Cancel();
         searchCancellation?.Dispose();
-        expansionCancellation?.Cancel();
-        expansionCancellation?.Dispose();
     }
 
     private sealed record FilterChip(string Key, string Label, string Values);
