@@ -46,6 +46,17 @@ public partial class NpsPublicPage : ComponentBase
         isLoading = true;
         invalidToken = false;
         loadFailed = false;
+
+        // O componente é reaproveitado quando o token muda: sem zerar aqui, o
+        // "Obrigado!" de uma pesquisa já respondida aparecia sobre a próxima, e
+        // nota, comentário e identificação de quem respondeu antes iam junto.
+        submitted = false;
+        submitError = null;
+        score = null;
+        comment = null;
+        respondentName = null;
+        respondentEmail = null;
+        aspects.Clear();
         try
         {
             survey = await NpsClient.GetPublicAsync(Token);

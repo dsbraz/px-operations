@@ -235,6 +235,34 @@ public sealed class NpsPublicPageTests : BunitContext, IAsyncLifetime
         Assert.Equal("true", cut.FindAll(".nps-score-scale button")[8].GetAttribute("aria-pressed"));
     }
 
+    /// <summary>
+    /// O componente é reaproveitado quando o token muda. Sem zerar o estado, a
+    /// confirmação de uma pesquisa já respondida cobre a pesquisa seguinte.
+    /// </summary>
+    [Fact]
+    public void Changing_the_token_should_not_carry_the_previous_answer_over()
+    {
+        var answered = Guid.NewGuid();
+        var fresh = Guid.NewGuid();
+        var handler = RegisterClient(PublicJson(answered, "simplified", "pt", "open"));
+        handler.AddResponse(HttpMethod.Post, ResponseJson(), HttpStatusCode.Created);
+        handler.AddResponse(HttpMethod.Get, PublicJson(fresh, "simplified", "pt", "open"), HttpStatusCode.OK);
+
+        var cut = Render<NpsPublicPage>(parameters => parameters.Add(page => page.Token, answered));
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find(".nps-submit")));
+        cut.Find(".nps-score-scale button").Click();
+        cut.Find(".nps-submit").Click();
+        cut.WaitForAssertion(() => Assert.Contains("Sua resposta foi registrada.", cut.Markup, StringComparison.Ordinal));
+
+        cut.Render(parameters => parameters.Add(page => page.Token, fresh));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.DoesNotContain("Sua resposta foi registrada.", cut.Markup, StringComparison.Ordinal);
+            Assert.NotNull(cut.Find(".nps-submit"));
+        });
+    }
+
     private ProjectsTestHelpers.MultiStubHttpMessageHandler RegisterClient(
         string response,
         HttpStatusCode status = HttpStatusCode.OK)

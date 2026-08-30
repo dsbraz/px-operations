@@ -99,10 +99,17 @@ public partial class NpsResultsView : ComponentBase, IDisposable
 
         try
         {
-            expandedResponses = (await NpsClient.ListProjectResponsesAsync(
+            var responses = (await NpsClient.ListProjectResponsesAsync(
                 result.Id,
                 null, [], [], [], [], [], [], [], From, To, null, null,
                 expansion.Token)).ToList();
+
+            // A continuação pode chegar depois de outra linha ter sido aberta:
+            // sem a guarda, as respostas de A apareciam sob a linha de B.
+            if (expandedProjectId == result.Id)
+            {
+                expandedResponses = responses;
+            }
         }
         catch (OperationCanceledException) when (expansion.IsCancellationRequested)
         {
@@ -151,7 +158,7 @@ public partial class NpsResultsView : ComponentBase, IDisposable
     }
 
     private static string DisplayAspectAverage(double? value)
-        => value?.ToString("0.0", CultureInfo.GetCultureInfo("pt-BR")) ?? "—";
+        => value?.ToString("0.0", NpsDisplay.OperationCulture) ?? "—";
 
     // Interpolar double em cultura corrente gerava "width:33,333%" em pt-BR:
     // declaração inválida, descartada pelo navegador, barra com largura zero.

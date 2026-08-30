@@ -463,6 +463,7 @@ public partial class NpsPage : ComponentBase, IDisposable
             return;
         }
 
+        actionError = null;
         createdDispatch = null;
         createProjectId = project.Id;
         createFormat = action.Format ?? "complete";
@@ -514,6 +515,7 @@ public partial class NpsPage : ComponentBase, IDisposable
 
     private void OpenWaiverDialog(int projectId)
     {
+        actionError = null;
         waiverProjectId = projectId;
         waiverReason = string.Empty;
         waiverDialogOpen = true;
