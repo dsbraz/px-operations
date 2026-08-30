@@ -1,5 +1,6 @@
 using PxOperations.Domain.Exceptions;
 using PxOperations.Domain.Nps;
+using PxOperations.Domain.Projects;
 
 namespace PxOperations.Application.Features.Nps;
 
@@ -49,5 +50,29 @@ public static class NpsCodes
         NpsClassification.Detractor => "Detrator",
         NpsClassification.Passive => "Neutro",
         _ => "Promotor"
+    };
+
+    // Os códigos de filtro chegam como texto na query string. O parsing mora
+    // aqui, junto de ParseFormat e ParseLanguage, e não na infraestrutura:
+    // traduzir código de entrada não é trabalho de quem consulta o banco.
+    public static DeliveryCenter ParseDc(string value)
+        => Enum.TryParse<DeliveryCenter>(value, true, out var parsed)
+            ? parsed
+            : throw new BusinessRuleValidationException("Invalid delivery center.");
+
+    public static ProjectType ParseProjectType(string value) => value.Trim().ToLowerInvariant() switch
+    {
+        "squad" => ProjectType.Squad,
+        "fixed_scope" => ProjectType.FixedScope,
+        "staffing" => ProjectType.Staffing,
+        _ => throw new BusinessRuleValidationException("Invalid project type.")
+    };
+
+    public static NpsClassification ParseClassification(string value) => value.Trim().ToLowerInvariant() switch
+    {
+        "detractor" => NpsClassification.Detractor,
+        "passive" => NpsClassification.Passive,
+        "promoter" => NpsClassification.Promoter,
+        _ => throw new BusinessRuleValidationException("Invalid NPS classification.")
     };
 }

@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using PxOperations.Application.Features.Nps;
-using PxOperations.Domain.Exceptions;
 using PxOperations.Domain.Nps;
 using PxOperations.Domain.Projects;
 using PxOperations.Infrastructure.Persistence;
@@ -469,13 +468,13 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
 
         if (filter.Dcs.Count != 0)
         {
-            var values = filter.Dcs.Select(ParseDc).ToArray();
+            var values = filter.Dcs.Select(NpsCodes.ParseDc).ToArray();
             query = query.Where(project => values.Contains(project.Dc));
         }
 
         if (filter.ProjectTypes.Count != 0)
         {
-            var values = filter.ProjectTypes.Select(ParseProjectType).ToArray();
+            var values = filter.ProjectTypes.Select(NpsCodes.ParseProjectType).ToArray();
             query = query.Where(project => values.Contains(project.Type));
         }
 
@@ -530,7 +529,7 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
 
         if (filter.Classifications.Count != 0)
         {
-            var classifications = filter.Classifications.Select(ParseClassification).ToArray();
+            var classifications = filter.Classifications.Select(NpsCodes.ParseClassification).ToArray();
             query = query.Where(response => classifications.Contains(response.Classification));
         }
 
@@ -930,27 +929,6 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
         ProjectType.Squad => "Squad",
         ProjectType.FixedScope => "Escopo fechado",
         _ => "Staffing"
-    };
-
-    private static DeliveryCenter ParseDc(string value)
-        => Enum.TryParse<DeliveryCenter>(value, true, out var parsed)
-            ? parsed
-            : throw new BusinessRuleValidationException("Invalid delivery center.");
-
-    private static ProjectType ParseProjectType(string value) => value.Trim().ToLowerInvariant() switch
-    {
-        "squad" => ProjectType.Squad,
-        "fixed_scope" => ProjectType.FixedScope,
-        "staffing" => ProjectType.Staffing,
-        _ => throw new BusinessRuleValidationException("Invalid project type.")
-    };
-
-    private static NpsClassification ParseClassification(string value) => value.Trim().ToLowerInvariant() switch
-    {
-        "detractor" => NpsClassification.Detractor,
-        "passive" => NpsClassification.Passive,
-        "promoter" => NpsClassification.Promoter,
-        _ => throw new BusinessRuleValidationException("Invalid NPS classification.")
     };
 
     private sealed record SnapshotResponse(
