@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -23,7 +22,7 @@ public sealed class NpsController(
 {
     [HttpGet("dashboard")]
     public async Task<ActionResult<NpsDashboardView>> GetDashboard([FromQuery] NpsQueryRequest request, CancellationToken ct)
-        => Ok(await queries.GetDashboardAsync(BuildFilter(request), timeProvider.GetUtcNow(), ct));
+        => Ok(await queries.GetDashboardAsync(NpsMappings.ToFilter(request), timeProvider.GetUtcNow(), ct));
 
     [HttpGet("filter-options")]
     public async Task<ActionResult<NpsFilterOptionsView>> GetFilterOptions(CancellationToken ct)
@@ -33,20 +32,20 @@ public sealed class NpsController(
     public async Task<ActionResult<IReadOnlyList<NpsProjectResultView>>> ListProjectResults(
         [FromQuery] NpsQueryRequest request,
         CancellationToken ct)
-        => Ok(await queries.ListProjectResultsAsync(BuildFilter(request), ct));
+        => Ok(await queries.ListProjectResultsAsync(NpsMappings.ToFilter(request), ct));
 
     [HttpGet("responses")]
     public async Task<ActionResult<IReadOnlyList<NpsResponseView>>> ListResponses(
         [FromQuery] NpsQueryRequest request,
         CancellationToken ct)
-        => Ok(await queries.ListResponsesAsync(BuildFilter(request), ct));
+        => Ok(await queries.ListResponsesAsync(NpsMappings.ToFilter(request), ct));
 
     [HttpGet("projects")]
     public async Task<ActionResult<IReadOnlyList<NpsProjectView>>> ListProjects(
         [FromQuery] NpsQueryRequest request,
         CancellationToken ct)
     {
-        var collectionFilter = BuildFilter(request) with
+        var collectionFilter = NpsMappings.ToFilter(request) with
         {
             Statuses = [],
             Formats = [],
@@ -69,7 +68,7 @@ public sealed class NpsController(
         int id,
         [FromQuery] NpsQueryRequest request,
         CancellationToken ct)
-        => Ok(await queries.ListProjectResponsesAsync(id, BuildFilter(request), ct));
+        => Ok(await queries.ListProjectResponsesAsync(id, NpsMappings.ToFilter(request), ct));
 
     [HttpGet("projects/{projectId:int}/contacts")]
     public async Task<ActionResult<IReadOnlyList<NpsContactView>>> ListContacts(
@@ -194,7 +193,7 @@ public sealed class NpsController(
     [HttpGet("responses/export")]
     public async Task<IActionResult> ExportResponses([FromQuery] NpsQueryRequest request, CancellationToken ct)
     {
-        var responses = await queries.ListResponsesAsync(BuildFilter(request), ct);
+        var responses = await queries.ListResponsesAsync(NpsMappings.ToFilter(request), ct);
         return File(
             Encoding.UTF8.GetBytes(NpsResponsesCsv.Build(responses)),
             "text/csv; charset=utf-8",
@@ -203,24 +202,4 @@ public sealed class NpsController(
 
     private ActionResult NotFoundProblem()
         => Problem(statusCode: StatusCodes.Status404NotFound, title: "Resource not found");
-
-    private static NpsFilter BuildFilter(NpsQueryRequest request)
-        => new(
-            request.Search?.Trim(),
-            request.Client,
-            request.Dc,
-            request.ProjectType,
-            request.DeliveryManager,
-            request.Status,
-            request.Format,
-            request.Classification,
-            ParseDate(request.From),
-            ParseDate(request.To),
-            request.IncludeWaived,
-            request.ProjectId);
-
-    private static DateOnly? ParseDate(string? value)
-        => string.IsNullOrWhiteSpace(value)
-            ? null
-            : DateOnly.ParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture);
 }
