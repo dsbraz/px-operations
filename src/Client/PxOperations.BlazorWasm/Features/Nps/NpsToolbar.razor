@@ -1,0 +1,94 @@
+@using PxOperations.Ui.Components.Forms
+
+<div class="toolbar nps-toolbar">
+    @if (ShowsFilters)
+    {
+        <div class="search-wrap nps-search">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" />
+            </svg>
+            <input value="@Search" @oninput="OnSearchInput" placeholder="@SearchPlaceholder" />
+        </div>
+        <BrqFilterPanel ActiveFacetCount="@ActiveFacetCount" OnClear="OnClear">
+            <fieldset>
+                <legend>Cliente</legend>
+                @foreach (var option in FilterOptions.Clients)
+                {
+                    <label><input type="checkbox" checked="@Clients.Contains(option.Code)" @onchange='() => ToggleAsync("client", option.Code)' />@option.Label</label>
+                }
+            </fieldset>
+            <fieldset>
+                <legend>DC</legend>
+                @foreach (var option in FilterOptions.Dcs)
+                {
+                    <label><input type="checkbox" checked="@Dcs.Contains(option.Code)" @onchange='() => ToggleAsync("dc", option.Code)' />@option.Label</label>
+                }
+            </fieldset>
+            <fieldset>
+                <legend>Tipo</legend>
+                @foreach (var option in FilterOptions.ProjectTypes)
+                {
+                    <label><input type="checkbox" checked="@ProjectTypes.Contains(option.Code)" @onchange='() => ToggleAsync("projectType", option.Code)' />@option.Label</label>
+                }
+            </fieldset>
+            <fieldset>
+                <legend>Delivery Manager</legend>
+                @foreach (var option in FilterOptions.DeliveryManagers)
+                {
+                    <label><input type="checkbox" checked="@DeliveryManagers.Contains(option.Code)" @onchange='() => ToggleAsync("deliveryManager", option.Code)' />@option.Label</label>
+                }
+            </fieldset>
+            @if (ActiveTab == NpsTab.Collection)
+            {
+                <fieldset>
+                    <legend>Dispensados</legend>
+                    <label><input type="checkbox" checked="@IncludeWaived" @onchange="OnToggleWaived" />Mostrar dispensados</label>
+                </fieldset>
+            }
+            @if (ActiveTab == NpsTab.Results)
+            {
+                <fieldset>
+                    <legend>Status</legend>
+                    @foreach (var option in FilterOptions.Statuses)
+                    {
+                        <label><input type="checkbox" checked="@Statuses.Contains(option.Code)" @onchange='() => ToggleAsync("status", option.Code)' />@option.Label</label>
+                    }
+                </fieldset>
+                <fieldset>
+                    <legend>Data da coleta</legend>
+                    <label>De <input type="date" value="@From" @onchange="OnFromChanged" /></label>
+                    <label>Até <input type="date" value="@To" @onchange="OnToChanged" /></label>
+                </fieldset>
+            }
+            @if (ActiveTab == NpsTab.Responses)
+            {
+                <fieldset>
+                    <legend>Formato</legend>
+                    @foreach (var option in FilterOptions.Formats)
+                    {
+                        <label><input type="checkbox" checked="@Formats.Contains(option.Code)" @onchange='() => ToggleAsync("format", option.Code)' />@option.Label</label>
+                    }
+                </fieldset>
+                <fieldset>
+                    <legend>Classificação</legend>
+                    @foreach (var option in FilterOptions.Classifications)
+                    {
+                        <label><input type="checkbox" checked="@Classifications.Contains(option.Code)" @onchange='() => ToggleAsync("classification", option.Code)' />@option.Label</label>
+                    }
+                </fieldset>
+                <fieldset>
+                    <legend>Recebida em</legend>
+                    <label>De <input type="date" value="@From" @onchange="OnFromChanged" /></label>
+                    <label>Até <input type="date" value="@To" @onchange="OnToChanged" /></label>
+                </fieldset>
+            }
+        </BrqFilterPanel>
+    }
+
+    <nav class="view-tabs" aria-label="Visões do NPS">
+        <a class="vtab @(ActiveTab == NpsTab.Collection ? "active" : null)" href="@CollectionHref" @onclick="() => OnTabChange.InvokeAsync(NpsTab.Collection)" @onclick:preventDefault="true">Coleta</a>
+        <a class="vtab @(ActiveTab == NpsTab.Results ? "active" : null)" href="@ResultsHref" @onclick="() => OnTabChange.InvokeAsync(NpsTab.Results)" @onclick:preventDefault="true">Resultados</a>
+        <a class="vtab @(ActiveTab == NpsTab.Responses ? "active" : null)" href="@ResponsesHref" @onclick="() => OnTabChange.InvokeAsync(NpsTab.Responses)" @onclick:preventDefault="true">Respostas</a>
+    </nav>
+</div>

@@ -300,8 +300,26 @@ public partial class NpsPage : ComponentBase, IDisposable
         }
     }
 
-    private async Task ToggleFacetAsync(HashSet<string> facet, string value)
+    private string SearchPlaceholder => ActiveTab == NpsTab.Responses
+        ? "Buscar projeto, pessoa ou comentário"
+        : "Buscar projeto ou cliente";
+
+    private HashSet<string> FacetFor(string key) => key switch
     {
+        "client" => clients,
+        "dc" => dcs,
+        "projectType" => projectTypes,
+        "deliveryManager" => deliveryManagers,
+        "status" => statuses,
+        "format" => formats,
+        _ => classifications
+    };
+
+    private async Task ToggleFacetAsync(NpsFacetToggle toggle)
+    {
+        var facet = FacetFor(toggle.Key);
+        var value = toggle.Value;
+
         if (!facet.Add(value))
         {
             facet.Remove(value);

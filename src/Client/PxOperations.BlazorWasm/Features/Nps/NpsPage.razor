@@ -28,98 +28,32 @@
                     OverdueProjects="@(dashboard?.OverdueProjects)" />
     }
 
-    <div class="toolbar nps-toolbar">
-        @if (ShowsFilters)
-        {
-            <div class="search-wrap nps-search">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="M21 21l-4.35-4.35" />
-                </svg>
-                <input value="@search" @oninput="SearchChanged" placeholder="@(ActiveTab == NpsTab.Responses ? "Buscar projeto, pessoa ou comentário" : "Buscar projeto ou cliente")" />
-            </div>
-            <BrqFilterPanel ActiveFacetCount="@ActiveFacetCount" OnClear="ClearFiltersAsync">
-                <fieldset>
-                    <legend>Cliente</legend>
-                    @foreach (var option in FilterOptions.Clients)
-                    {
-                        <label><input type="checkbox" checked="@clients.Contains(option.Code)" @onchange="() => ToggleFacetAsync(clients, option.Code)" />@option.Label</label>
-                    }
-                </fieldset>
-                <fieldset>
-                    <legend>DC</legend>
-                    @foreach (var option in FilterOptions.Dcs)
-                    {
-                        <label><input type="checkbox" checked="@dcs.Contains(option.Code)" @onchange="() => ToggleFacetAsync(dcs, option.Code)" />@option.Label</label>
-                    }
-                </fieldset>
-                <fieldset>
-                    <legend>Tipo</legend>
-                    @foreach (var option in FilterOptions.ProjectTypes)
-                    {
-                        <label><input type="checkbox" checked="@projectTypes.Contains(option.Code)" @onchange="() => ToggleFacetAsync(projectTypes, option.Code)" />@option.Label</label>
-                    }
-                </fieldset>
-                <fieldset>
-                    <legend>Delivery Manager</legend>
-                    @foreach (var option in FilterOptions.DeliveryManagers)
-                    {
-                        <label><input type="checkbox" checked="@deliveryManagers.Contains(option.Code)" @onchange="() => ToggleFacetAsync(deliveryManagers, option.Code)" />@option.Label</label>
-                    }
-                </fieldset>
-                @if (ActiveTab == NpsTab.Collection)
-                {
-                    <fieldset>
-                        <legend>Dispensados</legend>
-                        <label><input type="checkbox" checked="@includeWaived" @onchange="ToggleWaivedAsync" />Mostrar dispensados</label>
-                    </fieldset>
-                }
-                @if (ActiveTab == NpsTab.Results)
-                {
-                    <fieldset>
-                        <legend>Status</legend>
-                        @foreach (var option in FilterOptions.Statuses)
-                        {
-                            <label><input type="checkbox" checked="@statuses.Contains(option.Code)" @onchange="() => ToggleFacetAsync(statuses, option.Code)" />@option.Label</label>
-                        }
-                    </fieldset>
-                    <fieldset>
-                        <legend>Data da coleta</legend>
-                        <label>De <input type="date" value="@from" @onchange="FromChangedAsync" /></label>
-                        <label>Até <input type="date" value="@to" @onchange="ToChangedAsync" /></label>
-                    </fieldset>
-                }
-                @if (ActiveTab == NpsTab.Responses)
-                {
-                    <fieldset>
-                        <legend>Formato</legend>
-                        @foreach (var option in FilterOptions.Formats)
-                        {
-                            <label><input type="checkbox" checked="@formats.Contains(option.Code)" @onchange="() => ToggleFacetAsync(formats, option.Code)" />@option.Label</label>
-                        }
-                    </fieldset>
-                    <fieldset>
-                        <legend>Classificação</legend>
-                        @foreach (var option in FilterOptions.Classifications)
-                        {
-                            <label><input type="checkbox" checked="@classifications.Contains(option.Code)" @onchange="() => ToggleFacetAsync(classifications, option.Code)" />@option.Label</label>
-                        }
-                    </fieldset>
-                    <fieldset>
-                        <legend>Recebida em</legend>
-                        <label>De <input type="date" value="@from" @onchange="FromChangedAsync" /></label>
-                        <label>Até <input type="date" value="@to" @onchange="ToChangedAsync" /></label>
-                    </fieldset>
-                }
-            </BrqFilterPanel>
-        }
-
-        <nav class="view-tabs" aria-label="Visões do NPS">
-            <a class="vtab @(ActiveTab == NpsTab.Collection ? "active" : null)" href="@TabHref("coleta")" @onclick="() => ChangeTabAsync(NpsTab.Collection)" @onclick:preventDefault="true">Coleta</a>
-            <a class="vtab @(ActiveTab == NpsTab.Results ? "active" : null)" href="@TabHref("resultados")" @onclick="() => ChangeTabAsync(NpsTab.Results)" @onclick:preventDefault="true">Resultados</a>
-            <a class="vtab @(ActiveTab == NpsTab.Responses ? "active" : null)" href="@TabHref("respostas")" @onclick="() => ChangeTabAsync(NpsTab.Responses)" @onclick:preventDefault="true">Respostas</a>
-        </nav>
-    </div>
+    <NpsToolbar ShowsFilters="@ShowsFilters"
+                ActiveTab="@ActiveTab"
+                FilterOptions="@FilterOptions"
+                Search="@search"
+                SearchPlaceholder="@SearchPlaceholder"
+                OnSearchInput="SearchChanged"
+                ActiveFacetCount="@ActiveFacetCount"
+                OnClear="ClearFiltersAsync"
+                Clients="@clients"
+                Dcs="@dcs"
+                ProjectTypes="@projectTypes"
+                DeliveryManagers="@deliveryManagers"
+                Statuses="@statuses"
+                Formats="@formats"
+                Classifications="@classifications"
+                OnToggleFacet="ToggleFacetAsync"
+                IncludeWaived="@includeWaived"
+                OnToggleWaived="ToggleWaivedAsync"
+                From="@from"
+                To="@to"
+                OnFromChanged="FromChangedAsync"
+                OnToChanged="ToChangedAsync"
+                CollectionHref="@TabHref("coleta")"
+                ResultsHref="@TabHref("resultados")"
+                ResponsesHref="@TabHref("respostas")"
+                OnTabChange="ChangeTabAsync" />
 
     @if (ShowsFilters)
     {

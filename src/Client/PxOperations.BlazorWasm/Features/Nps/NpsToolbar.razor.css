@@ -1,0 +1,41 @@
+.nps-toolbar {
+    overflow: visible;
+    z-index: 5;
+}
+
+.nps-toolbar ::deep .fmenu {
+    position: relative;
+}
+
+@media (max-width: 56.25rem) {
+    .nps-toolbar {
+        padding-inline: 16px;
+    }
+
+    .nps-toolbar .view-tabs {
+        margin-left: auto;
+    }
+}
+
+@media (max-width: 48rem) {
+    .nps-toolbar {
+        align-items: stretch;
+    }
+
+    .nps-toolbar ::deep .fmenu__pop {
+        inset-inline-end: 0;
+        inset-inline-start: auto;
+    }
+
+    .nps-toolbar .view-tabs {
+        margin-left: 0;
+        order: 3;
+        overflow-x: auto;
+        width: 100%;
+    }
+
+    .nps-toolbar .vtab {
+        flex: 1;
+        text-align: center;
+    }
+}

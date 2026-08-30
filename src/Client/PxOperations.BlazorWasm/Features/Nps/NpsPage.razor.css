@@ -30,15 +30,6 @@
     margin-top: .2rem;
 }
 
-.nps-toolbar {
-    overflow: visible;
-    z-index: 5;
-}
-
-.nps-toolbar ::deep .fmenu {
-    position: relative;
-}
-
 .nps-filter-chips {
     flex-wrap: wrap;
     padding: 0 40px 12px;
@@ -911,14 +902,9 @@
 
 @media (max-width: 56.25rem) {
     .nps-page-header,
-    .nps-toolbar,
     .nps-filter-chips,
     .nps-content {
         padding-inline: 16px;
-    }
-
-    .nps-toolbar .view-tabs {
-        margin-left: auto;
     }
 
     .nps-executive-panels {
@@ -937,27 +923,6 @@
     }
 
     .nps-page-actions > * {
-        flex: 1;
-        text-align: center;
-    }
-
-    .nps-toolbar {
-        align-items: stretch;
-    }
-
-    .nps-toolbar ::deep .fmenu__pop {
-        inset-inline-end: 0;
-        inset-inline-start: auto;
-    }
-
-    .nps-toolbar .view-tabs {
-        margin-left: 0;
-        order: 3;
-        overflow-x: auto;
-        width: 100%;
-    }
-
-    .nps-toolbar .vtab {
         flex: 1;
         text-align: center;
     }
