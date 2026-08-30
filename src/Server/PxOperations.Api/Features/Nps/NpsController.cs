@@ -57,6 +57,8 @@ public sealed class NpsController(
     }
 
     [HttpGet("projects/{id:int}")]
+    [ProducesResponseType<NpsProjectDetailView>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<NpsProjectDetailView>> GetProject(int id, CancellationToken ct)
     {
         var project = await queries.GetProjectAsync(id, timeProvider.GetUtcNow(), ct);
@@ -116,6 +118,8 @@ public sealed class NpsController(
         => Ok(await queries.ListDispatchesAsync(id, timeProvider.GetUtcNow(), ct));
 
     [HttpGet("dispatches/{id:int}")]
+    [ProducesResponseType<NpsDispatchDetailView>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<NpsDispatchDetailView>> GetDispatch(int id, CancellationToken ct)
     {
         var dispatch = await queries.GetDispatchAsync(id, timeProvider.GetUtcNow(), ct);
@@ -162,6 +166,8 @@ public sealed class NpsController(
     }
 
     [HttpGet("public/{token:guid}")]
+    [ProducesResponseType<NpsPublicSurveyView>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<NpsPublicSurveyView>> GetPublic(Guid token, CancellationToken ct)
     {
         var survey = await queries.GetPublicSurveyAsync(token, timeProvider.GetUtcNow(), ct);
