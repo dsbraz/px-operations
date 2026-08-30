@@ -47,7 +47,21 @@ public partial class BrqDialog : ComponentBase, IAsyncDisposable
 
         if (module is null)
         {
-            module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", ModulePath);
+            var loaded = await JSRuntime.InvokeAsync<IJSObjectReference>("import", ModulePath);
+
+            // O import é assíncrono: ser descartado no meio dele já rodou o
+            // DisposeAsync, que não tinha módulo para soltar. Sem esta guarda a
+            // continuação registrava os listeners de close e cancel num diálogo
+            // já desconectado e chamava showModal num elemento fora do
+            // documento, que lança.
+            if (disposed)
+            {
+                try { await loaded.DisposeAsync(); }
+                catch (JSDisconnectedException) { }
+                return;
+            }
+
+            module = loaded;
             selfReference = DotNetObjectReference.Create(this);
         }
 
