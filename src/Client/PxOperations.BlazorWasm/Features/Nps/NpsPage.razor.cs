@@ -59,19 +59,10 @@ public partial class NpsPage : ComponentBase, IDisposable
     private int waiverProjectId;
     private string waiverReason = string.Empty;
 
-    private static readonly IReadOnlyList<BoardColumn> BoardColumns =
-    [
-        new("no_link", "Sem link", "kb-gray"),
-        new("awaiting_response", "Aguardando resposta", "kb-orange"),
-        new("recollection", "Recoleta", "kb-purple"),
-        new("current", "Em dia", "kb-green")
-    ];
-
     private NpsTab ActiveTab { get; set; }
     private bool ShowsFilters => true;
     private bool ShowsIndicators => ActiveTab is NpsTab.Collection or NpsTab.Results;
     private NpsFilterOptionsView FilterOptions => filterOptions ?? dashboard?.FilterOptions ?? new NpsFilterOptionsView();
-    private IReadOnlyList<NpsProjectView> WaivedProjects => projects.Where(project => project.Stage.Code == "waived").ToArray();
     private string CreateDialogDescription => createdDispatch is null
         ? "Escolha a rodada que será compartilhada."
         : "O link usa a validade devolvida pelo servidor.";
@@ -564,9 +555,6 @@ public partial class NpsPage : ComponentBase, IDisposable
         await ReloadAsync();
     }
 
-    private IReadOnlyList<NpsProjectView> ProjectsForStage(string stage)
-        => projects.Where(project => project.Stage.Code == stage).ToArray();
-
     private IEnumerable<NpsProjectResultView> SortedProjectResults => resultSort switch
     {
         "client" => OrderProjectResults(result => result.Client ?? string.Empty),
@@ -918,15 +906,6 @@ public partial class NpsPage : ComponentBase, IDisposable
         _ => "coleta"
     };
 
-    private static BrqStatusTone Tone(string tone) => tone switch
-    {
-        "positive" => BrqStatusTone.Positive,
-        "warning" => BrqStatusTone.Warning,
-        "critical" => BrqStatusTone.Danger,
-        "info" => BrqStatusTone.Info,
-        _ => BrqStatusTone.Neutral
-    };
-
     private static string? NullIfEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     public void Dispose()
@@ -939,7 +918,6 @@ public partial class NpsPage : ComponentBase, IDisposable
         expansionCancellation?.Dispose();
     }
 
-    private sealed record BoardColumn(string Code, string Label, string ColorClass);
     private sealed record FilterChip(string Key, string Label, string Values);
 }
 

@@ -6,8 +6,6 @@
 .nps-page-header,
 .nps-page-actions,
 .nps-filter-chips,
-.nps-card-heading,
-.nps-card-actions,
 .nps-created-link div,
 .nps-detail-format-filter {
     align-items: center;
@@ -52,164 +50,6 @@
     padding: 0 40px 40px;
     position: relative;
     z-index: 1;
-}
-
-.nps-loading {
-    color: var(--muted);
-    font-size: .72rem;
-    margin-bottom: .75rem;
-}
-
-.nps-load-error {
-    align-items: center;
-    display: flex;
-    justify-content: space-between;
-    margin: 0 0 1rem;
-    padding: 1rem;
-}
-
-.nps-board {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(15rem, 1fr));
-    max-width: 100%;
-    min-width: 0;
-    overflow-x: auto;
-    width: 100%;
-}
-
-.nps-board-column {
-    max-width: none;
-    min-height: 20rem;
-    min-width: 0;
-    width: auto;
-}
-
-.nps-board-column .kanban-col-header {
-    flex: none;
-}
-
-.nps-card-list {
-    max-height: min(62vh, 42rem);
-    min-height: 12rem;
-}
-
-.nps-project-card {
-    cursor: default;
-    gap: .65rem;
-}
-
-.nps-project-card:hover {
-    border-color: var(--border);
-    box-shadow: 0 2px 14px rgba(75, 20, 140, .08);
-}
-
-.nps-card-heading {
-    align-items: flex-start;
-    flex-wrap: wrap;
-    justify-content: space-between;
-}
-
-.nps-card-heading > div {
-    flex: 1 1 8rem;
-    min-width: 0;
-}
-
-.nps-card-heading h3 {
-    overflow-wrap: anywhere;
-}
-
-.nps-temporal {
-    display: flex;
-}
-
-.nps-project-card dl {
-    display: grid;
-    gap: .5rem;
-    grid-template-columns: minmax(0, 1fr) auto;
-    margin: 0;
-}
-
-.nps-project-card dl div {
-    display: grid;
-    min-width: 0;
-}
-
-.nps-project-card dt {
-    color: var(--muted);
-    font-size: .58rem;
-    font-weight: 700;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-}
-
-.nps-project-card dd {
-    font-size: .72rem;
-    margin: .15rem 0 0;
-    overflow-wrap: anywhere;
-}
-
-.nps-card-links {
-    border-top: 1px solid var(--border);
-    display: grid;
-    gap: .35rem;
-    list-style: none;
-    margin: 0;
-    padding: .6rem 0 0;
-}
-
-.nps-card-links li {
-    display: grid;
-    font-size: .66rem;
-    gap: .1rem;
-}
-
-.nps-card-links span {
-    color: var(--muted);
-}
-
-.nps-card-actions {
-    align-items: stretch;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    margin-top: .1rem;
-}
-
-.nps-primary-action {
-    justify-content: center;
-    min-width: 0;
-    padding-inline: .65rem;
-}
-
-.nps-card-icon-action svg {
-    height: .95rem;
-    width: .95rem;
-}
-
-.nps-waived-section {
-    border-top: 1px solid var(--border);
-    display: grid;
-    gap: .75rem;
-    margin-top: 1.25rem;
-    padding-top: 1.25rem;
-}
-
-.nps-waived-section h2 {
-    font-size: .9rem;
-}
-
-.nps-waived-grid {
-    display: grid;
-    gap: .75rem;
-    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
-}
-
-.nps-waived-grid .nps-project-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: .65rem;
-    display: grid;
-    gap: .75rem;
-    padding: .9rem;
 }
 
 .nps-executive-panels {
@@ -892,12 +732,6 @@
 
 ::deep .nps-detail-dialog {
     width: min(42rem, 92vw);
-}
-
-@media (max-width: 64rem) {
-    .nps-board {
-        grid-template-columns: repeat(4, minmax(14rem, 1fr));
-    }
 }
 
 @media (max-width: 56.25rem) {

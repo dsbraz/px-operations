@@ -78,111 +78,15 @@
 
         @if (ActiveTab == NpsTab.Collection)
         {
-            @if (isLoading)
-            {
-                <p class="nps-loading" role="status">Atualizando quadro…</p>
-            }
-            @if (loadError is not null)
-            {
-                <div class="status-card error nps-load-error">
-                    <p>@loadError</p>
-                    <button type="button" class="btn btn-purple" @onclick="ReloadAsync">Tentar novamente</button>
-                </div>
-            }
-
-            <div class="kanban-board nps-board" aria-busy="@isLoading">
-                @foreach (var column in BoardColumns)
-                {
-                    var stageProjects = ProjectsForStage(column.Code);
-                    <section class="kanban-column nps-board-column @column.ColorClass" data-stage="@column.Code">
-                        <header class="kanban-col-header">
-                            <h2 class="kanban-col-title">@column.Label</h2>
-                            <span class="kanban-col-count">@stageProjects.Count</span>
-                        </header>
-                        <div class="kanban-col-body nps-card-list">
-                            @if (stageProjects.Count == 0)
-                            {
-                                <div class="kanban-empty">Nenhum projeto nesta etapa</div>
-                            }
-                            else
-                            {
-                                @foreach (var project in stageProjects)
-                                {
-                                    <article class="kanban-card nps-project-card">
-                                        <div class="nps-card-heading">
-                                            <div>
-                                                <h3 class="kanban-card-name">@project.Name</h3>
-                                                <p class="kanban-card-meta">@project.Client · @project.Dc</p>
-                                            </div>
-                                            <BrqStatusPill Label="@project.Stage.Label" Tone="@Tone(project.Stage.Tone)" Size="BrqSize.Small" />
-                                        </div>
-                                        <div class="nps-temporal">
-                                            <BrqStatusPill Label="@project.Temporal.Label" Tone="@Tone(project.Temporal.Tone)" Size="BrqSize.Small" />
-                                        </div>
-                                        <dl>
-                                            <div><dt>Delivery Manager</dt><dd>@(project.DeliveryManager ?? "—")</dd></div>
-                                            <div><dt>Respostas</dt><dd>@project.ResponsesCount</dd></div>
-                                        </dl>
-                                        @if (project.ActiveLinks.Count != 0)
-                                        {
-                                            <ul class="nps-card-links">
-                                                @foreach (var link in project.ActiveLinks)
-                                                {
-                                                    <li><strong>@link.FormatLabel</strong><span>@link.AvailabilityLabel · até @NpsTimeDisplay.Date(link.ExpiresAt)</span></li>
-                                                }
-                                            </ul>
-                                        }
-                                        <div class="nps-card-actions">
-                                            @if (project.PrimaryAction is not null)
-                                            {
-                                                <button type="button" class="btn btn-purple nps-primary-action" @onclick="() => RunPrimaryActionAsync(project)">@project.PrimaryAction.Label</button>
-                                            }
-                                            <button type="button"
-                                                    class="ibtn nps-card-icon-action"
-                                                    title="Ver detalhe"
-                                                    aria-label="Ver detalhe de @project.Name"
-                                                    @onclick="() => OpenDetailAsync(project.Id)">
-                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                                                    <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
-                                                    <circle cx="12" cy="12" r="2.5" />
-                                                </svg>
-                                            </button>
-                                            <button type="button"
-                                                    class="ibtn nps-card-icon-action del"
-                                                    title="Dispensar coleta"
-                                                    aria-label="Dispensar coleta de @project.Name"
-                                                    @onclick="() => OpenWaiverDialog(project.Id)">
-                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                                                    <circle cx="12" cy="12" r="8.5" />
-                                                    <path d="m6 6 12 12" />
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </article>
-                                }
-                            }
-                        </div>
-                    </section>
-                }
-            </div>
-
-            @if (includeWaived)
-            {
-                <section class="nps-waived-section">
-                    <h2>Dispensados</h2>
-                    <div class="nps-waived-grid">
-                        @foreach (var project in WaivedProjects)
-                        {
-                            <article class="nps-project-card">
-                                <h3>@project.Name</h3>
-                                <p>@project.Waiver?.Reason</p>
-                                <BrqStatusPill Label="@project.Temporal.Label" Tone="BrqStatusTone.Neutral" Size="BrqSize.Small" />
-                                <button type="button" class="btn btn-purple" @onclick="() => ReactivateAsync(project.Id)">Reativar</button>
-                            </article>
-                        }
-                    </div>
-                </section>
-            }
+            <NpsCollectionBoard Projects="@projects"
+                                IsLoading="@isLoading"
+                                LoadError="@loadError"
+                                OnReload="ReloadAsync"
+                                IncludeWaived="@includeWaived"
+                                OnPrimaryAction="RunPrimaryActionAsync"
+                                OnOpenDetail="OpenDetailAsync"
+                                OnOpenWaiver="OpenWaiverDialog"
+                                OnReactivate="ReactivateAsync" />
         }
         else if (ActiveTab == NpsTab.Results)
         {
@@ -296,7 +200,7 @@
                                     <td>@(result.DeliveryManager ?? "—")</td>
                                     <td>@result.ResponsesCount</td>
                                     <td>@NpsDisplay.Metric(result.OfficialNps)</td>
-                                    <td><BrqStatusPill Label="@result.Status.Label" Tone="@Tone(result.Status.Tone)" Size="BrqSize.Small" /></td>
+                                    <td><BrqStatusPill Label="@result.Status.Label" Tone="@NpsTone.From(result.Status.Tone)" Size="BrqSize.Small" /></td>
                                 </tr>
                                 @if (expandedProjectId == result.Id)
                                 {
@@ -385,7 +289,7 @@
                                     @onkeydown="args => ResponseRowKeyDown(args, response)">
                                     <td class="data-table__cell-strong"><button type="button" class="nps-response-project" @onclick:stopPropagation="true" @onclick="() => OpenResponseDialog(response)">@response.ProjectName</button></td>
                                     <td><strong class="nps-response-score">@response.Score</strong></td>
-                                    <td><BrqStatusPill Label="@response.ClassificationLabel" Tone="@Tone(response.ClassificationTone)" Size="BrqSize.Small" /></td>
+                                    <td><BrqStatusPill Label="@response.ClassificationLabel" Tone="@NpsTone.From(response.ClassificationTone)" Size="BrqSize.Small" /></td>
                                     <td>@response.FormatLabel</td>
                                     <td class="nps-response-author"><span>@ResponseAuthorName(response)</span>@if (ResponseAuthorDetail(response) is { } detail) { <small>@detail</small> }</td>
                                     <td><span class="nps-response-comment" title="@response.Comment">@(response.Comment ?? "Sem comentário")</span></td>

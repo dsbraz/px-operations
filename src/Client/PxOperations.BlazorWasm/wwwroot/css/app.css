@@ -1310,3 +1310,20 @@ textarea.fi { resize: vertical; min-height: 90px; line-height: 1.65; }
     .ph-exp-cols { grid-template-columns: 1fr; }
     .ph-proj-row-head, .ph-proj-head { grid-template-columns: 1fr 70px 32px; }
 }
+
+/* Estados de carga e de falha do NPS. Ficam aqui, e nao no CSS escopado
+   de um componente, porque a pagina e tres componentes do modulo mostram
+   o mesmo bloco — escopar obrigaria a repetir a regra em cada um. */
+.nps-loading {
+    color: var(--muted);
+    font-size: .72rem;
+    margin-bottom: .75rem;
+}
+
+.nps-load-error {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin: 0 0 1rem;
+    padding: 1rem;
+}
