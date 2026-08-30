@@ -10,11 +10,16 @@ namespace PxOperations.BlazorWasm.Features.Nps;
 /// </summary>
 internal static class NpsDisplay
 {
+    // Uma cultura só para todos os números do módulo. Misturar a do navegador
+    // com pt-BR fazia a mesma tela mostrar "33.3" no indicador e "4,2" na média
+    // por aspecto, logo abaixo.
+    internal static readonly CultureInfo OperationCulture = CultureInfo.GetCultureInfo("pt-BR");
+
     internal static string Metric(double? value)
-        => value?.ToString("0.0", CultureInfo.CurrentCulture) ?? "—";
+        => value?.ToString("0.0", OperationCulture) ?? "—";
 
     internal static string Count(int? value)
-        => value?.ToString(CultureInfo.CurrentCulture) ?? "—";
+        => value?.ToString(OperationCulture) ?? "—";
 
     internal static string AuthorName(NpsResponseView response)
     {
@@ -64,6 +69,6 @@ internal static class NpsDisplay
             .ToArray();
         return values.Length == 0
             ? "—"
-            : values.Average().ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
+            : values.Average().ToString("0.0", OperationCulture);
     }
 }
