@@ -67,7 +67,7 @@
         @if (Created is null)
         {
             <button type="button" class="btn btn-ghost" @onclick="OnCancel">Cancelar</button>
-            <button type="button" class="btn btn-purple nps-create-submit" disabled="@(ProjectId == 0)" @onclick="OnSubmit">Gerar link</button>
+            <button type="button" class="btn btn-purple nps-create-submit" disabled="@(ProjectId == 0 || IsSubmitting)" @onclick="OnSubmit">Gerar link</button>
         }
         else
         {

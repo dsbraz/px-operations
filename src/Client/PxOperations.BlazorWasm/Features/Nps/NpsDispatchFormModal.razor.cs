@@ -23,6 +23,12 @@ public partial class NpsDispatchFormModal : ComponentBase
 
     [Parameter] public string LinkUrl { get; set; } = string.Empty;
     [Parameter] public string SuggestedMessage { get; set; } = string.Empty;
+    /// <summary>
+    /// Trava o envio enquanto o POST está em voo: dois cliques criariam dois
+    /// disparos do mesmo formato e o segundo bateria no índice único.
+    /// </summary>
+    [Parameter] public bool IsSubmitting { get; set; }
+
     [Parameter] public string? ActionError { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public EventCallback OnSubmit { get; set; }

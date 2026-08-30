@@ -27,6 +27,7 @@ public partial class NpsPage : ComponentBase, IDisposable
     private bool isLoading;
     private string? loadError;
     private string? actionError;
+    private bool isCreatingDispatch;
     private string? selfNavigatedRoute;
     private string search = string.Empty;
     private string? from;
@@ -412,6 +413,7 @@ public partial class NpsPage : ComponentBase, IDisposable
         }
 
         actionError = null;
+        isCreatingDispatch = true;
         try
         {
             createdDispatch = await NpsClient.CreateDispatchAsync(new CreateNpsDispatchRequest
@@ -429,6 +431,10 @@ public partial class NpsPage : ComponentBase, IDisposable
             // tela de erro global, com o diálogo aberto e nenhuma explicação.
             actionError = ApiErrorFormatter.Format(exception, "Não foi possível gerar o link.");
             return;
+        }
+        finally
+        {
+            isCreatingDispatch = false;
         }
 
         // O quadro atrás do diálogo ainda mostra o projeto em "Sem link" com a
