@@ -1,5 +1,9 @@
 @using PxOperations.Ui.Components.DataDisplay
 
+@if (IsLoading && Dashboard is null)
+{
+    <p class="nps-loading" role="status">Atualizando resultados…</p>
+}
 @if (LoadError is not null)
 {
     <div class="status-card error nps-load-error"><p>@LoadError</p><button type="button" class="btn btn-purple" @onclick="OnReload">Tentar novamente</button></div>

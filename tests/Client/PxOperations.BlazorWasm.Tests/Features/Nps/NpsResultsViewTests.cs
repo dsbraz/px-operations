@@ -60,6 +60,14 @@ public sealed class NpsResultsViewTests : BunitContext
         Assert.Equal("width:33.333%", style);
     }
 
+    [Fact]
+    public void Initial_load_should_say_it_is_loading_instead_of_rendering_nothing()
+    {
+        var cut = Render<NpsResultsView>(parameters => parameters.Add(view => view.IsLoading, true));
+
+        Assert.Equal("Atualizando resultados…", cut.Find(".nps-loading").TextContent.Trim());
+    }
+
     private static NpsDashboardView Dashboard(double percentage = 100) => new()
     {
         OfficialNps = 100,
