@@ -1,4 +1,5 @@
 using System.Globalization;
+using PxOperations.BlazorWasm.Api;
 
 namespace PxOperations.BlazorWasm.Features.Nps;
 
@@ -14,4 +15,44 @@ internal static class NpsDisplay
 
     internal static string Count(int? value)
         => value?.ToString(CultureInfo.CurrentCulture) ?? "—";
+
+    internal static string AuthorName(NpsResponseView response)
+    {
+        if (!string.IsNullOrWhiteSpace(response.RespondentName))
+        {
+            return response.RespondentName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(response.RespondentEmail))
+        {
+            return response.RespondentEmail;
+        }
+
+        if (!string.IsNullOrWhiteSpace(response.ContactName))
+        {
+            return response.ContactName;
+        }
+
+        return !string.IsNullOrWhiteSpace(response.ContactEmail)
+            ? response.ContactEmail
+            : "Resposta anônima";
+    }
+
+    internal static string? AuthorDetail(NpsResponseView response)
+    {
+        if (!string.IsNullOrWhiteSpace(response.RespondentName) && !string.IsNullOrWhiteSpace(response.RespondentEmail))
+        {
+            return response.RespondentEmail;
+        }
+
+        if (string.IsNullOrWhiteSpace(response.RespondentName) &&
+            string.IsNullOrWhiteSpace(response.RespondentEmail) &&
+            !string.IsNullOrWhiteSpace(response.ContactName) &&
+            !string.IsNullOrWhiteSpace(response.ContactEmail))
+        {
+            return response.ContactEmail;
+        }
+
+        return null;
+    }
 }

@@ -101,46 +101,11 @@
         }
         else if (ActiveTab == NpsTab.Responses)
         {
-            @if (isLoading)
-            {
-                <p class="nps-loading" role="status">Atualizando respostas…</p>
-            }
-            @if (loadError is not null)
-            {
-                <div class="status-card error nps-load-error"><p>@loadError</p><button type="button" class="btn btn-purple" @onclick="ReloadAsync">Tentar novamente</button></div>
-            }
-            else if (!isLoading && responseAudit.Count == 0)
-            {
-                <div class="nps-empty-delivery"><BrqEmptyState Title="Nenhuma resposta" Description="Ajuste os filtros ou aguarde uma nova coleta." /></div>
-            }
-            else
-            {
-                <section class="nps-responses-table" aria-busy="@isLoading">
-                    <BrqTableShell Caption="Auditoria de respostas NPS">
-                        <thead>
-                            <tr><th scope="col">Projeto</th><th scope="col">Nota</th><th scope="col">Classificação</th><th scope="col">Formato</th><th scope="col">Autor</th><th scope="col">Comentário</th><th scope="col">Recebida</th></tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var response in responseAudit)
-                            {
-                                <tr class="nps-response-row"
-                                    tabindex="0"
-                                    aria-label="@($"Abrir resposta de {response.ProjectName}")"
-                                    @onclick="() => OpenResponseDialog(response)"
-                                    @onkeydown="args => ResponseRowKeyDown(args, response)">
-                                    <td class="data-table__cell-strong"><button type="button" class="nps-response-project" @onclick:stopPropagation="true" @onclick="() => OpenResponseDialog(response)">@response.ProjectName</button></td>
-                                    <td><strong class="nps-response-score">@response.Score</strong></td>
-                                    <td><BrqStatusPill Label="@response.ClassificationLabel" Tone="@NpsTone.From(response.ClassificationTone)" Size="BrqSize.Small" /></td>
-                                    <td>@response.FormatLabel</td>
-                                    <td class="nps-response-author"><span>@ResponseAuthorName(response)</span>@if (ResponseAuthorDetail(response) is { } detail) { <small>@detail</small> }</td>
-                                    <td><span class="nps-response-comment" title="@response.Comment">@(response.Comment ?? "Sem comentário")</span></td>
-                                    <td><time datetime='@response.SubmittedAt.ToString("O")'>@NpsTimeDisplay.DateAndTime(response.SubmittedAt)</time></td>
-                                </tr>
-                            }
-                        </tbody>
-                    </BrqTableShell>
-                </section>
-            }
+            <NpsResponsesView Responses="@responseAudit"
+                              IsLoading="@isLoading"
+                              LoadError="@loadError"
+                              OnReload="ReloadAsync"
+                              OnOpenResponse="OpenResponseDialog" />
         }
     </div>
 </section>
@@ -237,8 +202,8 @@
             </section>
             <section class="nps-response-attribution">
                 <h3>Atribuição</h3>
-                <strong>@ResponseAuthorName(selectedResponse)</strong>
-                @if (ResponseAuthorDetail(selectedResponse) is { } detail)
+                <strong>@NpsDisplay.AuthorName(selectedResponse)</strong>
+                @if (NpsDisplay.AuthorDetail(selectedResponse) is { } detail)
                 {
                     <span>@detail</span>
                 }

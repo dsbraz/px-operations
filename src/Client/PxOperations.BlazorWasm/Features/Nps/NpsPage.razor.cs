@@ -555,57 +555,7 @@ public partial class NpsPage : ComponentBase, IDisposable
         responseDialogOpen = true;
     }
 
-    private void ResponseRowKeyDown(
-        Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args,
-        NpsResponseView response)
-    {
-        if (args.Key is "Enter" or " ")
-        {
-            OpenResponseDialog(response);
-        }
-    }
-
     private void CloseResponseDialog() => responseDialogOpen = false;
-
-    private static string ResponseAuthorName(NpsResponseView response)
-    {
-        if (!string.IsNullOrWhiteSpace(response.RespondentName))
-        {
-            return response.RespondentName;
-        }
-
-        if (!string.IsNullOrWhiteSpace(response.RespondentEmail))
-        {
-            return response.RespondentEmail;
-        }
-
-        if (!string.IsNullOrWhiteSpace(response.ContactName))
-        {
-            return response.ContactName;
-        }
-
-        return !string.IsNullOrWhiteSpace(response.ContactEmail)
-            ? response.ContactEmail
-            : "Resposta anônima";
-    }
-
-    private static string? ResponseAuthorDetail(NpsResponseView response)
-    {
-        if (!string.IsNullOrWhiteSpace(response.RespondentName) && !string.IsNullOrWhiteSpace(response.RespondentEmail))
-        {
-            return response.RespondentEmail;
-        }
-
-        if (string.IsNullOrWhiteSpace(response.RespondentName) &&
-            string.IsNullOrWhiteSpace(response.RespondentEmail) &&
-            !string.IsNullOrWhiteSpace(response.ContactName) &&
-            !string.IsNullOrWhiteSpace(response.ContactEmail))
-        {
-            return response.ContactEmail;
-        }
-
-        return null;
-    }
 
     private static string ResponseAspectAverage(NpsResponseView response)
     {

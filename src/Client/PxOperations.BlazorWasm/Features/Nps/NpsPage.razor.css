@@ -61,59 +61,6 @@
     padding: var(--space-sm);
 }
 
-.nps-responses-table {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    max-height: min(66vh, 44rem);
-    overflow: auto;
-}
-
-.nps-responses-table ::deep .table-wrap {
-    overflow: visible;
-}
-
-.nps-response-row {
-    cursor: pointer;
-}
-
-.nps-response-row:focus-visible {
-    outline: 2px solid var(--color-focus);
-    outline-offset: -2px;
-}
-
-.nps-response-project {
-    background: transparent;
-    border: 0;
-    color: var(--color-info);
-    cursor: pointer;
-    font: inherit;
-    font-weight: var(--fw-semibold);
-    padding: 0;
-}
-
-.nps-response-score {
-    font-family: var(--font-mono);
-    font-size: var(--fs-body-md);
-}
-
-.nps-response-author {
-    display: grid;
-    gap: .15rem;
-}
-
-.nps-response-author small {
-    color: var(--color-text-muted);
-}
-
-.nps-response-comment {
-    display: block;
-    max-width: 22rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
 .nps-response-overview {
     display: grid;
     gap: .5rem;
@@ -189,14 +136,6 @@
 
 ::deep .nps-response-dialog {
     width: min(46rem, 92vw);
-}
-
-.nps-empty-delivery {
-    padding-block: 2rem;
-}
-
-.nps-empty-delivery ::deep .brq-empty-state {
-    max-width: 44rem;
 }
 
 .nps-create-form,
