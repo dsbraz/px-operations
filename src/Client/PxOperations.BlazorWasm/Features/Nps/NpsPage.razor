@@ -22,24 +22,10 @@
 
     @if (ShowsIndicators)
     {
-        <section class="stats-bar nps-indicators" aria-label="Indicadores do NPS">
-            <div class="stat p">
-                <div class="sico p" aria-hidden="true">◈</div>
-                <div><div class="sval">@DisplayMetric(dashboard?.OfficialNps)</div><div class="slbl">NPS oficial</div></div>
-            </div>
-            <div class="stat g">
-                <div class="sico g" aria-hidden="true">✓</div>
-                <div><div class="sval">@(dashboard is null ? "—" : dashboard.TotalResponses.ToString())</div><div class="slbl">Respostas</div></div>
-            </div>
-            <div class="stat b">
-                <div class="sico b" aria-hidden="true">◎</div>
-                <div><div class="sval">@DisplayMetric(dashboard?.AverageScore)</div><div class="slbl">Média</div></div>
-            </div>
-            <div class="stat o">
-                <div class="sico o" aria-hidden="true">!</div>
-                <div><div class="sval">@(dashboard is null ? "—" : dashboard.OverdueProjects.ToString())</div><div class="slbl">Vencidos</div></div>
-            </div>
-        </section>
+        <NpsStatsBar OfficialNps="@dashboard?.OfficialNps"
+                    TotalResponses="@(dashboard?.TotalResponses)"
+                    AverageScore="@dashboard?.AverageScore"
+                    OverdueProjects="@(dashboard?.OverdueProjects)" />
     }
 
     <div class="toolbar nps-toolbar">
@@ -375,7 +361,7 @@
                                     <td>@result.Dc</td>
                                     <td>@(result.DeliveryManager ?? "—")</td>
                                     <td>@result.ResponsesCount</td>
-                                    <td>@DisplayMetric(result.OfficialNps)</td>
+                                    <td>@NpsDisplay.Metric(result.OfficialNps)</td>
                                     <td><BrqStatusPill Label="@result.Status.Label" Tone="@Tone(result.Status.Tone)" Size="BrqSize.Small" /></td>
                                 </tr>
                                 @if (expandedProjectId == result.Id)
@@ -609,9 +595,9 @@
         @if (selectedDetail is not null)
         {
             <section class="nps-detail-kpis" aria-label="Indicadores da coleta">
-                <article class="nps-detail-kpi"><span>NPS</span><strong>@DisplayMetric(selectedDetail.OfficialNps)</strong></article>
+                <article class="nps-detail-kpi"><span>NPS</span><strong>@NpsDisplay.Metric(selectedDetail.OfficialNps)</strong></article>
                 <article class="nps-detail-kpi"><span>Respostas</span><strong>@selectedDetail.ResponsesCount</strong></article>
-                <article class="nps-detail-kpi"><span>Média</span><strong>@DisplayMetric(selectedDetail.AverageScore)</strong></article>
+                <article class="nps-detail-kpi"><span>Média</span><strong>@NpsDisplay.Metric(selectedDetail.AverageScore)</strong></article>
                 <article class="nps-detail-kpi"><span>Promotores</span><strong>@selectedDetail.PromotersCount</strong></article>
             </section>
             <section class="nps-detail-links">

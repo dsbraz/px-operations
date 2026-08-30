@@ -762,7 +762,6 @@ public partial class NpsPage : ComponentBase, IDisposable
             actionError = "Não foi possível copiar. Copie manualmente do campo acima.";
         }
     }
-    private static string DisplayMetric(double? value) => value?.ToString("0.0") ?? "—";
     private static string DisplayAspectAverage(double? value)
         => value?.ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("pt-BR")) ?? "—";
     // Interpolar double em cultura corrente gerava "width:33,333%" em pt-BR:

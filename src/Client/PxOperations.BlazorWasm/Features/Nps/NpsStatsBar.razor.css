@@ -1,0 +1,9 @@
+.nps-indicators {
+    min-width: 0;
+}
+
+@media (max-width: 56.25rem) {
+    .nps-indicators {
+        padding-inline: 16px;
+    }
+}

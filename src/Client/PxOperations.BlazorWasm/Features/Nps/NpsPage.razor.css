@@ -30,10 +30,6 @@
     margin-top: .2rem;
 }
 
-.nps-indicators {
-    min-width: 0;
-}
-
 .nps-toolbar {
     overflow: visible;
     z-index: 5;
@@ -915,7 +911,6 @@
 
 @media (max-width: 56.25rem) {
     .nps-page-header,
-    .nps-indicators,
     .nps-toolbar,
     .nps-filter-chips,
     .nps-content {
