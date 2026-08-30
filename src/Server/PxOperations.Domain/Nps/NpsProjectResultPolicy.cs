@@ -14,10 +14,3 @@ public static class NpsProjectResultPolicy
             : NpsProjectResultStatus.Pending;
     }
 }
-
-public enum NpsProjectResultStatus
-{
-    Responded,
-    LinkGenerated,
-    Pending
-}

@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using PxOperations.Application.Features.Nps;
 using PxOperations.Domain.Exceptions;
 using PxOperations.Domain.Nps;
-using PxOperations.Domain.Nps.Calculation;
 using PxOperations.Domain.Projects;
 using PxOperations.Infrastructure.Persistence;
 

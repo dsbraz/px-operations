@@ -89,21 +89,3 @@ public static class NpsCollectionPolicy
         return new NpsPrimaryAction(NpsPrimaryActionKind.CopyLink, closest.Format, closest.DispatchId);
     }
 }
-
-public sealed record NpsOpenDispatchState(
-    int DispatchId,
-    NpsFormFormat Format,
-    DateTimeOffset ExpiresAt,
-    bool HasResponses);
-
-public enum NpsPrimaryActionKind
-{
-    GenerateLink,
-    CopyLink,
-    Reactivate
-}
-
-public sealed record NpsPrimaryAction(
-    NpsPrimaryActionKind Kind,
-    NpsFormFormat? Format,
-    int? DispatchId);

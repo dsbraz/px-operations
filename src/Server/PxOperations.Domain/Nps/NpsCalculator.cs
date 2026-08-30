@@ -1,9 +1,7 @@
-namespace PxOperations.Domain.Nps.Calculation;
+namespace PxOperations.Domain.Nps;
 
 public static class NpsCalculator
 {
-    public static NpsClassification Classify(int score) => NpsScale.Classify(score);
-
     public static NpsMetrics Calculate(IEnumerable<int> scores)
     {
         var values = scores.ToArray();
@@ -30,14 +28,4 @@ public static class NpsCalculator
 
     private static decimal Percentage(int count, int total)
         => Math.Round((decimal)count / total * 100m, 1);
-}
-
-public sealed record NpsMetrics(
-    decimal? OfficialScore,
-    decimal? AverageScore,
-    decimal DetractorPercentage,
-    decimal PassivePercentage,
-    decimal PromoterPercentage)
-{
-    public static NpsMetrics Empty { get; } = new(null, null, 0m, 0m, 0m);
 }

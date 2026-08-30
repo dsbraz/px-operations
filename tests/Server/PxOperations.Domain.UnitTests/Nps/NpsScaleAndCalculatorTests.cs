@@ -1,6 +1,5 @@
 using PxOperations.Domain.Exceptions;
 using PxOperations.Domain.Nps;
-using PxOperations.Domain.Nps.Calculation;
 
 namespace PxOperations.Domain.UnitTests.Nps;
 
