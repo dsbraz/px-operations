@@ -213,6 +213,28 @@ public sealed class NpsPublicPageTests : BunitContext, IAsyncLifetime
         });
     }
 
+    /// <summary>
+    /// aria-pressed precisa do texto "true"/"false": passando bool, o Blazor
+    /// omite o atributo quando falso, e a nota escolhida nunca é anunciada.
+    /// </summary>
+    [Fact]
+    public void Score_buttons_should_announce_whether_they_are_pressed()
+    {
+        var token = Guid.NewGuid();
+        RegisterClient(PublicJson(token, "simplified", "pt", "open"));
+
+        var cut = Render<NpsPublicPage>(parameters => parameters.Add(page => page.Token, token));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".nps-score-scale button")));
+
+        Assert.All(
+            cut.FindAll(".nps-score-scale button"),
+            button => Assert.Equal("false", button.GetAttribute("aria-pressed")));
+
+        cut.FindAll(".nps-score-scale button")[8].Click();
+
+        Assert.Equal("true", cut.FindAll(".nps-score-scale button")[8].GetAttribute("aria-pressed"));
+    }
+
     private ProjectsTestHelpers.MultiStubHttpMessageHandler RegisterClient(
         string response,
         HttpStatusCode status = HttpStatusCode.OK)

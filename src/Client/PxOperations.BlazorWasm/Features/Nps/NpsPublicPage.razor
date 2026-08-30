@@ -43,7 +43,7 @@
                 <div class="nps-score-scale" role="radiogroup" aria-label="@Texts.Question">
                     @foreach (var value in ScoreValues)
                     {
-                        <button type="button" class="@(score == value ? "selected" : null)" aria-pressed="@(score == value)" @onclick="() => score = value">@value</button>
+                        <button type="button" class="@(score == value ? "selected" : null)" aria-pressed="@((score == value).ToString().ToLowerInvariant())" @onclick="() => score = value">@value</button>
                     }
                 </div>
                 <div class="nps-scale-help"><span>@Texts.Unlikely</span><span>@Texts.Likely</span></div>
