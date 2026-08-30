@@ -33,8 +33,8 @@ public sealed class NpsPageTests : BunitContext
     public void Collection_should_keep_four_columns_and_render_waived_projects_below_them()
     {
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
         Navigate("/nps/coleta?includeWaived=true");
 
         var cut = Render<NpsPage>();
@@ -65,8 +65,8 @@ public sealed class NpsPageTests : BunitContext
     public void Collection_should_order_actions_indicators_toolbar_and_content_with_tabs_inside_toolbar()
     {
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
         Navigate("/nps/coleta");
 
         var cut = Render<NpsPage>();
@@ -90,8 +90,8 @@ public sealed class NpsPageTests : BunitContext
     public void Collection_search_should_match_the_other_toolbars_without_an_extra_visible_label()
     {
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
         Navigate("/nps/coleta");
 
         var cut = Render<NpsPage>();
@@ -109,8 +109,8 @@ public sealed class NpsPageTests : BunitContext
     public void Collection_card_should_highlight_the_primary_action_and_expose_two_accessible_icon_actions()
     {
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
         Navigate("/nps/coleta");
 
         var cut = Render<NpsPage>();
@@ -134,8 +134,8 @@ public sealed class NpsPageTests : BunitContext
     public void Shared_filters_should_write_repeated_parameters_show_one_chip_per_facet_and_clear_everything()
     {
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
         Navigate("/nps/coleta?client=Alpha&client=Beta&format=complete");
 
         var cut = Render<NpsPage>();
@@ -156,8 +156,8 @@ public sealed class NpsPageTests : BunitContext
     public void Results_should_render_distribution_and_accessible_aspect_averages_side_by_side()
     {
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", ProjectResultsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", NpsTestHelpers.ProjectResultsJson(), HttpStatusCode.OK);
         Navigate("/nps/resultados");
 
         var cut = Render<NpsPage>();
@@ -203,7 +203,7 @@ public sealed class NpsPageTests : BunitContext
     public void Results_should_show_a_localized_empty_state_without_complete_responses()
     {
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardWithoutCompleteResponsesJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardWithoutCompleteResponsesJson(), HttpStatusCode.OK);
         handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", "[]", HttpStatusCode.OK);
         Navigate("/nps/resultados");
 
@@ -221,10 +221,10 @@ public sealed class NpsPageTests : BunitContext
     public void Tabs_should_switch_the_rendered_view_without_reloading_the_page()
     {
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", ProjectResultsJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", NpsTestHelpers.ProjectResultsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
         Navigate("/nps/resultados");
 
         var cut = Render<NpsPage>();
@@ -244,10 +244,10 @@ public sealed class NpsPageTests : BunitContext
     public void Results_should_sort_accessibly_and_keep_only_one_lazy_expansion_open()
     {
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", ProjectResultsJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/projects/1/responses", FilteredResponsesJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/projects/2/responses", FilteredResponsesJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", NpsTestHelpers.ProjectResultsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects/1/responses", NpsTestHelpers.FilteredResponsesJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects/2/responses", NpsTestHelpers.FilteredResponsesJson(), HttpStatusCode.OK);
         Navigate("/nps/resultados?from=2026-08-01&to=2026-08-31");
 
         var cut = Render<NpsPage>();
@@ -274,10 +274,10 @@ public sealed class NpsPageTests : BunitContext
     public void Result_expansion_failure_should_stay_in_the_row_and_retry_without_hiding_the_page()
     {
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", ProjectResultsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", NpsTestHelpers.ProjectResultsJson(), HttpStatusCode.OK);
         handler.AddResponse(HttpMethod.Get, "/api/nps/projects/1/responses", "{}", HttpStatusCode.InternalServerError);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/projects/1/responses", FilteredResponsesJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects/1/responses", NpsTestHelpers.FilteredResponsesJson(), HttpStatusCode.OK);
         Navigate("/nps/resultados");
 
         var cut = Render<NpsPage>();
@@ -296,8 +296,8 @@ public sealed class NpsPageTests : BunitContext
     public void Responses_should_load_options_and_audit_in_parallel_without_indicators()
     {
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/filter-options", FilterOptionsJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/responses", ResponsesJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/filter-options", NpsTestHelpers.FilterOptionsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/responses", NpsTestHelpers.ResponsesJson(), HttpStatusCode.OK);
         Navigate("/nps/respostas?format=complete&status=responded");
 
         var cut = Render<NpsPage>();
@@ -320,8 +320,8 @@ public sealed class NpsPageTests : BunitContext
     public void Response_dialog_should_show_full_attribution_and_aspects_only_for_complete_format()
     {
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/filter-options", FilterOptionsJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/responses", ResponsesJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/filter-options", NpsTestHelpers.FilterOptionsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/responses", NpsTestHelpers.ResponsesJson(), HttpStatusCode.OK);
         Navigate("/nps/respostas");
 
         var cut = Render<NpsPage>();
@@ -349,9 +349,9 @@ public sealed class NpsPageTests : BunitContext
     {
         var token = Guid.NewGuid();
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Post, "/api/nps/dispatches", DispatchJson(token), HttpStatusCode.Created);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Post, "/api/nps/dispatches", NpsTestHelpers.DispatchJson(token), HttpStatusCode.Created);
         Navigate("/nps/coleta");
 
         var cut = Render<NpsPage>();
@@ -383,10 +383,10 @@ public sealed class NpsPageTests : BunitContext
     public void Detail_dialog_should_render_compact_kpis_labeled_links_footer_and_segmented_response_filter()
     {
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/projects/1", DetailJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/projects/1/responses", FilteredResponsesJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects/1", NpsTestHelpers.DetailJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects/1/responses", NpsTestHelpers.FilteredResponsesJson(), HttpStatusCode.OK);
         Navigate("/nps/coleta");
 
         var cut = Render<NpsPage>();
@@ -420,11 +420,11 @@ public sealed class NpsPageTests : BunitContext
     public void Waiver_dialog_should_label_the_reason_and_keep_cancel_and_confirmation_in_the_footer()
     {
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Post, "/api/nps/projects/1/waiver", DetailJson(), HttpStatusCode.Created);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Post, "/api/nps/projects/1/waiver", NpsTestHelpers.DetailJson(), HttpStatusCode.Created);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
         Navigate("/nps/coleta");
 
         var cut = Render<NpsPage>();
@@ -480,8 +480,8 @@ public sealed class NpsPageTests : BunitContext
         try
         {
             var handler = RegisterClient();
-            handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", FractionalDashboardJson(), HttpStatusCode.OK);
-            handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", ProjectResultsJson(), HttpStatusCode.OK);
+            handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.FractionalDashboardJson(), HttpStatusCode.OK);
+            handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", NpsTestHelpers.ProjectResultsJson(), HttpStatusCode.OK);
             Navigate("/nps/resultados");
 
             var cut = Render<NpsPage>();
@@ -506,8 +506,8 @@ public sealed class NpsPageTests : BunitContext
     public void Results_should_apply_the_waived_filter_to_the_table_and_the_indicators()
     {
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", ProjectResultsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/project-results", NpsTestHelpers.ProjectResultsJson(), HttpStatusCode.OK);
         Navigate("/nps/resultados?includeWaived=true");
 
         var cut = Render<NpsPage>();
@@ -524,11 +524,11 @@ public sealed class NpsPageTests : BunitContext
     public void Generating_a_link_should_refresh_the_board()
     {
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Post, "/api/nps/dispatches", DispatchJson(Guid.NewGuid()), HttpStatusCode.Created);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Post, "/api/nps/dispatches", NpsTestHelpers.DispatchJson(Guid.NewGuid()), HttpStatusCode.Created);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
         Navigate("/nps/coleta");
 
         var cut = Render<NpsPage>();
@@ -547,8 +547,8 @@ public sealed class NpsPageTests : BunitContext
     public void Failed_link_generation_should_report_the_reason_the_server_gave()
     {
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
         handler.AddResponse(
             HttpMethod.Post,
             "/api/nps/dispatches",
@@ -573,8 +573,8 @@ public sealed class NpsPageTests : BunitContext
     public void Failed_waiver_should_report_the_reason_the_server_gave()
     {
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
         handler.AddResponse(
             HttpMethod.Post,
             "/api/nps/projects/1/waiver",
@@ -600,11 +600,11 @@ public sealed class NpsPageTests : BunitContext
     public void Clipboard_failure_should_be_reported_instead_of_failing_silently()
     {
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Post, "/api/nps/dispatches", DispatchJson(Guid.NewGuid()), HttpStatusCode.Created);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Post, "/api/nps/dispatches", NpsTestHelpers.DispatchJson(Guid.NewGuid()), HttpStatusCode.Created);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
         JSInterop.SetupVoid(invocation => invocation.Identifier == "navigator.clipboard.writeText")
             .SetException(new JSException("Clipboard indisponível."));
         Navigate("/nps/coleta");
@@ -637,8 +637,8 @@ public sealed class NpsPageTests : BunitContext
         var handler = RegisterClient();
         for (var round = 0; round < 4; round++)
         {
-            handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", DashboardJson(), HttpStatusCode.OK);
-            handler.AddResponse(HttpMethod.Get, "/api/nps/projects", ProjectsJson(), HttpStatusCode.OK);
+            handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+            handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
         }
 
         Navigate("/nps/coleta");
@@ -664,8 +664,8 @@ public sealed class NpsPageTests : BunitContext
     public void Response_timestamps_should_be_shown_in_the_operation_timezone()
     {
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/filter-options", FilterOptionsJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/responses", ResponsesJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/filter-options", NpsTestHelpers.FilterOptionsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/responses", NpsTestHelpers.ResponsesJson(), HttpStatusCode.OK);
         Navigate("/nps/respostas");
 
         var cut = Render<NpsPage>();
@@ -683,8 +683,8 @@ public sealed class NpsPageTests : BunitContext
     public void Response_row_should_take_the_tone_the_server_sent()
     {
         var handler = RegisterClient();
-        handler.AddResponse(HttpMethod.Get, "/api/nps/filter-options", FilterOptionsJson(), HttpStatusCode.OK);
-        handler.AddResponse(HttpMethod.Get, "/api/nps/responses", ResponsesJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/filter-options", NpsTestHelpers.FilterOptionsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/responses", NpsTestHelpers.ResponsesJson(), HttpStatusCode.OK);
         Navigate("/nps/respostas");
 
         var cut = Render<NpsPage>();
@@ -712,157 +712,4 @@ public sealed class NpsPageTests : BunitContext
 
     private static AngleSharp.Dom.IElement Dialog(IRenderedComponent<NpsPage> cut, string title)
         => cut.FindAll("dialog").Single(dialog => dialog.TextContent.Contains(title, StringComparison.Ordinal));
-
-    private static string DashboardJson() => """
-        {
-          "officialNps":50.0,"totalResponses":4,"averageScore":8.3,"overdueProjects":1,
-          "scale":{"minimum":1,"maximum":10},
-          "distribution":[
-            {"code":"detractor","label":"Detrator","tone":"critical","count":1,"percentage":25.0},
-            {"code":"passive","label":"Neutro","tone":"warning","count":1,"percentage":25.0},
-            {"code":"promoter","label":"Promotor","tone":"positive","count":2,"percentage":50.0}
-          ],
-          "aspectSummary":{
-            "completeResponsesCount":4,"scale":{"minimum":1,"maximum":5},
-            "aspects":[
-              {"code":"quality","label":"Qualidade técnica","average":4.2,"responsesCount":3},
-              {"code":"schedule","label":"Prazos acordados","average":3.5,"responsesCount":2},
-              {"code":"communication","label":"Comunicação","average":4.0,"responsesCount":4},
-              {"code":"business_value","label":"Valor para o negócio","average":null,"responsesCount":0}
-            ]
-          },
-          "filterOptions":{
-            "clients":[{"code":"Alpha","label":"Alpha"},{"code":"Beta","label":"Beta"}],
-            "dcs":[{"code":"DC1","label":"DC1"}],"projectTypes":[],"deliveryManagers":[],
-            "statuses":[],"formats":[],"classifications":[]
-          }
-        }
-        """;
-
-    private static string FractionalDashboardJson() => """
-        {
-          "officialNps":0.0,"totalResponses":3,"averageScore":7.0,"overdueProjects":0,
-          "scale":{"minimum":1,"maximum":10},
-          "distribution":[
-            {"code":"detractor","label":"Detrator","tone":"critical","count":1,"percentage":33.333},
-            {"code":"passive","label":"Neutro","tone":"warning","count":1,"percentage":33.333},
-            {"code":"promoter","label":"Promotor","tone":"positive","count":1,"percentage":33.334}
-          ],
-          "aspectSummary":{
-            "completeResponsesCount":0,"scale":{"minimum":1,"maximum":5},
-            "aspects":[
-              {"code":"quality","label":"Qualidade técnica","average":null,"responsesCount":0},
-              {"code":"schedule","label":"Prazos acordados","average":null,"responsesCount":0},
-              {"code":"communication","label":"Comunicação","average":null,"responsesCount":0},
-              {"code":"business_value","label":"Valor para o negócio","average":null,"responsesCount":0}
-            ]
-          },
-          "filterOptions":{"clients":[],"dcs":[],"projectTypes":[],"deliveryManagers":[],"statuses":[],"formats":[],"classifications":[]}
-        }
-        """;
-
-    private static string DashboardWithoutCompleteResponsesJson() => """
-        {
-          "officialNps":100.0,"totalResponses":1,"averageScore":9.0,"overdueProjects":0,
-          "scale":{"minimum":1,"maximum":10},
-          "distribution":[
-            {"code":"detractor","label":"Detrator","tone":"critical","count":0,"percentage":0.0},
-            {"code":"passive","label":"Neutro","tone":"warning","count":0,"percentage":0.0},
-            {"code":"promoter","label":"Promotor","tone":"positive","count":1,"percentage":100.0}
-          ],
-          "aspectSummary":{
-            "completeResponsesCount":0,"scale":{"minimum":1,"maximum":5},
-            "aspects":[
-              {"code":"quality","label":"Qualidade técnica","average":null,"responsesCount":0},
-              {"code":"schedule","label":"Prazos acordados","average":null,"responsesCount":0},
-              {"code":"communication","label":"Comunicação","average":null,"responsesCount":0},
-              {"code":"business_value","label":"Valor para o negócio","average":null,"responsesCount":0}
-            ]
-          },
-          "filterOptions":{"clients":[],"dcs":[],"projectTypes":[],"deliveryManagers":[],"statuses":[],"formats":[],"classifications":[]}
-        }
-        """;
-
-    private static string ProjectsJson() => """
-        [
-          {
-            "id":1,"name":"Projeto ativo","client":"Alpha","dc":"DC1","deliveryManager":"Maria","projectType":"Squad","responsesCount":0,
-            "stage":{"code":"no_link","label":"Sem link","tone":"neutral"},
-            "temporal":{"label":"Nunca coletado","tone":"neutral","at":null},"waiver":null,"activeLinks":[],
-            "primaryAction":{"code":"generate_link","label":"Gerar link","format":"complete","dispatchId":null,"token":null},
-            "isOverdue":true,"lastDispatchClosedAt":null
-          },
-          {
-            "id":2,"name":"Projeto dispensado","client":"Beta","dc":"DC1","deliveryManager":"João","projectType":"Squad","responsesCount":1,
-            "stage":{"code":"waived","label":"Dispensado","tone":"neutral"},
-            "temporal":{"label":"Dispensado em 01/08/2026","tone":"neutral","at":"2026-08-01T12:00:00Z"},
-            "waiver":{"reason":"Sem pesquisa","waivedAt":"2026-08-01T12:00:00Z"},"activeLinks":[],
-            "primaryAction":{"code":"reactivate","label":"Reativar","format":null,"dispatchId":null,"token":null},
-            "isOverdue":false,"lastDispatchClosedAt":"2026-08-01T12:00:00Z"
-          }
-        ]
-        """;
-
-    private static string DispatchJson(Guid token) => $$"""
-        {
-          "dispatch":{"id":10,"projectId":1,"projectName":"Projeto ativo","format":"complete","formatLabel":"Completo","language":"pt","languageLabel":"Português","status":"open","createdAt":"2026-08-01T12:00:00Z","expiresAt":"2026-08-21T12:00:00Z","closedAt":null,"targetsCount":1,"responsesCount":0,"availability":"open","availabilityLabel":"Aberto","tone":"positive"},
-          "targets":[{"id":20,"dispatchId":10,"contactId":null,"contactName":null,"contactEmail":null,"token":"{{token}}","isGeneric":true,"responsesCount":0}]
-        }
-        """;
-
-    private static string DetailJson() => """
-        {
-          "project":{
-            "id":1,"name":"Projeto ativo","client":"Alpha","dc":"DC1","deliveryManager":"Maria","projectType":"Squad","responsesCount":2,
-            "stage":{"code":"awaiting_response","label":"Aguardando resposta","tone":"warning"},
-            "temporal":{"label":"Enviado há 2d","tone":"warning","at":"2026-08-19T12:00:00Z"},"waiver":null,
-            "activeLinks":[{"dispatchId":10,"token":"11111111-1111-1111-1111-111111111111","format":"complete","formatLabel":"Completo","expiresAt":"2026-08-21T12:00:00Z","availability":"open","availabilityLabel":"Aberto","tone":"positive"}],
-            "primaryAction":{"code":"copy_link","label":"Copiar link","format":"complete","dispatchId":10,"token":"11111111-1111-1111-1111-111111111111"},
-            "isOverdue":false,"lastDispatchClosedAt":null
-          },
-          "officialNps":50.0,"averageScore":8.5,"responsesCount":2,"promotersCount":1,
-          "activeLinks":[{"dispatchId":10,"token":"11111111-1111-1111-1111-111111111111","format":"complete","formatLabel":"Completo","expiresAt":"2026-08-21T12:00:00Z","availability":"open","availabilityLabel":"Aberto","tone":"positive"}],
-          "recentResponses":[{"id":1,"projectId":1,"projectName":"Projeto ativo","dispatchId":10,"targetId":20,"contactId":null,"contactName":null,"contactEmail":null,"format":"complete","formatLabel":"Completo","score":10,"classification":"promoter","classificationLabel":"Promotor","quality":5,"schedule":5,"communication":5,"businessValue":5,"comment":"Excelente parceria","respondentName":null,"respondentEmail":null,"submittedAt":"2026-08-20T12:00:00Z"}]
-        }
-        """;
-
-    private static string FilteredResponsesJson() => """
-        [
-          {"id":2,"projectId":1,"projectName":"Projeto ativo","dispatchId":10,"targetId":21,"contactId":null,"contactName":null,"contactEmail":null,"format":"complete","formatLabel":"Completo","score":9,"classification":"promoter","classificationLabel":"Promotor","quality":5,"schedule":4,"communication":5,"businessValue":5,"comment":"Resposta completa filtrada","respondentName":null,"respondentEmail":null,"submittedAt":"2026-08-21T12:00:00Z"}
-        ]
-        """;
-
-    private static string ProjectResultsJson() => """
-        [
-          {
-            "id":1,"name":"Zulu","client":"Beta","dc":"DC1","deliveryManager":"Maria","responsesCount":1,"officialNps":100.0,
-            "distribution":[{"code":"detractor","label":"Detrator","tone":"critical","count":0,"percentage":0.0},{"code":"passive","label":"Neutro","tone":"warning","count":0,"percentage":0.0},{"code":"promoter","label":"Promotor","tone":"positive","count":1,"percentage":100.0}],
-            "formats":[{"code":"complete","label":"Completo","count":1},{"code":"simplified","label":"Simplificado","count":0}],
-            "lastResponseAt":"2026-08-21T12:00:00Z","status":{"code":"responded","label":"Respondido","tone":"positive"}
-          },
-          {
-            "id":2,"name":"Alpha","client":"Alpha","dc":"DC2","deliveryManager":"João","responsesCount":2,"officialNps":0.0,
-            "distribution":[{"code":"detractor","label":"Detrator","tone":"critical","count":1,"percentage":50.0},{"code":"passive","label":"Neutro","tone":"warning","count":0,"percentage":0.0},{"code":"promoter","label":"Promotor","tone":"positive","count":1,"percentage":50.0}],
-            "formats":[{"code":"complete","label":"Completo","count":1},{"code":"simplified","label":"Simplificado","count":1}],
-            "lastResponseAt":"2026-08-20T12:00:00Z","status":{"code":"responded","label":"Respondido","tone":"positive"}
-          }
-        ]
-        """;
-
-    private static string FilterOptionsJson() => """
-        {
-          "clients":[{"code":"Alpha","label":"Alpha"}],"dcs":[{"code":"DC1","label":"DC1"}],
-          "projectTypes":[{"code":"squad","label":"Squad"}],"deliveryManagers":[{"code":"Maria","label":"Maria"}],
-          "statuses":[{"code":"responded","label":"Respondido"}],
-          "formats":[{"code":"complete","label":"Completo"},{"code":"simplified","label":"Simplificado"}],
-          "classifications":[{"code":"detractor","label":"Detrator"},{"code":"passive","label":"Neutro"},{"code":"promoter","label":"Promotor"}]
-        }
-        """;
-
-    private static string ResponsesJson() => """
-        [
-          {"id":1,"projectId":1,"projectName":"Projeto ativo","dispatchId":10,"targetId":20,"contactId":null,"contactName":null,"contactEmail":null,"format":"complete","formatLabel":"Completo","score":10,"classification":"promoter","classificationLabel":"Promotor","quality":5,"schedule":4,"communication":3,"businessValue":2,"comment":"Comentário completo que deve permanecer acessível","respondentName":"Pessoa Teste","respondentEmail":"pessoa@example.com","submittedAt":"2026-08-21T12:00:00Z","classificationTone":"warning"},
-          {"id":2,"projectId":2,"projectName":"Projeto simplificado","dispatchId":11,"targetId":21,"contactId":null,"contactName":null,"contactEmail":null,"format":"simplified","formatLabel":"Simplificado","score":4,"classification":"detractor","classificationLabel":"Detrator","quality":null,"schedule":null,"communication":null,"businessValue":null,"comment":null,"respondentName":null,"respondentEmail":null,"submittedAt":"2026-08-20T12:00:00Z","classificationTone":"critical"}
-        ]
-        """;
 }
