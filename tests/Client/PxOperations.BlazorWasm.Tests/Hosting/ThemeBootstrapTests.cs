@@ -49,6 +49,30 @@ public sealed partial class ThemeBootstrapTests
         Assert.True(File.Exists(ResolveAsset("_content", "PxOperations.Ui", "js", "theme-init.js")));
     }
 
+    /// <summary>
+    /// O bootstrap roda em toda a aplicação, não só no formulário público. Ele
+    /// só pode escolher um tema para o qual exista paleta: o app.css, que veste
+    /// as telas internas, não define nenhuma variante escura, e o layout interno
+    /// não tem o botão de tema — quem caísse em escuro pela preferência do
+    /// sistema ficaria com a página clara e os componentes escuros, sem saída.
+    /// </summary>
+    [Fact]
+    public void Bootstrap_should_not_choose_a_theme_the_application_has_no_palette_for()
+    {
+        var appCss = File.ReadAllText(ResolveAsset("css", "app.css"));
+        if (appCss.Contains("data-theme=\"dark\"", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var bootstrap = File.ReadAllText(ResolveAsset("_content", "PxOperations.Ui", "js", "theme-init.js"));
+
+        Assert.DoesNotContain(
+            "prefers-color-scheme",
+            bootstrap,
+            StringComparison.Ordinal);
+    }
+
     private static string ResolveAsset(params string[] segments)
     {
         var manifestPath = Path.Combine(
