@@ -1,0 +1,65 @@
+.nps-create-form,
+.nps-created-link {
+    display: grid;
+    gap: 1rem;
+}
+
+.nps-dialog-step {
+    align-items: center;
+    display: flex;
+    gap: .75rem;
+}
+
+.nps-dialog-step > span {
+    align-items: center;
+    background: var(--color-info-bg);
+    border-radius: 50%;
+    color: var(--color-info);
+    display: inline-flex;
+    flex: none;
+    font-family: var(--font-mono);
+    font-size: var(--fs-body-sm);
+    height: 2rem;
+    justify-content: center;
+    width: 2rem;
+}
+
+.nps-dialog-step.complete > span {
+    background: var(--color-good-bg);
+    color: var(--color-good);
+}
+
+.nps-dialog-step strong {
+    color: var(--color-text);
+    font-size: var(--fs-body-sm);
+}
+
+.nps-dialog-step p {
+    color: var(--color-text-muted);
+    font-size: var(--fs-body-xs);
+    margin-top: .15rem;
+}
+
+.nps-form-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.nps-created-link textarea {
+    min-height: 7rem;
+    resize: vertical;
+}
+
+.nps-created-validity {
+    background: var(--color-info-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: .75rem;
+}
+
+.nps-created-validity strong {
+    color: var(--color-info);
+    font-family: var(--font-mono);
+    font-size: var(--fs-body-md);
+}

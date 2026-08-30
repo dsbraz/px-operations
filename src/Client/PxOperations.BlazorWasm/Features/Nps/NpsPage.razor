@@ -110,149 +110,31 @@
     </div>
 </section>
 
-<BrqDialog @bind-Open="createDialogOpen"
-           Title="Gerar link NPS"
-           Description="@CreateDialogDescription"
-           CssClass="nps-dialog"
-           AutofocusSelector=".nps-create-project">
-    <ChildContent>
-        @if (createdDispatch is null)
-        {
-            <div class="nps-create-form">
-                <div class="nps-dialog-step">
-                    <span>1</span>
-                    <div><strong>Projeto, formato e idioma</strong><p>Defina como a rodada será compartilhada.</p></div>
-                </div>
-                <div class="nps-form-grid">
-                    <label class="nps-field nps-field-full">
-                        <span>Projeto</span>
-                        <select class="nps-create-project" @bind="createProjectId">
-                            <option value="0">Selecione o projeto</option>
-                            @foreach (var project in projects.Where(project => project.Stage.Code != "waived"))
-                            {
-                                <option value="@project.Id">@project.Name</option>
-                            }
-                        </select>
-                    </label>
-                    <label class="nps-field">
-                        <span>Formato</span>
-                        <select @bind="createFormat"><option value="complete">Completo</option><option value="simplified">Simplificado</option></select>
-                    </label>
-                    <label class="nps-field">
-                        <span>Idioma</span>
-                        <select @bind="createLanguage"><option value="pt">Português</option><option value="en">Inglês</option><option value="es">Espanhol</option></select>
-                    </label>
-                </div>
-            </div>
-        }
-        else
-        {
-            var target = createdDispatch.Targets.Single(target => target.IsGeneric);
-            <div class="nps-created-link">
-                <div class="nps-dialog-step complete">
-                    <span>2</span>
-                    <div><strong>Link pronto · @createdDispatch.Dispatch.FormatLabel</strong><p>Compartilhe o link ou a mensagem sugerida.</p></div>
-                </div>
-                <label class="nps-created-block">
-                    <span>Link</span>
-                    <input readonly value="@PublicUrl(target.Token)" />
-                </label>
-                <div class="nps-created-block nps-created-validity">
-                    <span>Validade</span>
-                    <strong>@NpsTimeDisplay.Date(createdDispatch.Dispatch.ExpiresAt)</strong>
-                </div>
-                <label class="nps-created-block">
-                    <span>Mensagem sugerida</span>
-                    <textarea readonly>@SuggestedMessage</textarea>
-                </label>
-            </div>
-        }
-
-        @if (actionError is not null)
-        {
-            <p class="nps-action-error" role="alert">@actionError</p>
-        }
-    </ChildContent>
-    <Footer>
-        @if (createdDispatch is null)
-        {
-            <button type="button" class="btn btn-ghost" @onclick="CloseCreateDialog">Cancelar</button>
-            <button type="button" class="btn btn-purple nps-create-submit" disabled="@(createProjectId == 0)" @onclick="CreateDispatchAsync">Gerar link</button>
-        }
-        else
-        {
-            <button type="button" class="btn btn-ghost" @onclick="() => CopyAsync(PublicUrl(createdDispatch.Targets.Single(target => target.IsGeneric).Token))">Copiar link</button>
-            <button type="button" class="btn btn-purple" @onclick="() => CopyAsync(SuggestedMessage)">Copiar mensagem</button>
-        }
-    </Footer>
-</BrqDialog>
+<NpsDispatchFormModal @bind-Open="createDialogOpen"
+                      Description="@CreateDialogDescription"
+                      Projects="@projects"
+                      @bind-ProjectId="createProjectId"
+                      @bind-Format="createFormat"
+                      @bind-Language="createLanguage"
+                      Created="@createdDispatch"
+                      LinkUrl="@CreatedLinkUrl"
+                      SuggestedMessage="@SuggestedMessage"
+                      ActionError="@actionError"
+                      OnCancel="CloseCreateDialog"
+                      OnSubmit="CreateDispatchAsync"
+                      OnCopy="CopyAsync" />
 
 <NpsResponseModal @bind-Open="responseDialogOpen"
                   Response="@selectedResponse"
                   OnClose="CloseResponseDialog" />
 
-<BrqDialog @bind-Open="detailDialogOpen" Title="Detalhe da coleta" Description="@selectedDetail?.Project.Name" CssClass="nps-dialog nps-detail-dialog">
-    <ChildContent>
-        @if (actionError is not null)
-        {
-            <p class="nps-action-error" role="alert">@actionError</p>
-        }
-
-        @if (selectedDetail is not null)
-        {
-            <section class="nps-detail-kpis" aria-label="Indicadores da coleta">
-                <article class="nps-detail-kpi"><span>NPS</span><strong>@NpsDisplay.Metric(selectedDetail.OfficialNps)</strong></article>
-                <article class="nps-detail-kpi"><span>Respostas</span><strong>@selectedDetail.ResponsesCount</strong></article>
-                <article class="nps-detail-kpi"><span>Média</span><strong>@NpsDisplay.Metric(selectedDetail.AverageScore)</strong></article>
-                <article class="nps-detail-kpi"><span>Promotores</span><strong>@selectedDetail.PromotersCount</strong></article>
-            </section>
-            <section class="nps-detail-links">
-                <h3>Links ativos</h3>
-                @if (selectedDetail.ActiveLinks.Count == 0)
-                {
-                    <p class="nps-detail-empty">Nenhum link ativo.</p>
-                }
-                else
-                {
-                    @foreach (var link in selectedDetail.ActiveLinks)
-                    {
-                        <article>
-                            <span><small>Formato</small><strong>@link.FormatLabel</strong></span>
-                            <span><small>Status</small><strong>@link.AvailabilityLabel</strong></span>
-                            <span><small>Validade</small><strong>@NpsTimeDisplay.Date(link.ExpiresAt)</strong></span>
-                        </article>
-                    }
-                }
-            </section>
-            <section class="nps-detail-responses">
-                <header>
-                    <h3>Respostas recentes</h3>
-                    <div class="nps-detail-format-filter" aria-label="Filtrar respostas por formato">
-                        <button type="button" class="nps-detail-segment @(detailFormat == "all" ? "active" : null)" data-format="all" aria-pressed="@((detailFormat == "all").ToString().ToLowerInvariant())" @onclick="FilterAllDetailResponsesAsync">Todos</button>
-                        <button type="button" class="nps-detail-segment @(detailFormat == "complete" ? "active" : null)" data-format="complete" aria-pressed="@((detailFormat == "complete").ToString().ToLowerInvariant())" @onclick="FilterCompleteDetailResponsesAsync">Completo</button>
-                        <button type="button" class="nps-detail-segment @(detailFormat == "simplified" ? "active" : null)" data-format="simplified" aria-pressed="@((detailFormat == "simplified").ToString().ToLowerInvariant())" @onclick="FilterSimplifiedDetailResponsesAsync">Simplificado</button>
-                    </div>
-                </header>
-                @if (detailResponses.Count == 0)
-                {
-                    <p class="nps-detail-empty">Nenhuma resposta neste formato.</p>
-                }
-                else
-                {
-                    <ul class="nps-recent-responses">
-                        @foreach (var response in detailResponses)
-                        {
-                            <li><strong>@response.Score · @response.ClassificationLabel</strong><span>@(response.Comment ?? "Sem comentário")</span></li>
-                        }
-                    </ul>
-                }
-            </section>
-        }
-    </ChildContent>
-    <Footer>
-        <button type="button" class="btn btn-ghost" @onclick="CloseDetailDialog">Fechar</button>
-    </Footer>
-</BrqDialog>
+<NpsCollectionDetailModal @bind-Open="detailDialogOpen"
+                          Detail="@selectedDetail"
+                          Responses="@detailResponses"
+                          Format="@detailFormat"
+                          OnFilter="FilterDetailByFormatAsync"
+                          ActionError="@actionError"
+                          OnClose="CloseDetailDialog" />
 
 <NpsWaiverModal @bind-Open="waiverDialogOpen"
                 @bind-Reason="waiverReason"

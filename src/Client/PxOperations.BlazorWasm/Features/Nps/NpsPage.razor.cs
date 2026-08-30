@@ -60,6 +60,10 @@ public partial class NpsPage : ComponentBase, IDisposable
     private string CreateDialogDescription => createdDispatch is null
         ? "Escolha a rodada que será compartilhada."
         : "O link usa a validade devolvida pelo servidor.";
+    private string CreatedLinkUrl => createdDispatch is null
+        ? string.Empty
+        : PublicUrl(createdDispatch.Targets.Single(target => target.IsGeneric).Token);
+
     private string ExportHref => new Uri(HttpClient.BaseAddress!, $"api/nps/responses/export{BuildResponseQuery()}").ToString();
     private int ActiveFacetCount => ActiveChips.Count;
 
@@ -499,9 +503,8 @@ public partial class NpsPage : ComponentBase, IDisposable
         }
     }
 
-    private Task FilterAllDetailResponsesAsync() => FilterDetailResponsesAsync("all", []);
-    private Task FilterCompleteDetailResponsesAsync() => FilterDetailResponsesAsync("complete", ["complete"]);
-    private Task FilterSimplifiedDetailResponsesAsync() => FilterDetailResponsesAsync("simplified", ["simplified"]);
+    private Task FilterDetailByFormatAsync(string format)
+        => FilterDetailResponsesAsync(format, format == "all" ? [] : [format]);
 
     private void OpenWaiverDialog(int projectId)
     {

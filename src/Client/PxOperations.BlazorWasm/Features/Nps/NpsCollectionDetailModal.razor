@@ -1,0 +1,68 @@
+@using PxOperations.Ui.Components.Overlays
+
+<BrqDialog Open="@Open"
+           OpenChanged="OpenChanged"
+           Title="Detalhe da coleta"
+           Description="@Detail?.Project.Name"
+           CssClass="nps-dialog nps-detail-dialog">
+    <ChildContent>
+        @if (ActionError is not null)
+        {
+            <p class="nps-action-error" role="alert">@ActionError</p>
+        }
+
+        @if (Detail is not null)
+        {
+            <section class="nps-detail-kpis" aria-label="Indicadores da coleta">
+                <article class="nps-detail-kpi"><span>NPS</span><strong>@NpsDisplay.Metric(Detail.OfficialNps)</strong></article>
+                <article class="nps-detail-kpi"><span>Respostas</span><strong>@Detail.ResponsesCount</strong></article>
+                <article class="nps-detail-kpi"><span>Média</span><strong>@NpsDisplay.Metric(Detail.AverageScore)</strong></article>
+                <article class="nps-detail-kpi"><span>Promotores</span><strong>@Detail.PromotersCount</strong></article>
+            </section>
+            <section class="nps-detail-links">
+                <h3>Links ativos</h3>
+                @if (Detail.ActiveLinks.Count == 0)
+                {
+                    <p class="nps-detail-empty">Nenhum link ativo.</p>
+                }
+                else
+                {
+                    @foreach (var link in Detail.ActiveLinks)
+                    {
+                        <article>
+                            <span><small>Formato</small><strong>@link.FormatLabel</strong></span>
+                            <span><small>Status</small><strong>@link.AvailabilityLabel</strong></span>
+                            <span><small>Validade</small><strong>@NpsTimeDisplay.Date(link.ExpiresAt)</strong></span>
+                        </article>
+                    }
+                }
+            </section>
+            <section class="nps-detail-responses">
+                <header>
+                    <h3>Respostas recentes</h3>
+                    <div class="nps-detail-format-filter" aria-label="Filtrar respostas por formato">
+                        <button type="button" class="nps-detail-segment @(Format == "all" ? "active" : null)" data-format="all" aria-pressed="@((Format == "all").ToString().ToLowerInvariant())" @onclick='() => OnFilter.InvokeAsync("all")'>Todos</button>
+                        <button type="button" class="nps-detail-segment @(Format == "complete" ? "active" : null)" data-format="complete" aria-pressed="@((Format == "complete").ToString().ToLowerInvariant())" @onclick='() => OnFilter.InvokeAsync("complete")'>Completo</button>
+                        <button type="button" class="nps-detail-segment @(Format == "simplified" ? "active" : null)" data-format="simplified" aria-pressed="@((Format == "simplified").ToString().ToLowerInvariant())" @onclick='() => OnFilter.InvokeAsync("simplified")'>Simplificado</button>
+                    </div>
+                </header>
+                @if (Responses.Count == 0)
+                {
+                    <p class="nps-detail-empty">Nenhuma resposta neste formato.</p>
+                }
+                else
+                {
+                    <ul class="nps-recent-responses">
+                        @foreach (var response in Responses)
+                        {
+                            <li><strong>@response.Score · @response.ClassificationLabel</strong><span>@(response.Comment ?? "Sem comentário")</span></li>
+                        }
+                    </ul>
+                }
+            </section>
+        }
+    </ChildContent>
+    <Footer>
+        <button type="button" class="btn btn-ghost" @onclick="OnClose">Fechar</button>
+    </Footer>
+</BrqDialog>
