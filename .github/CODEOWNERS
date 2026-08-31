@@ -1,0 +1,4 @@
+# Dono padrão de todo o repositório.
+# Só tem efeito a partir do branch padrão (main) e só vira revisão
+# obrigatória se a proteção de main exigir review de code owner.
+* @dsbraz
