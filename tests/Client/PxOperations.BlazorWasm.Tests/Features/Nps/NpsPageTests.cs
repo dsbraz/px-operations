@@ -379,6 +379,35 @@ public sealed class NpsPageTests : BunitContext
         });
     }
 
+    /// <summary>
+    /// A validade exibida e a data escrita na mensagem que vai para o cliente
+    /// vêm do mesmo instante: formatar uma no fuso da operação e a outra em UTC
+    /// prometeria ao respondente um dia a mais do que o sistema aceita.
+    /// </summary>
+    [Fact]
+    public void Suggested_message_should_use_the_same_deadline_the_dialog_shows()
+    {
+        var token = Guid.NewGuid();
+        var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Post, "/api/nps/dispatches", NpsTestHelpers.DispatchJson(token, "2026-08-22T02:00:00Z"), HttpStatusCode.Created);
+        Navigate("/nps/coleta");
+
+        var cut = Render<NpsPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Projeto ativo", cut.Markup));
+        cut.Find(".nps-page-actions button").Click();
+        cut.WaitForAssertion(() => cut.Find(".nps-create-project"));
+        cut.Find(".nps-create-project").Change("1");
+        cut.Find(".nps-create-submit").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var message = Dialog(cut, "Gerar link NPS").QuerySelector("textarea")!.TextContent;
+            Assert.Contains("Responda até 21/08/2026", message);
+        });
+    }
+
     [Fact]
     public void Detail_dialog_should_render_compact_kpis_labeled_links_footer_and_segmented_response_filter()
     {

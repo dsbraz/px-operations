@@ -115,7 +115,7 @@ public partial class NpsPage : ComponentBase, IDisposable
             var target = createdDispatch.Targets.Single(item => item.IsGeneric);
             var project = projects.FirstOrDefault(item => item.Id == createdDispatch.Dispatch.ProjectId)?.Name
                 ?? createdDispatch.Dispatch.ProjectName;
-            var expires = createdDispatch.Dispatch.ExpiresAt.ToString("dd/MM/yyyy");
+            var expires = NpsTimeDisplay.Date(createdDispatch.Dispatch.ExpiresAt);
             var url = PublicUrl(target.Token);
             return createLanguage switch
             {

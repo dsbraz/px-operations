@@ -97,9 +97,11 @@ internal static class NpsTestHelpers
         ]
         """;
 
-    internal static string DispatchJson(Guid token) => $$"""
+    internal static string DispatchJson(Guid token) => DispatchJson(token, "2026-08-21T12:00:00Z");
+
+    internal static string DispatchJson(Guid token, string expiresAt) => $$"""
         {
-          "dispatch":{"id":10,"projectId":1,"projectName":"Projeto ativo","format":"complete","formatLabel":"Completo","language":"pt","languageLabel":"Português","status":"open","createdAt":"2026-08-01T12:00:00Z","expiresAt":"2026-08-21T12:00:00Z","closedAt":null,"targetsCount":1,"responsesCount":0,"availability":"open","availabilityLabel":"Aberto","tone":"positive"},
+          "dispatch":{"id":10,"projectId":1,"projectName":"Projeto ativo","format":"complete","formatLabel":"Completo","language":"pt","languageLabel":"Português","status":"open","createdAt":"2026-08-01T12:00:00Z","expiresAt":"{{expiresAt}}","closedAt":null,"targetsCount":1,"responsesCount":0,"availability":"open","availabilityLabel":"Aberto","tone":"positive"},
           "targets":[{"id":20,"dispatchId":10,"contactId":null,"contactName":null,"contactEmail":null,"token":"{{token}}","isGeneric":true,"responsesCount":0}]
         }
         """;
