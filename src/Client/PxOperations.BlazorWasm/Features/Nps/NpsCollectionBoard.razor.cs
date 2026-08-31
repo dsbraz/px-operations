@@ -26,8 +26,17 @@ public partial class NpsCollectionBoard : ComponentBase
     private IReadOnlyList<NpsProjectView> WaivedProjects
         => Projects.Where(project => project.Stage.Code == "waived").ToArray();
 
+    // Link expirado é um estado dentro de "Aguardando resposta" e o PRD pede que
+    // ele lidere a coluna: é o card que exige ação imediata. A ordenação é
+    // estável, então dentro de cada grupo a ordem vinda da API é preservada.
     private IReadOnlyList<NpsProjectView> ProjectsForStage(string stage)
-        => Projects.Where(project => project.Stage.Code == stage).ToArray();
+        => Projects
+            .Where(project => project.Stage.Code == stage)
+            .OrderByDescending(HasExpiredLink)
+            .ToArray();
+
+    private static bool HasExpiredLink(NpsProjectView project)
+        => project.ActiveLinks.Any(link => link.Availability == "expired");
 
     private sealed record BoardColumn(string Code, string Label, string ColorClass);
 }

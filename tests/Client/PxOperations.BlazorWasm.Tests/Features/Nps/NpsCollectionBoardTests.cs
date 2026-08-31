@@ -58,6 +58,41 @@ public sealed class NpsCollectionBoardTests : BunitContext
         Assert.Equal("Projeto Alfa", reported?.Name);
     }
 
+    /// <summary>
+    /// Link expirado é um estado dentro de "Aguardando resposta", e o PRD pede
+    /// que ele fique no topo da coluna: é o card que exige ação imediata.
+    /// </summary>
+    [Fact]
+    public void Awaiting_column_should_lead_with_the_projects_whose_link_expired()
+    {
+        var open = Project("awaiting_response");
+        var expired = Project("awaiting_response");
+        expired.Id = 2;
+        expired.Name = "Projeto Beta";
+        expired.ActiveLinks =
+        [
+            new NpsLinkView
+            {
+                DispatchId = 2,
+                Token = Guid.NewGuid(),
+                FormatLabel = "Completo",
+                ExpiresAt = DateTimeOffset.UtcNow.AddDays(-1),
+                Availability = "expired",
+                AvailabilityLabel = "Expirado",
+                Tone = "danger"
+            }
+        ];
+
+        var cut = Render<NpsCollectionBoard>(parameters => parameters
+            .Add(board => board.Projects, [open, expired]));
+
+        var names = cut.FindAll(".nps-board-column")[1]
+            .QuerySelectorAll(".kanban-card-name")
+            .Select(name => name.TextContent.Trim())
+            .ToArray();
+        Assert.Equal(new[] { "Projeto Beta", "Projeto Alfa" }, names);
+    }
+
     private static NpsProjectView Project(string stage) => new()
     {
         Id = 1,
