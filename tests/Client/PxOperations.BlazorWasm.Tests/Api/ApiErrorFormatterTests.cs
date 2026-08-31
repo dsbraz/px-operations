@@ -27,6 +27,26 @@ public sealed class ApiErrorFormatterTests
         Assert.Equal("Informe o título do marco.", formatted);
     }
 
+    [Fact]
+    public void Format_should_fall_back_when_the_failure_carries_no_server_message()
+    {
+        var formatted = ApiErrorFormatter.Format(
+            new HttpRequestException("TypeError: Failed to fetch"),
+            "Não foi possível gerar o link.");
+
+        Assert.Equal("Não foi possível gerar o link.", formatted);
+    }
+
+    [Fact]
+    public void Format_should_fall_back_when_the_response_body_has_no_usable_text()
+    {
+        var formatted = ApiErrorFormatter.Format(
+            CreateApiException("""{"status":500}"""),
+            "Não foi possível gerar o link.");
+
+        Assert.Equal("Não foi possível gerar o link.", formatted);
+    }
+
     private static ApiException CreateApiException(string response)
         => new("Bad Request", 400, response, new Dictionary<string, IEnumerable<string>>(), null!);
 }

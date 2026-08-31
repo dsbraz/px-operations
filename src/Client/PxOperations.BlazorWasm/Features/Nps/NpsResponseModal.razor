@@ -1,0 +1,44 @@
+@using PxOperations.Ui.Components.Overlays
+
+<BrqDialog Open="@Open"
+           OpenChanged="OpenChanged"
+           Title="Resposta NPS"
+           Description="@Response?.ProjectName"
+           CssClass="nps-dialog nps-response-dialog">
+    <ChildContent>
+        @if (Response is not null)
+        {
+            <section class="nps-response-overview">
+                <div><span>Nota</span><strong>@Response.Score</strong></div>
+                <div><span>Classificação</span><strong>@Response.ClassificationLabel</strong></div>
+                <div><span>Formato</span><strong>@Response.FormatLabel</strong></div>
+                <div><span>Recebida</span><strong>@NpsTimeDisplay.DateAndTime(Response.SubmittedAt)</strong></div>
+            </section>
+            <section class="nps-response-attribution">
+                <h3>Atribuição</h3>
+                <strong>@NpsDisplay.AuthorName(Response)</strong>
+                @if (NpsDisplay.AuthorDetail(Response) is { } detail)
+                {
+                    <span>@detail</span>
+                }
+            </section>
+            <section class="nps-response-full-comment">
+                <h3>Comentário</h3>
+                <p>@(Response.Comment ?? "Sem comentário")</p>
+            </section>
+            @if (Response.Format == "complete")
+            {
+                <section class="nps-response-aspects">
+                    <header><h3>Aspectos</h3><span>Média dos aspectos <strong>@NpsDisplay.AspectAverage(Response)</strong></span></header>
+                    <dl>
+                        <div class="nps-response-aspect"><dt>Qualidade</dt><dd>@(Response.Quality?.ToString() ?? "—")</dd></div>
+                        <div class="nps-response-aspect"><dt>Prazo</dt><dd>@(Response.Schedule?.ToString() ?? "—")</dd></div>
+                        <div class="nps-response-aspect"><dt>Comunicação</dt><dd>@(Response.Communication?.ToString() ?? "—")</dd></div>
+                        <div class="nps-response-aspect"><dt>Valor para o negócio</dt><dd>@(Response.BusinessValue?.ToString() ?? "—")</dd></div>
+                    </dl>
+                </section>
+            }
+        }
+    </ChildContent>
+    <Footer><button type="button" class="btn btn-ghost" @onclick="OnClose">Fechar</button></Footer>
+</BrqDialog>

@@ -4,6 +4,7 @@ namespace PxOperations.Ui.Theming;
 
 public sealed class ThemeService(IJSRuntime jsRuntime) : IThemeService
 {
+    private const string ImportIdentifier = "import";
     private const string ModulePath = "./_content/PxOperations.Ui/js/theme.js";
 
     private IJSObjectReference? module;
@@ -17,14 +18,34 @@ public sealed class ThemeService(IJSRuntime jsRuntime) : IThemeService
     public ValueTask InitializeAsync()
     {
         ObjectDisposedException.ThrowIf(disposed, this);
-        initialization ??= InitializeCoreAsync();
-        return new ValueTask(initialization);
+        var pending = initialization ??= InitializeCoreAsync();
+        return new ValueTask(ForgetIfItFailsAsync(pending));
     }
 
     // Uma falha transitória ao importar o módulo não pode desabilitar o tema
     // para o resto da sessão: a task com falha ficaria cacheada em
     // `initialization` e toda chamada seguinte relançaria a mesma exceção.
-    private void ForgetFailedInitialization() => initialization = null;
+    //
+    // A limpeza precisa acontecer aqui, e não dentro de InitializeCoreAsync:
+    // quando a interop rejeita antes do primeiro await, o catch de lá rodava e
+    // zerava o campo ANTES de o `??=` acima gravar a task já falha — ou seja,
+    // justamente no caso que queríamos proteger, o cache voltava.
+    private async Task ForgetIfItFailsAsync(Task pending)
+    {
+        try
+        {
+            await pending;
+        }
+        catch
+        {
+            if (ReferenceEquals(initialization, pending))
+            {
+                initialization = null;
+            }
+
+            throw;
+        }
+    }
 
     public async ValueTask ToggleAsync()
     {
@@ -55,17 +76,19 @@ public sealed class ThemeService(IJSRuntime jsRuntime) : IThemeService
 
     private async Task InitializeCoreAsync()
     {
-        try
+        var loaded = await jsRuntime.InvokeAsync<IJSObjectReference>(ImportIdentifier, ModulePath);
+
+        // Uma tentativa anterior pode ter importado o módulo e falhado só no
+        // getTheme; trocar a referência sem soltar a antiga vazava o objeto no
+        // runtime JS a cada retentativa.
+        if (module is not null)
         {
-            module = await jsRuntime.InvokeAsync<IJSObjectReference>("import", ModulePath);
-            Current = Parse(await module.InvokeAsync<string>("getTheme"));
-            Changed?.Invoke();
+            await module.DisposeAsync();
         }
-        catch
-        {
-            ForgetFailedInitialization();
-            throw;
-        }
+
+        module = loaded;
+        Current = Parse(await module.InvokeAsync<string>("getTheme"));
+        Changed?.Invoke();
     }
 
     private static ThemePreference Parse(string? value) =>

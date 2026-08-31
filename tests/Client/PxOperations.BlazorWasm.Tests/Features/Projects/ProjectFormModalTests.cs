@@ -12,7 +12,7 @@ namespace PxOperations.BlazorWasm.Tests.Features.Projects;
 /// Testes isolados do componente <see cref="ProjectFormModal"/>.
 /// O componente injeta <see cref="ProjectsClient"/> para chamadas Create/Update.
 /// </summary>
-public sealed class ProjectFormModalTests : TestContext
+public sealed class ProjectFormModalTests : BunitContext
 {
     [Fact]
     public void Should_render_create_form_with_novo_projeto_title()
@@ -20,7 +20,7 @@ public sealed class ProjectFormModalTests : TestContext
         Services.AddScoped(_ => ProjectsTestHelpers.CreateEmptyClient());
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<ProjectFormModal>();
+        var cut = Render<ProjectFormModal>();
 
         Assert.Contains("Novo Projeto", cut.Markup);
         Assert.Contains("overlay open", cut.Markup);
@@ -39,7 +39,7 @@ public sealed class ProjectFormModalTests : TestContext
             deliveryManager: "Flavia de Castro",
             renewal: "Pendente", renewalObservation: "Obs test");
 
-        var cut = RenderComponent<ProjectFormModal>(p => p
+        var cut = Render<ProjectFormModal>(p => p
             .Add(c => c.EditingProject, project));
 
         Assert.Contains("Editar Projeto", cut.Markup);
@@ -55,7 +55,7 @@ public sealed class ProjectFormModalTests : TestContext
 
         var closed = false;
 
-        var cut = RenderComponent<ProjectFormModal>(p => p
+        var cut = Render<ProjectFormModal>(p => p
             .Add(c => c.OnClose, Microsoft.AspNetCore.Components.EventCallback.Factory.Create(
                 this, () => closed = true)));
 
@@ -70,7 +70,7 @@ public sealed class ProjectFormModalTests : TestContext
         Services.AddScoped(_ => ProjectsTestHelpers.CreateEmptyClient());
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<ProjectFormModal>();
+        var cut = Render<ProjectFormModal>();
 
         // Nome está vazio por padrão na criação; clicar Salvar deve exibir erro
         cut.Find(".mfoot .btn-purple").Click();
@@ -89,7 +89,7 @@ public sealed class ProjectFormModalTests : TestContext
 
         ProjectResponse? result = null;
 
-        var cut = RenderComponent<ProjectFormModal>(p => p
+        var cut = Render<ProjectFormModal>(p => p
             .Add(c => c.OnSaved, Microsoft.AspNetCore.Components.EventCallback.Factory.Create<ProjectResponse>(
                 this, r => result = r)));
 
@@ -111,7 +111,7 @@ public sealed class ProjectFormModalTests : TestContext
             HttpStatusCode.BadRequest));
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<ProjectFormModal>();
+        var cut = Render<ProjectFormModal>();
 
         cut.Find("input[type=text]").Change("Projeto Teste");
         cut.FindAll("input[type=date]")[0].Change("2026-12-31");

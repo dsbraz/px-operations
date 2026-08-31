@@ -28,6 +28,7 @@ services:
       DOTNET_USE_POLLING_FILE_WATCHER: "1"
       DOTNET_WATCH_SUPPRESS_EMOJIS: "1"
       ConnectionStrings__Default: Host=postgres;Port=5432;Database=${POSTGRES_DB:-pxoperations};Username=${POSTGRES_USER:-pxoperations};Password=${POSTGRES_PASSWORD:-pxoperations}
+      Database__MigrateOnStartup: "true"
       OpenTelemetry__Otlp__Endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
     depends_on:
       postgres:

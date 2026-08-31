@@ -42,16 +42,32 @@ internal static class ProjectsTestHelpers
     internal sealed class MultiStubHttpMessageHandler : HttpMessageHandler
     {
         private readonly Queue<(HttpMethod Method, string Content, HttpStatusCode Status)> _responses = new();
+        private readonly List<(HttpMethod Method, string Path, string Content, HttpStatusCode Status)> _pathResponses = [];
         public List<Uri?> RequestUris { get; } = [];
 
         public void AddResponse(HttpMethod method, string content, HttpStatusCode status)
             => _responses.Enqueue((method, content, status));
+
+        public void AddResponse(HttpMethod method, string path, string content, HttpStatusCode status)
+            => _pathResponses.Add((method, path, content, status));
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
             RequestUris.Add(request.RequestUri);
+
+            var pathResponseIndex = _pathResponses.FindIndex(response =>
+                response.Method == request.Method && response.Path == request.RequestUri?.AbsolutePath);
+            if (pathResponseIndex >= 0)
+            {
+                var matched = _pathResponses[pathResponseIndex];
+                _pathResponses.RemoveAt(pathResponseIndex);
+                return Task.FromResult(new HttpResponseMessage(matched.Status)
+                {
+                    Content = new StringContent(matched.Content, Encoding.UTF8, "application/json")
+                });
+            }
 
             if (_responses.TryDequeue(out var r))
             {

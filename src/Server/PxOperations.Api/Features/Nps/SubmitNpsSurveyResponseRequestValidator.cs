@@ -7,14 +7,14 @@ public sealed class SubmitNpsSurveyResponseRequestValidator : AbstractValidator<
 {
     public SubmitNpsSurveyResponseRequestValidator()
     {
-        RuleFor(r => r.Score).InclusiveBetween(0, 10);
-        RuleFor(r => r.Scope).InclusiveBetween(0, 10).When(r => r.Scope.HasValue);
-        RuleFor(r => r.Schedule).InclusiveBetween(0, 10).When(r => r.Schedule.HasValue);
-        RuleFor(r => r.Quality).InclusiveBetween(0, 10).When(r => r.Quality.HasValue);
-        RuleFor(r => r.Communication).InclusiveBetween(0, 10).When(r => r.Communication.HasValue);
-        RuleFor(r => r.Tags).MaximumLength(500);
-        RuleFor(r => r.Comment).MaximumLength(2000);
-        RuleFor(r => r.RespondentName).MaximumLength(200);
-        RuleFor(r => r.RespondentEmail).EmailAddress().MaximumLength(320).When(r => !string.IsNullOrWhiteSpace(r.RespondentEmail));
+        RuleFor(request => request.Score).InclusiveBetween(1, 10);
+        RuleFor(request => request.Quality).InclusiveBetween(1, 5).When(request => request.Quality.HasValue);
+        RuleFor(request => request.Schedule).InclusiveBetween(1, 5).When(request => request.Schedule.HasValue);
+        RuleFor(request => request.Communication).InclusiveBetween(1, 5).When(request => request.Communication.HasValue);
+        RuleFor(request => request.BusinessValue).InclusiveBetween(1, 5).When(request => request.BusinessValue.HasValue);
+        RuleFor(request => request.Comment).MaximumLength(2000);
+        RuleFor(request => request.RespondentName).MaximumLength(200);
+        RuleFor(request => request.RespondentEmail).EmailAddress().MaximumLength(320)
+            .When(request => !string.IsNullOrWhiteSpace(request.RespondentEmail));
     }
 }

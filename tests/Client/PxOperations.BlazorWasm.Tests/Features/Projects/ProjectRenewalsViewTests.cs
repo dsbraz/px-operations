@@ -8,7 +8,7 @@ namespace PxOperations.BlazorWasm.Tests.Features.Projects;
 /// Testes isolados do componente <see cref="ProjectRenewalsView"/>.
 /// O componente recebe a lista completa de projetos via parâmetro — não injeta serviços.
 /// </summary>
-public sealed class ProjectRenewalsViewTests : TestContext
+public sealed class ProjectRenewalsViewTests : BunitContext
 {
     [Fact]
     public void Should_show_coverage_indicator_with_computed_percentage()
@@ -24,7 +24,7 @@ public sealed class ProjectRenewalsViewTests : TestContext
                 endDate: "2026-12-31", renewal: "None")
         };
 
-        var cut = RenderComponent<ProjectRenewalsView>(p => p
+        var cut = Render<ProjectRenewalsView>(p => p
             .Add(c => c.Projects, projects.ToList()));
 
         Assert.Contains("ri-pct", cut.Markup);
@@ -43,7 +43,7 @@ public sealed class ProjectRenewalsViewTests : TestContext
                 startDate: "2026-01-01", endDate: "2026-06-30", renewal: "Pendente")
         };
 
-        var cut = RenderComponent<ProjectRenewalsView>(p => p
+        var cut = Render<ProjectRenewalsView>(p => p
             .Add(c => c.Projects, projects.ToList()));
 
         Assert.Contains("dc-bars-grid", cut.Markup);
@@ -63,7 +63,7 @@ public sealed class ProjectRenewalsViewTests : TestContext
                 endDate: "2026-09-30", renewal: "Pendente")
         };
 
-        var cut = RenderComponent<ProjectRenewalsView>(p => p
+        var cut = Render<ProjectRenewalsView>(p => p
             .Add(c => c.Projects, projects.ToList()));
 
         Assert.DoesNotContain("dc-bars-grid", cut.Markup);
@@ -80,7 +80,7 @@ public sealed class ProjectRenewalsViewTests : TestContext
                 renewal: "Em andamento", renewalObservation: "Negociação em curso")
         };
 
-        var cut = RenderComponent<ProjectRenewalsView>(p => p
+        var cut = Render<ProjectRenewalsView>(p => p
             .Add(c => c.Projects, projects.ToList()));
 
         Assert.Contains("proj-card highlighted", cut.Markup);
@@ -98,7 +98,7 @@ public sealed class ProjectRenewalsViewTests : TestContext
                 name: "Sem Renov", endDate: "2026-12-31", renewal: "None")
         };
 
-        var cut = RenderComponent<ProjectRenewalsView>(p => p
+        var cut = Render<ProjectRenewalsView>(p => p
             .Add(c => c.Projects, projects.ToList()));
 
         Assert.Contains("Nenhuma renova", cut.Markup);
@@ -113,7 +113,7 @@ public sealed class ProjectRenewalsViewTests : TestContext
                 name: "Scheduled Renewal", endDate: "2026-12-31", renewal: "Aprovada")
         };
 
-        var cut = RenderComponent<ProjectRenewalsView>(p => p
+        var cut = Render<ProjectRenewalsView>(p => p
             .Add(c => c.Projects, projects.ToList()));
 
         Assert.Contains("Scheduled Renewal", cut.Markup);
@@ -131,7 +131,7 @@ public sealed class ProjectRenewalsViewTests : TestContext
 
         int? editedId = null;
 
-        var cut = RenderComponent<ProjectRenewalsView>(p => p
+        var cut = Render<ProjectRenewalsView>(p => p
             .Add(c => c.Projects, projects.ToList())
             .Add(c => c.OnEdit, Microsoft.AspNetCore.Components.EventCallback.Factory.Create<int>(
                 this, id => editedId = id)));

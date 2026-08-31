@@ -3,6 +3,7 @@ using PxOperations.Application.Features.ProjectHealth;
 using PxOperations.Domain.ProjectHealth;
 using PxOperations.Domain.Projects;
 using ProjectMappings = PxOperations.Api.Features.Projects.ProjectMappings;
+using PxOperations.Api.Errors;
 
 namespace PxOperations.Api.Features.ProjectHealth;
 
@@ -63,7 +64,7 @@ public static class ProjectHealthMappings
             "green" or "verde" => RagStatus.Green,
             "yellow" or "amarelo" => RagStatus.Yellow,
             "red" or "vermelho" => RagStatus.Red,
-            _ => throw new ArgumentException($"Invalid RAG status: {value}")
+            _ => throw new InvalidRequestValueException($"Invalid RAG status: {value}")
         };
     }
 

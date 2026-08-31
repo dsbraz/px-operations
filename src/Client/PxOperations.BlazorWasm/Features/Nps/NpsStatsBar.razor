@@ -1,0 +1,18 @@
+<section class="stats-bar nps-indicators" aria-label="Indicadores do NPS">
+    <div class="stat p">
+        <div class="sico p" aria-hidden="true">◈</div>
+        <div><div class="sval">@NpsDisplay.Metric(OfficialNps)</div><div class="slbl">NPS oficial</div></div>
+    </div>
+    <div class="stat g">
+        <div class="sico g" aria-hidden="true">✓</div>
+        <div><div class="sval">@NpsDisplay.Count(TotalResponses)</div><div class="slbl">Respostas</div></div>
+    </div>
+    <div class="stat b">
+        <div class="sico b" aria-hidden="true">◎</div>
+        <div><div class="sval">@NpsDisplay.Metric(AverageScore)</div><div class="slbl">Média</div></div>
+    </div>
+    <div class="stat o">
+        <div class="sico o" aria-hidden="true">!</div>
+        <div><div class="sval">@NpsDisplay.Count(OverdueProjects)</div><div class="slbl">Vencidos</div></div>
+    </div>
+</section>

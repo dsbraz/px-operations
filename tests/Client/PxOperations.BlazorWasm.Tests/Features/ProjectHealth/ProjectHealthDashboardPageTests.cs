@@ -9,7 +9,7 @@ using PxOperations.BlazorWasm.Tests.Helpers;
 
 namespace PxOperations.BlazorWasm.Tests.Features.ProjectHealth;
 
-public sealed class ProjectHealthDashboardPageTests : TestContext
+public sealed class ProjectHealthDashboardPageTests : BunitContext
 {
     private static string ScoreText(double value) => value.ToString("0.0", CultureInfo.CurrentCulture);
 
@@ -19,7 +19,7 @@ public sealed class ProjectHealthDashboardPageTests : TestContext
         Services.AddScoped(_ => ProjectsTestHelpers.CreateDelayedClient());
         Services.AddScoped<ProjectHealthClient>();
 
-        var cut = RenderComponent<ProjectHealthDashboardPage>();
+        var cut = Render<ProjectHealthDashboardPage>();
 
         Assert.Contains("Carregando", cut.Markup);
     }
@@ -40,7 +40,7 @@ public sealed class ProjectHealthDashboardPageTests : TestContext
         Services.AddScoped(_ => client);
         Services.AddScoped<ProjectHealthClient>();
 
-        var cut = RenderComponent<ProjectHealthDashboardPage>();
+        var cut = Render<ProjectHealthDashboardPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -63,7 +63,7 @@ public sealed class ProjectHealthDashboardPageTests : TestContext
         Services.AddScoped(_ => client);
         Services.AddScoped<ProjectHealthClient>();
 
-        var cut = RenderComponent<ProjectHealthDashboardPage>();
+        var cut = Render<ProjectHealthDashboardPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -92,7 +92,7 @@ public sealed class ProjectHealthDashboardPageTests : TestContext
         Services.AddScoped(_ => client);
         Services.AddScoped<ProjectHealthClient>();
 
-        var cut = RenderComponent<ProjectHealthDashboardPage>();
+        var cut = Render<ProjectHealthDashboardPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -128,7 +128,7 @@ public sealed class ProjectHealthDashboardPageTests : TestContext
         Services.AddScoped(_ => client);
         Services.AddScoped<ProjectHealthClient>();
 
-        var cut = RenderComponent<ProjectHealthDashboardPage>();
+        var cut = Render<ProjectHealthDashboardPage>();
         cut.WaitForAssertion(() => Assert.Contains(ScoreText(7.5), cut.Markup));
 
         // Period select is the third dropdown (DC, Tipo de Projeto, Período, Nota).
@@ -162,7 +162,7 @@ public sealed class ProjectHealthDashboardPageTests : TestContext
         Services.AddScoped(_ => client);
         Services.AddScoped<ProjectHealthClient>();
 
-        var cut = RenderComponent<ProjectHealthDashboardPage>();
+        var cut = Render<ProjectHealthDashboardPage>();
         cut.WaitForAssertion(() => Assert.Contains(ScoreText(7.5), cut.Markup));
 
         // Nota is the fourth dropdown (DC, Tipo de Projeto, Período, Nota).
@@ -193,7 +193,7 @@ public sealed class ProjectHealthDashboardPageTests : TestContext
         Services.AddScoped(_ => client);
         Services.AddScoped<ProjectHealthClient>();
 
-        var cut = RenderComponent<ProjectHealthDashboardPage>();
+        var cut = Render<ProjectHealthDashboardPage>();
         cut.WaitForAssertion(() => Assert.Contains("Todas as semanas", cut.Markup));
 
         cut.FindAll("select")[2].Change("2026-03-23"); // pick an explicit period
@@ -220,7 +220,7 @@ public sealed class ProjectHealthDashboardPageTests : TestContext
         Services.AddScoped(_ => client);
         Services.AddScoped<ProjectHealthClient>();
 
-        var cut = RenderComponent<ProjectHealthDashboardPage>();
+        var cut = Render<ProjectHealthDashboardPage>();
         cut.WaitForAssertion(() => Assert.Contains("Todas as semanas", cut.Markup));
 
         cut.FindAll("select")[2].Change("2026-03-23");
@@ -254,7 +254,7 @@ public sealed class ProjectHealthDashboardPageTests : TestContext
         Services.AddScoped(_ => client);
         Services.AddScoped<ProjectHealthClient>();
 
-        var cut = RenderComponent<ProjectHealthDashboardPage>();
+        var cut = Render<ProjectHealthDashboardPage>();
         cut.WaitForAssertion(() => Assert.Contains("Destaque", cut.Markup));
 
         cut.Find(".ph-com-card").Click(); // open the detail modal
@@ -274,7 +274,7 @@ public sealed class ProjectHealthDashboardPageTests : TestContext
         Services.AddScoped(_ => client);
         Services.AddScoped<ProjectHealthClient>();
 
-        var cut = RenderComponent<ProjectHealthDashboardPage>();
+        var cut = Render<ProjectHealthDashboardPage>();
 
         cut.WaitForAssertion(() =>
         {

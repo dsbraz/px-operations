@@ -32,6 +32,7 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
+        services.AddSingleton(TimeProvider.System);
         services.AddScoped<IProjectRepository, ProjectRepository>();
         services.AddScoped<IMilestoneRepository, MilestoneRepository>();
 
@@ -55,19 +56,13 @@ public static class DependencyInjection
         services.AddScoped<GetProjectHealthSummaryUseCase>();
 
         services.AddScoped<INpsRepository, NpsRepository>();
-        services.AddScoped<GetNpsDashboardUseCase>();
-        services.AddScoped<ListNpsProjectsUseCase>();
-        services.AddScoped<GetNpsProjectUseCase>();
-        services.AddScoped<ListNpsContactsUseCase>();
+        services.AddScoped<INpsQueries, NpsQueries>();
         services.AddScoped<CreateNpsContactUseCase>();
         services.AddScoped<UpdateNpsContactUseCase>();
-        services.AddScoped<DeleteNpsContactUseCase>();
-        services.AddScoped<ListNpsDispatchesUseCase>();
-        services.AddScoped<GetNpsDispatchUseCase>();
+        services.AddScoped<ArchiveNpsContactUseCase>();
         services.AddScoped<CreateNpsDispatchUseCase>();
-        services.AddScoped<CloseNpsDispatchUseCase>();
-        services.AddScoped<ListNpsResponsesUseCase>();
-        services.AddScoped<GetNpsPublicSurveyUseCase>();
+        services.AddScoped<WaiveNpsCollectionUseCase>();
+        services.AddScoped<ReactivateNpsCollectionUseCase>();
         services.AddScoped<SubmitNpsPublicResponseUseCase>();
 
         services.AddScoped<IReadinessService, DatabaseReadinessService>();

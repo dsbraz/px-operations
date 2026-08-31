@@ -1,23 +1,31 @@
 using PxOperations.Application.Abstractions;
+using PxOperations.Domain.Exceptions;
 using PxOperations.Domain.Nps;
 
 namespace PxOperations.Application.Features.Nps.UseCases;
 
-public sealed record CreateNpsContactCommand(string Name, string Email, string? Role);
+public sealed record CreateNpsContactCommand(int ProjectId, string Name, string Email, string? Role);
 
-public sealed class CreateNpsContactUseCase(INpsRepository repository, IUnitOfWork unitOfWork)
+public sealed class CreateNpsContactUseCase(
+    INpsRepository repository,
+    IUnitOfWork unitOfWork,
+    TimeProvider timeProvider)
 {
-    public async Task<NpsContactView> ExecuteAsync(int projectId, CreateNpsContactCommand command, CancellationToken ct)
+    public async Task<int> ExecuteAsync(CreateNpsContactCommand command, CancellationToken ct)
     {
-        if (!await repository.ProjectExistsAsync(projectId, ct))
+        if (!await repository.ProjectExistsAsync(command.ProjectId, ct))
         {
-            throw new KeyNotFoundException("Project not found.");
+            throw new ResourceNotFoundException("Project was not found.");
         }
 
-        var contact = Contact.Create(projectId, command.Name, command.Email, command.Role, DateTimeOffset.UtcNow);
+        var contact = Contact.Create(
+            command.ProjectId,
+            command.Name,
+            command.Email,
+            command.Role,
+            timeProvider.GetUtcNow());
         repository.AddContact(contact);
         await unitOfWork.SaveChangesAsync(ct);
-
-        return (await repository.ListContactsAsync(projectId, includeArchived: true, ct)).Single(c => c.Id == contact.Id);
+        return contact.Id;
     }
 }

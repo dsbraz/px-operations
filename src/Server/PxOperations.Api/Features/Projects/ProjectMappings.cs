@@ -1,5 +1,6 @@
 using PxOperations.Api.Features.Projects.Contracts;
 using PxOperations.Domain.Projects;
+using PxOperations.Api.Errors;
 
 namespace PxOperations.Api.Features.Projects;
 
@@ -31,7 +32,7 @@ public static class ProjectMappings
             "DC4" => DeliveryCenter.Dc4,
             "DC5" => DeliveryCenter.Dc5,
             "DC6" => DeliveryCenter.Dc6,
-            _ => throw new ArgumentException($"Invalid delivery center: {value}")
+            _ => throw new InvalidRequestValueException($"Invalid delivery center: {value}")
         };
     }
 
@@ -42,7 +43,7 @@ public static class ProjectMappings
             "em andamento" or "in_progress" => ProjectStatus.InProgress,
             "programado" or "scheduled" => ProjectStatus.Scheduled,
             "encerrado" or "closed" => ProjectStatus.Closed,
-            _ => throw new ArgumentException($"Invalid project status: {value}")
+            _ => throw new InvalidRequestValueException($"Invalid project status: {value}")
         };
     }
 
@@ -53,7 +54,7 @@ public static class ProjectMappings
             "squad" => ProjectType.Squad,
             "escopo fechado" or "fixed_scope" => ProjectType.FixedScope,
             "alocacao" or "alocação" or "staffing" => ProjectType.Staffing,
-            _ => throw new ArgumentException($"Invalid project type: {value}")
+            _ => throw new InvalidRequestValueException($"Invalid project type: {value}")
         };
     }
 
@@ -67,7 +68,7 @@ public static class ProjectMappings
             "pendente" or "pending" => RenewalStatus.Pending,
             "em andamento" or "in_progress" => RenewalStatus.InProgress,
             "aprovada" or "approved" => RenewalStatus.Approved,
-            _ => throw new ArgumentException($"Invalid renewal status: {value}")
+            _ => throw new InvalidRequestValueException($"Invalid renewal status: {value}")
         };
     }
 

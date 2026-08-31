@@ -1,104 +1,90 @@
 @page "/nps/{Token:guid}"
-@using PxOperations.BlazorWasm.Api
+@using PxOperations.Ui.Components.Navigation
 
 <PageTitle>NPS · Operations PX</PageTitle>
 
-<main class="nps-public">
+<main class="nps-public-page">
+    <header class="nps-public-header">
+        <strong class="nps-public-brand">BRQ</strong>
+        <BrqThemeToggle />
+    </header>
+
     @if (isLoading)
     {
-        <div class="nps-public-box">@Texts.Loading</div>
+        <section class="nps-public-card"><p>@Texts.Loading</p></section>
     }
-    else if (loadError is not null)
+    else if (invalidToken)
     {
-        <div class="nps-public-box">@loadError</div>
+        <section class="nps-public-card nps-final-state"><h1>@Texts.InvalidTitle</h1><p>@Texts.InvalidMessage</p></section>
     }
-    else if (survey is not null && submitted)
+    else if (loadFailed)
     {
-        <div class="nps-public-box">
-            <h1>@Texts.ThankYouTitle</h1>
-            <p>@Texts.ThankYouMessage</p>
-        </div>
+        <section class="nps-public-card nps-final-state"><h1>@Texts.LoadErrorTitle</h1><p>@Texts.LoadErrorMessage</p></section>
+    }
+    else if (submitted)
+    {
+        <section class="nps-public-card nps-final-state"><h1>@Texts.SuccessTitle</h1><p>@Texts.SuccessMessage</p></section>
+    }
+    else if (survey is not null && survey.Availability != "open")
+    {
+        <section class="nps-public-card nps-final-state"><h1>@FinalTitle</h1><p>@FinalMessage</p></section>
     }
     else if (survey is not null)
     {
-        <div class="nps-public-box">
-            <div class="nps-survey-context">@Texts.ProjectContext</div>
-            <h1>@survey.ProjectName</h1>
+        <section class="nps-public-card">
+            <div class="nps-public-intro">
+                <span>@Texts.Introduction</span>
+                <h1>@survey.ProjectName</h1>
+                <p>@survey.Client · @Texts.ValidUntil @NpsTimeDisplay.Date(survey.ExpiresAt)</p>
+            </div>
 
-            @if (survey.AlreadyAnswered)
-            {
-                <div class="nps-empty">@Texts.AlreadyAnswered</div>
-            }
-            else
-            {
-                <div class="nps-scale-field">
-                    <div class="nps-question">@Texts.NpsQuestion</div>
-                    <div class="nps-scale" role="radiogroup" aria-label="@Texts.NpsQuestion">
-                        @for (var i = 0; i <= 10; i++)
-                        {
-                            var value = i;
-                            <button type="button" class="nps-score @(score == value ? "selected" : "")" aria-pressed="@(score == value)" @onclick="() => score = value">@value</button>
-                        }
-                    </div>
-                    <div class="nps-scale-help"><span>@Texts.ScaleLow</span><span>@Texts.ScaleHigh</span></div>
+            <fieldset class="nps-question-block">
+                <legend>@Texts.Question</legend>
+                <div class="nps-score-scale" role="radiogroup" aria-label="@Texts.Question">
+                    @foreach (var value in ScoreValues)
+                    {
+                        <button type="button" class="@(score == value ? "selected" : null)" aria-pressed="@((score == value).ToString().ToLowerInvariant())" @onclick="() => score = value">@value</button>
+                    }
                 </div>
+                <div class="nps-scale-help"><span>@Texts.Unlikely</span><span>@Texts.Likely</span></div>
+            </fieldset>
 
-                @if (survey.Format == "Completo")
-                {
-                    <div class="nps-public-grid">
-                        <div class="nps-scale-field compact">
-                            <div class="nps-scale-label">@Texts.Scope</div>
-                            <div class="nps-scale" role="radiogroup" aria-label="@Texts.Scope">
-                                @for (var i = 0; i <= 10; i++)
+            <label class="nps-field">
+                <span>@Texts.Comment</span>
+                <textarea @bind="comment" maxlength="2000"></textarea>
+            </label>
+
+            @if (survey.Format == "complete")
+            {
+                <section class="nps-aspects">
+                    @foreach (var aspect in survey.Aspects)
+                    {
+                        <fieldset class="nps-aspect">
+                            <legend>@aspect.Label</legend>
+                            <div class="nps-aspect-scale" role="radiogroup" aria-label="@aspect.Label">
+                                @for (var value = aspect.Scale.Minimum; value <= aspect.Scale.Maximum; value++)
                                 {
-                                    var value = i;
-                                    <button type="button" class="nps-score @(scope == value ? "selected" : "")" aria-pressed="@(scope == value)" @onclick="() => scope = value">@value</button>
+                                    var choice = value;
+                                    <button type="button" class="@(AspectValue(aspect.Code) == choice ? "selected" : null)" @onclick="() => SetAspect(aspect.Code, choice)">@choice</button>
                                 }
                             </div>
-                        </div>
-                        <div class="nps-scale-field compact">
-                            <div class="nps-scale-label">@Texts.Schedule</div>
-                            <div class="nps-scale" role="radiogroup" aria-label="@Texts.Schedule">
-                                @for (var i = 0; i <= 10; i++)
-                                {
-                                    var value = i;
-                                    <button type="button" class="nps-score @(schedule == value ? "selected" : "")" aria-pressed="@(schedule == value)" @onclick="() => schedule = value">@value</button>
-                                }
-                            </div>
-                        </div>
-                        <div class="nps-scale-field compact">
-                            <div class="nps-scale-label">@Texts.Quality</div>
-                            <div class="nps-scale" role="radiogroup" aria-label="@Texts.Quality">
-                                @for (var i = 0; i <= 10; i++)
-                                {
-                                    var value = i;
-                                    <button type="button" class="nps-score @(quality == value ? "selected" : "")" aria-pressed="@(quality == value)" @onclick="() => quality = value">@value</button>
-                                }
-                            </div>
-                        </div>
-                        <div class="nps-scale-field compact">
-                            <div class="nps-scale-label">@Texts.Communication</div>
-                            <div class="nps-scale" role="radiogroup" aria-label="@Texts.Communication">
-                                @for (var i = 0; i <= 10; i++)
-                                {
-                                    var value = i;
-                                    <button type="button" class="nps-score @(communication == value ? "selected" : "")" aria-pressed="@(communication == value)" @onclick="() => communication = value">@value</button>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                }
-
-                <textarea placeholder="@Texts.CommentPlaceholder" @bind="comment"></textarea>
-
-                <div class="nps-identity">
-                    <div class="nps-scale-label">@Texts.OptionalIdentity</div>
-                    <input placeholder="@Texts.NamePlaceholder" @bind="respondentName" />
-                    <input placeholder="@Texts.EmailPlaceholder" @bind="respondentEmail" />
-                </div>
-
-                <button class="btn btn-purple" @onclick="SubmitAsync">@Texts.Submit</button>
+                        </fieldset>
+                    }
+                </section>
             }
-        </div>
+
+            <section class="nps-identity">
+                <label class="nps-field"><span>@Texts.Name</span><input @bind="respondentName" maxlength="200" /></label>
+                <label class="nps-field"><span>@Texts.Email</span><input type="email" @bind="respondentEmail" maxlength="320" /></label>
+            </section>
+
+            <section class="nps-privacy"><h2>@Texts.PrivacyTitle</h2><p>@Texts.PrivacyMessage</p></section>
+
+            @if (submitError is not null)
+            {
+                <p class="nps-submit-error" role="alert">@submitError</p>
+            }
+            <button type="button" class="btn btn-purple nps-submit" disabled="@(!score.HasValue || isSubmitting)" @onclick="SubmitAsync">@Texts.Submit</button>
+        </section>
     }
 </main>

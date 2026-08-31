@@ -1,0 +1,78 @@
+@using PxOperations.Ui.Components.Overlays
+
+<BrqDialog Open="@Open"
+           OpenChanged="OpenChanged"
+           Title="Gerar link NPS"
+           Description="@Description"
+           CssClass="nps-dialog"
+           AutofocusSelector=".nps-create-project">
+    <ChildContent>
+        @if (Created is null)
+        {
+            <div class="nps-create-form">
+                <div class="nps-dialog-step">
+                    <span>1</span>
+                    <div><strong>Projeto, formato e idioma</strong><p>Defina como a rodada será compartilhada.</p></div>
+                </div>
+                <div class="nps-form-grid">
+                    <label class="nps-field nps-field-full">
+                        <span>Projeto</span>
+                        <select class="nps-create-project" value="@ProjectId" @onchange="ProjectChanged">
+                            <option value="0">Selecione o projeto</option>
+                            @foreach (var project in Projects.Where(project => project.Stage.Code != "waived"))
+                            {
+                                <option value="@project.Id">@project.Name</option>
+                            }
+                        </select>
+                    </label>
+                    <label class="nps-field">
+                        <span>Formato</span>
+                        <select value="@Format" @onchange="args => FormatChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty)"><option value="complete">Completo</option><option value="simplified">Simplificado</option></select>
+                    </label>
+                    <label class="nps-field">
+                        <span>Idioma</span>
+                        <select value="@Language" @onchange="args => LanguageChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty)"><option value="pt">Português</option><option value="en">Inglês</option><option value="es">Espanhol</option></select>
+                    </label>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="nps-created-link">
+                <div class="nps-dialog-step complete">
+                    <span>2</span>
+                    <div><strong>Link pronto · @Created.Dispatch.FormatLabel</strong><p>Compartilhe o link ou a mensagem sugerida.</p></div>
+                </div>
+                <label class="nps-created-block">
+                    <span>Link</span>
+                    <input readonly value="@LinkUrl" />
+                </label>
+                <div class="nps-created-block nps-created-validity">
+                    <span>Validade</span>
+                    <strong>@NpsTimeDisplay.Date(Created.Dispatch.ExpiresAt)</strong>
+                </div>
+                <label class="nps-created-block">
+                    <span>Mensagem sugerida</span>
+                    <textarea readonly>@SuggestedMessage</textarea>
+                </label>
+            </div>
+        }
+
+        @if (ActionError is not null)
+        {
+            <p class="nps-action-error" role="alert">@ActionError</p>
+        }
+    </ChildContent>
+    <Footer>
+        @if (Created is null)
+        {
+            <button type="button" class="btn btn-ghost" @onclick="OnCancel">Cancelar</button>
+            <button type="button" class="btn btn-purple nps-create-submit" disabled="@(ProjectId == 0 || IsSubmitting)" @onclick="OnSubmit">Gerar link</button>
+        }
+        else
+        {
+            <button type="button" class="btn btn-ghost" @onclick="() => OnCopy.InvokeAsync(LinkUrl)">Copiar link</button>
+            <button type="button" class="btn btn-purple" @onclick="() => OnCopy.InvokeAsync(SuggestedMessage)">Copiar mensagem</button>
+        }
+    </Footer>
+</BrqDialog>

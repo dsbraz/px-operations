@@ -7,8 +7,8 @@ public sealed class UpdateNpsContactRequestValidator : AbstractValidator<UpdateN
 {
     public UpdateNpsContactRequestValidator()
     {
-        RuleFor(r => r.Name).NotEmpty().MaximumLength(200);
-        RuleFor(r => r.Email).NotEmpty().EmailAddress().MaximumLength(320);
-        RuleFor(r => r.Role).MaximumLength(120);
+        RuleFor(request => request.Name).NotEmpty().MaximumLength(200);
+        RuleFor(request => request.Email).NotEmpty().EmailAddress().MaximumLength(320);
+        RuleFor(request => request.Role).MaximumLength(120);
     }
 }

@@ -8,7 +8,7 @@ using PxOperations.BlazorWasm.Tests.Helpers;
 
 namespace PxOperations.BlazorWasm.Tests.Features.ProjectHealth;
 
-public sealed class ProjectHealthFormPageTests : TestContext
+public sealed class ProjectHealthFormPageTests : BunitContext
 {
     [Fact]
     public void Page_should_show_loading_while_api_is_pending()
@@ -17,7 +17,7 @@ public sealed class ProjectHealthFormPageTests : TestContext
         Services.AddScoped<ProjectHealthClient>();
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<ProjectHealthFormPage>();
+        var cut = Render<ProjectHealthFormPage>();
 
         Assert.Contains("Project Health", cut.Markup);
     }
@@ -36,7 +36,7 @@ public sealed class ProjectHealthFormPageTests : TestContext
         Services.AddScoped<ProjectHealthClient>();
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<ProjectHealthFormPage>();
+        var cut = Render<ProjectHealthFormPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -61,7 +61,7 @@ public sealed class ProjectHealthFormPageTests : TestContext
         Services.AddScoped<ProjectHealthClient>();
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<ProjectHealthFormPage>();
+        var cut = Render<ProjectHealthFormPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -81,7 +81,7 @@ public sealed class ProjectHealthFormPageTests : TestContext
         Services.AddScoped<ProjectHealthClient>();
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<ProjectHealthFormPage>();
+        var cut = Render<ProjectHealthFormPage>();
 
         cut.WaitForAssertion(() =>
         {

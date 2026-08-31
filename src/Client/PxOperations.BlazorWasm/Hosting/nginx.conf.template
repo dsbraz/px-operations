@@ -32,9 +32,22 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
-    # Cache imutavel exige que a URL mude quando o conteudo muda. Hoje so o
-    # _framework atende: o pipeline do .NET grava o hash no nome do arquivo
-    # (blazor.webassembly.<hash>.js). Ali um ano de cache sem revalidacao e seguro.
+    # Excecao dentro do _framework: o loader publicado faz import("./dotnet.js"),
+    # um caminho sem hash, e por isso o Dockerfile copia dotnet.<hash>.js para
+    # dotnet.js. Esse arquivo carrega a lista de assets fingerprinted, entao um
+    # ano de cache nele congela o manifest: no deploy seguinte o .wasm antigo
+    # deixa de existir, o navegador que voltou pede o nome velho, recebe 404 do
+    # try_files e a aplicacao nao sobe. O nome e estavel, logo ele revalida.
+    location = /_framework/dotnet.js {
+        include /etc/nginx/security-headers.conf;
+        add_header Cache-Control "no-cache, must-revalidate" always;
+        try_files $uri =404;
+    }
+
+    # Cache imutavel exige que a URL mude quando o conteudo muda. No _framework o
+    # pipeline do .NET grava o hash no nome do arquivo (blazor.webassembly.<hash>.js,
+    # dotnet.<hash>.js, cada .wasm), entao um ano de cache sem revalidacao e seguro
+    # para tudo que passa por aqui - a excecao de nome estavel esta tratada acima.
     location ^~ /_framework/ {
         include /etc/nginx/security-headers.conf;
         add_header Cache-Control "public, max-age=31536000, immutable" always;

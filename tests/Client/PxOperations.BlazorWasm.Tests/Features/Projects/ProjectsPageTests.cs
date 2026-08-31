@@ -16,7 +16,7 @@ namespace PxOperations.BlazorWasm.Tests.Features.Projects;
 /// Comportamentos internos de cada subcomponente são testados nos
 /// arquivos de teste correspondentes.
 /// </summary>
-public sealed class ProjectsPageTests : TestContext
+public sealed class ProjectsPageTests : BunitContext
 {
     // ── CARREGAMENTO ─────────────────────────────────────────────────────────
 
@@ -26,7 +26,7 @@ public sealed class ProjectsPageTests : TestContext
         Services.AddScoped(_ => ProjectsTestHelpers.CreateDelayedClient());
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<ProjectsPage>();
+        var cut = Render<ProjectsPage>();
 
         Assert.Contains("Carregando", cut.Markup);
     }
@@ -46,7 +46,7 @@ public sealed class ProjectsPageTests : TestContext
         Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(ProjectsTestHelpers.ProjectsJson(projects)));
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<ProjectsPage>();
+        var cut = Render<ProjectsPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -69,7 +69,7 @@ public sealed class ProjectsPageTests : TestContext
         Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(ProjectsTestHelpers.ProjectsJson(projects)));
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<ProjectsPage>();
+        var cut = Render<ProjectsPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -100,7 +100,7 @@ public sealed class ProjectsPageTests : TestContext
         Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(ProjectsTestHelpers.ProjectsJson(projects)));
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<ProjectsPage>();
+        var cut = Render<ProjectsPage>();
 
         cut.WaitForAssertion(() => Assert.Contains("Alpha Renewal", cut.Markup));
 
@@ -128,7 +128,7 @@ public sealed class ProjectsPageTests : TestContext
         Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(ProjectsTestHelpers.ProjectsJson(projects)));
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<ProjectsPage>();
+        var cut = Render<ProjectsPage>();
 
         cut.WaitForAssertion(() => Assert.Contains("Renewal One", cut.Markup));
 
@@ -156,7 +156,7 @@ public sealed class ProjectsPageTests : TestContext
         Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(ProjectsTestHelpers.ProjectsJson(projects)));
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<ProjectsPage>();
+        var cut = Render<ProjectsPage>();
 
         cut.WaitForAssertion(() => Assert.Contains("Scheduled Renewal", cut.Markup));
 
@@ -186,7 +186,7 @@ public sealed class ProjectsPageTests : TestContext
         Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(ProjectsTestHelpers.ProjectsJson(projects)));
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<ProjectsPage>();
+        var cut = Render<ProjectsPage>();
 
         cut.WaitForAssertion(() => Assert.Contains("Approved Renewal", cut.Markup));
 
@@ -209,7 +209,7 @@ public sealed class ProjectsPageTests : TestContext
         Services.AddScoped(_ => ProjectsTestHelpers.CreateEmptyClient());
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<ProjectsPage>();
+        var cut = Render<ProjectsPage>();
 
         cut.WaitForAssertion(() => Assert.DoesNotContain("overlay open", cut.Markup));
 
@@ -235,7 +235,7 @@ public sealed class ProjectsPageTests : TestContext
         Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(ProjectsTestHelpers.ProjectsJson(projects)));
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<ProjectsPage>();
+        var cut = Render<ProjectsPage>();
 
         cut.WaitForAssertion(() => Assert.Contains("Portal X", cut.Markup));
 
@@ -255,7 +255,7 @@ public sealed class ProjectsPageTests : TestContext
         Services.AddScoped(_ => ProjectsTestHelpers.CreateEmptyClient());
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<ProjectsPage>();
+        var cut = Render<ProjectsPage>();
 
         cut.Find("button.btn-purple").Click();
         cut.WaitForAssertion(() => Assert.Contains("overlay open", cut.Markup));
@@ -279,7 +279,7 @@ public sealed class ProjectsPageTests : TestContext
         Services.AddScoped(_ => new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
         Services.AddScoped<ProjectsClient>();
 
-        var cut = RenderComponent<ProjectsPage>();
+        var cut = Render<ProjectsPage>();
 
         cut.WaitForAssertion(() => Assert.Contains("ToDelete", cut.Markup));
 

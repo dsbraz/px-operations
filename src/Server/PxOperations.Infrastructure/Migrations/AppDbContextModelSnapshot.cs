@@ -127,15 +127,17 @@ namespace PxOperations.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("closed_at");
 
+                    b.Property<int>("CollectionId")
+                        .HasColumnType("integer")
+                        .HasColumnName("collection_id");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("created_by");
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
 
                     b.Property<int>("Format")
                         .HasColumnType("integer")
@@ -145,25 +147,15 @@ namespace PxOperations.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("language");
 
-                    b.Property<DateOnly>("PeriodEnd")
-                        .HasColumnType("date")
-                        .HasColumnName("period_end");
-
-                    b.Property<DateOnly>("PeriodStart")
-                        .HasColumnType("date")
-                        .HasColumnName("period_start");
-
-                    b.Property<int>("ProjectId")
-                        .HasColumnType("integer")
-                        .HasColumnName("project_id");
-
                     b.Property<int>("Status")
                         .HasColumnType("integer")
                         .HasColumnName("status");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProjectId", "Status");
+                    b.HasIndex("CollectionId", "Format")
+                        .IsUnique()
+                        .HasFilter("status = 0");
 
                     b.ToTable("nps_dispatches", (string)null);
                 });
@@ -189,10 +181,6 @@ namespace PxOperations.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("dispatch_id");
 
-                    b.Property<int>("ProjectId")
-                        .HasColumnType("integer")
-                        .HasColumnName("project_id");
-
                     b.Property<Guid>("Token")
                         .HasColumnType("uuid")
                         .HasColumnName("token");
@@ -200,8 +188,6 @@ namespace PxOperations.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ContactId");
-
-                    b.HasIndex("ProjectId");
 
                     b.HasIndex("Token")
                         .IsUnique();
@@ -213,6 +199,36 @@ namespace PxOperations.Infrastructure.Migrations
                     b.ToTable("nps_dispatch_targets", (string)null);
                 });
 
+            modelBuilder.Entity("PxOperations.Domain.Nps.NpsCollection", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("integer")
+                        .HasColumnName("project_id");
+
+                    b.Property<DateTimeOffset?>("WaivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("waived_at");
+
+                    b.Property<string>("WaiverReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("waiver_reason");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId")
+                        .IsUnique();
+
+                    b.ToTable("nps_collections", (string)null);
+                });
+
             modelBuilder.Entity("PxOperations.Domain.Nps.SurveyResponse", b =>
                 {
                     b.Property<int>("Id")
@@ -221,6 +237,10 @@ namespace PxOperations.Infrastructure.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("BusinessValue")
+                        .HasColumnType("integer")
+                        .HasColumnName("business_value");
 
                     b.Property<int>("Classification")
                         .HasColumnType("integer")
@@ -242,6 +262,15 @@ namespace PxOperations.Infrastructure.Migrations
                     b.Property<int>("DispatchId")
                         .HasColumnType("integer")
                         .HasColumnName("dispatch_id");
+
+                    b.Property<int>("Format")
+                        .HasColumnType("integer")
+                        .HasColumnName("format");
+
+                    b.Property<string>("NormalizedRespondentEmail")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("normalized_respondent_email");
 
                     b.Property<int>("ProjectId")
                         .HasColumnType("integer")
@@ -265,10 +294,6 @@ namespace PxOperations.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("schedule");
 
-                    b.Property<int?>("Scope")
-                        .HasColumnType("integer")
-                        .HasColumnName("scope");
-
                     b.Property<int>("Score")
                         .HasColumnType("integer")
                         .HasColumnName("score");
@@ -276,11 +301,6 @@ namespace PxOperations.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("SubmittedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("submitted_at");
-
-                    b.Property<string>("Tags")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("tags");
 
                     b.Property<int>("TargetId")
                         .HasColumnType("integer")
@@ -291,13 +311,29 @@ namespace PxOperations.Infrastructure.Migrations
                     b.HasIndex("ContactId");
 
                     b.HasIndex("TargetId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("contact_id IS NOT NULL");
 
                     b.HasIndex("DispatchId", "SubmittedAt");
 
                     b.HasIndex("ProjectId", "SubmittedAt");
 
-                    b.ToTable("nps_survey_responses", (string)null);
+                    b.HasIndex("TargetId", "NormalizedRespondentEmail")
+                        .IsUnique()
+                        .HasFilter("contact_id IS NULL AND normalized_respondent_email IS NOT NULL");
+
+                    b.ToTable("nps_survey_responses", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_nps_survey_responses_business_value", "business_value IS NULL OR business_value BETWEEN 1 AND 5");
+
+                            t.HasCheckConstraint("CK_nps_survey_responses_communication", "communication IS NULL OR communication BETWEEN 1 AND 5");
+
+                            t.HasCheckConstraint("CK_nps_survey_responses_quality", "quality IS NULL OR quality BETWEEN 1 AND 5");
+
+                            t.HasCheckConstraint("CK_nps_survey_responses_schedule", "schedule IS NULL OR schedule BETWEEN 1 AND 5");
+
+                            t.HasCheckConstraint("CK_nps_survey_responses_score", "score BETWEEN 1 AND 10");
+                        });
                 });
 
             modelBuilder.Entity("PxOperations.Domain.ProjectHealth.ProjectHealth", b =>
@@ -455,84 +491,69 @@ namespace PxOperations.Infrastructure.Migrations
 
             modelBuilder.Entity("PxOperations.Domain.Nps.Contact", b =>
                 {
-                    b.HasOne("PxOperations.Domain.Projects.Project", "Project")
+                    b.HasOne("PxOperations.Domain.Projects.Project", null)
                         .WithMany()
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Project");
                 });
 
             modelBuilder.Entity("PxOperations.Domain.Nps.Dispatch", b =>
                 {
-                    b.HasOne("PxOperations.Domain.Projects.Project", "Project")
-                        .WithMany()
-                        .HasForeignKey("ProjectId")
+                    b.HasOne("PxOperations.Domain.Nps.NpsCollection", null)
+                        .WithMany("Dispatches")
+                        .HasForeignKey("CollectionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Project");
                 });
 
             modelBuilder.Entity("PxOperations.Domain.Nps.DispatchTarget", b =>
                 {
-                    b.HasOne("PxOperations.Domain.Nps.Contact", "Contact")
+                    b.HasOne("PxOperations.Domain.Nps.Contact", null)
                         .WithMany()
                         .HasForeignKey("ContactId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("PxOperations.Domain.Nps.Dispatch", "Dispatch")
+                    b.HasOne("PxOperations.Domain.Nps.Dispatch", null)
                         .WithMany("Targets")
                         .HasForeignKey("DispatchId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
 
-                    b.HasOne("PxOperations.Domain.Projects.Project", "Project")
-                        .WithMany()
-                        .HasForeignKey("ProjectId")
+            modelBuilder.Entity("PxOperations.Domain.Nps.NpsCollection", b =>
+                {
+                    b.HasOne("PxOperations.Domain.Projects.Project", null)
+                        .WithOne()
+                        .HasForeignKey("PxOperations.Domain.Nps.NpsCollection", "ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Contact");
-
-                    b.Navigation("Dispatch");
-
-                    b.Navigation("Project");
                 });
 
             modelBuilder.Entity("PxOperations.Domain.Nps.SurveyResponse", b =>
                 {
-                    b.HasOne("PxOperations.Domain.Nps.Contact", "Contact")
+                    b.HasOne("PxOperations.Domain.Nps.Contact", null)
                         .WithMany()
                         .HasForeignKey("ContactId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("PxOperations.Domain.Nps.Dispatch", "Dispatch")
+                    b.HasOne("PxOperations.Domain.Nps.Dispatch", null)
                         .WithMany()
                         .HasForeignKey("DispatchId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("PxOperations.Domain.Projects.Project", "Project")
+                    b.HasOne("PxOperations.Domain.Projects.Project", null)
                         .WithMany()
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("PxOperations.Domain.Nps.DispatchTarget", "Target")
-                        .WithMany("Responses")
+                    b.HasOne("PxOperations.Domain.Nps.DispatchTarget", null)
+                        .WithMany()
                         .HasForeignKey("TargetId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Contact");
-
-                    b.Navigation("Dispatch");
-
-                    b.Navigation("Project");
-
-                    b.Navigation("Target");
                 });
 
             modelBuilder.Entity("PxOperations.Domain.ProjectHealth.ProjectHealth", b =>
@@ -551,9 +572,9 @@ namespace PxOperations.Infrastructure.Migrations
                     b.Navigation("Targets");
                 });
 
-            modelBuilder.Entity("PxOperations.Domain.Nps.DispatchTarget", b =>
+            modelBuilder.Entity("PxOperations.Domain.Nps.NpsCollection", b =>
                 {
-                    b.Navigation("Responses");
+                    b.Navigation("Dispatches");
                 });
 
             modelBuilder.Entity("PxOperations.Domain.Projects.Project", b =>

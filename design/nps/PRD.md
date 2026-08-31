@@ -282,17 +282,24 @@ O modelo de dados atual (projeto → disparo → link → resposta, com formato,
 Esforço: P = pequeno (horas), M = médio (dias). Estimativas de quem mapeou o código; validar no
 refinamento.
 
-**Decisão pendente em B13.** O quarto aspecto trocou de assunto: era "Escopo", virou "Valor
-gerado para o negócio". Duas saídas, com custos diferentes:
+**B13 e B14: decidido converter.** O quarto aspecto trocou de assunto — era "Escopo", virou
+"Valor gerado para o negócio" — e as escalas mudaram: a nota do NPS passou de 0–10 para 1–10 e os
+aspectos de 0–10 para 1–5. Entre renomear o campo e criar um novo preservando as duas séries,
+optou-se por **renomear e converter**, na migração `20260827232330_RebuildNpsPhaseOne`:
 
-1. **Renomear o campo `Scope`** (migração simples). O histórico passa a ser lido como "valor",
-   quando as respostas antigas mediram escopo: mistura duas coisas na mesma série.
-2. **Criar `BusinessValue` e aposentar `Scope`**. Histórico preservado e honesto, custo de uma
-   migração a mais e de o painel de médias conviver com duas séries na transição.
+- `scope` foi renomeada para `business_value`;
+- os aspectos foram convertidos com `CEIL(x / 2.0)`, limitados a 1–5;
+- a nota 0 foi elevada a 1 e a classificação recalculada pela régua nova.
 
-Recomendação: a opção 2 se houver volume de respostas Completo que valha comparar; a 1 se o
-histórico for pequeno. **B14 tem a mesma pergunta**: as notas antigas estão em 0 a 10 e os
-aspectos também; decidir se são convertidos, segregados por data ou descartados da série.
+**Consequência aceita:** a média de "Valor para o negócio" no painel soma respostas que mediram
+valor e respostas antigas que mediram escopo, sem distinguir as duas. Se um dia for preciso
+separar as séries, será por migração nova — a `Down` desta lança `NotSupportedException`, de
+propósito, porque a conversão não é semanticamente reversível.
+
+A conversão tem prova: `NpsEndpointsTests.Historical_nps_data_should_be_converted_without_changing_ids`
+sobe o schema anterior num contêiner, semeia dados no formato antigo, migra para a frente e afirma
+linha a linha o resultado — ids preservados, escalas convertidas, e-mail normalizado e disparos
+duplicados fechados.
 
 ## 8. Fases de entrega (proposta)
 
@@ -330,19 +337,20 @@ definir na revisão deste PRD; baseline = leitura do dashboard atual na ativaç�
 
 ## 11. Questões em aberto
 
-1. **Idiomas**: backend e v1 suportam **espanhol**; o mockup expõe só PT/EN. Mantém ES no
-   redesign (custo ~zero) ou corta de propósito?
-2. O subtexto do KPI de respostas da v1 ("% de enviados") morre com D1/D2: fica contagem
-   simples ou entra B8?
+1. ~~**Idiomas**: mantém espanhol no redesign?~~ **Mantido.** O formulário público responde em
+   português, inglês e espanhol, escolhidos na geração do link.
+2. ~~O subtexto do KPI de respostas ("% de enviados") fica ou entra B8?~~ **Contagem simples.**
+   B8 não foi construído.
 3. **Permissões**: quem pode gerar link e quem pode dispensar coleta? O motivo da dispensa é
    auditado?
-4. Filtros na querystring das rotas (compartilhar visão filtrada)? Natural com D5, mas com
-   multi-seleção (D11) cada faceta vira uma lista na URL; definir o formato (`?empresa=Santander,Itaú`).
+4. ~~Filtros na querystring (compartilhar visão filtrada) e o formato da multi-seleção?~~
+   **Feito, com a chave repetida** em vez de lista separada por vírgula: `?client=Santander&client=Itaú`.
+   Evita ambiguidade com nomes que contêm vírgula.
 5. **Fase futura**: links por contato para nudge individual ("quem não respondeu"), mantém no
    radar?
-6. **B13/B14**: converter, segregar ou descartar o histórico na virada de escala e do quarto
-   aspecto? É a decisão que trava as duas migrações.
-7. O prazo de 20 dias (D7) é **fixo** ou vira parâmetro por projeto/rodada mais adiante?
+6. ~~**B13/B14**: converter, segregar ou descartar o histórico?~~ **Decidido: converter.** Ver §7.
+7. ~~O prazo de 20 dias (D7) é fixo ou vira parâmetro?~~ **Fixo** por ora, em
+   `NpsCollectionPolicy.LinkValidityDays`. Vira parâmetro quando alguém pedir.
 8. Com D9, o KPI de **vencidos** passa a contar todo projeto sem coleta recente, inclusive os que
    antes eram descartados por estarem encerrados. Confirmar que é isso mesmo que a liderança quer
    ver, ou se a régua de "vencido" também precisa mudar.

@@ -3,6 +3,7 @@ using PxOperations.Application.Features.Milestones;
 using PxOperations.Domain.Milestones;
 using PxOperations.Domain.Projects;
 using ProjectMappings = PxOperations.Api.Features.Projects.ProjectMappings;
+using PxOperations.Api.Errors;
 
 namespace PxOperations.Api.Features.Milestones;
 
@@ -32,7 +33,7 @@ public static class MilestoneMappings
             "presencial com cliente" or "client_onsite" => MilestoneType.ClientOnsite,
             "kickoff" => MilestoneType.Kickoff,
             "outros" or "other" => MilestoneType.Other,
-            _ => throw new ArgumentException($"Invalid milestone type: {value}")
+            _ => throw new InvalidRequestValueException($"Invalid milestone type: {value}")
         };
     }
 
