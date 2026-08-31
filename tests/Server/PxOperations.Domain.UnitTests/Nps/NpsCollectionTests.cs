@@ -170,4 +170,44 @@ public sealed class NpsCollectionTests
 
     private static Dispatch CreateDispatch(NpsCollection collection, NpsFormFormat format, DateTimeOffset now)
         => collection.CreateDispatch(format, NpsLanguage.Portuguese, [], Guid.NewGuid(), [], now);
+
+    /// <summary>
+    /// A coluna "Aguardando resposta" é sobre disparo aberto e zero respostas
+    /// (PRD §"Quadro de coleta"). Com um Completo já respondido e expirado ao
+    /// lado de um Simplificado ainda válido e pendente, a ação precisa ser
+    /// cobrar o pendente, não regerar o que já foi respondido.
+    /// </summary>
+    [Fact]
+    public void Primary_action_should_ignore_dispatches_that_were_already_answered()
+    {
+        var now = new DateTimeOffset(2026, 8, 30, 12, 0, 0, TimeSpan.Zero);
+        var answeredAndExpired = new NpsOpenDispatchState(1, NpsFormFormat.Complete, now.AddDays(-1), true);
+        var pendingAndValid = new NpsOpenDispatchState(2, NpsFormFormat.Simplified, now.AddDays(5), false);
+
+        var action = NpsCollectionPolicy.DeterminePrimaryAction(
+            NpsCollectionStage.AwaitingResponse,
+            [answeredAndExpired, pendingAndValid],
+            NpsFormFormat.Complete,
+            now);
+
+        Assert.Equal(NpsPrimaryActionKind.CopyLink, action!.Kind);
+        Assert.Equal(2, action.DispatchId);
+    }
+
+    [Fact]
+    public void Primary_action_should_regenerate_the_pending_link_that_expired()
+    {
+        var now = new DateTimeOffset(2026, 8, 30, 12, 0, 0, TimeSpan.Zero);
+        var answeredAndValid = new NpsOpenDispatchState(1, NpsFormFormat.Complete, now.AddDays(5), true);
+        var pendingAndExpired = new NpsOpenDispatchState(2, NpsFormFormat.Simplified, now.AddDays(-1), false);
+
+        var action = NpsCollectionPolicy.DeterminePrimaryAction(
+            NpsCollectionStage.AwaitingResponse,
+            [answeredAndValid, pendingAndExpired],
+            NpsFormFormat.Complete,
+            now);
+
+        Assert.Equal(NpsPrimaryActionKind.GenerateLink, action!.Kind);
+        Assert.Equal(2, action.DispatchId);
+    }
 }

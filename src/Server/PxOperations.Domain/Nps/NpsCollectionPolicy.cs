@@ -76,7 +76,16 @@ public static class NpsCollectionPolicy
             return null;
         }
 
-        var expired = openDispatches
+        // O estágio é sobre o disparo que ainda não foi respondido: um link já
+        // respondido não precisa ser regerado nem recopiado, mesmo que tenha
+        // vencido antes dos demais.
+        var pending = openDispatches.Where(dispatch => !dispatch.HasResponses).ToArray();
+        if (pending.Length == 0)
+        {
+            return null;
+        }
+
+        var expired = pending
             .Where(dispatch => IsExpired(dispatch.ExpiresAt, now))
             .OrderBy(dispatch => dispatch.ExpiresAt)
             .FirstOrDefault();
@@ -85,7 +94,7 @@ public static class NpsCollectionPolicy
             return new NpsPrimaryAction(NpsPrimaryActionKind.GenerateLink, expired.Format, expired.DispatchId);
         }
 
-        var closest = openDispatches.OrderBy(dispatch => dispatch.ExpiresAt).First();
+        var closest = pending.OrderBy(dispatch => dispatch.ExpiresAt).First();
         return new NpsPrimaryAction(NpsPrimaryActionKind.CopyLink, closest.Format, closest.DispatchId);
     }
 }
