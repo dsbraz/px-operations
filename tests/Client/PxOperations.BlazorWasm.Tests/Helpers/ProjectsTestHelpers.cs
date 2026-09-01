@@ -44,6 +44,7 @@ internal static class ProjectsTestHelpers
         private readonly Queue<(HttpMethod Method, string Content, HttpStatusCode Status)> _responses = new();
         private readonly List<(HttpMethod Method, string Path, string Content, HttpStatusCode Status)> _pathResponses = [];
         public List<Uri?> RequestUris { get; } = [];
+        public List<string> RequestBodies { get; } = [];
 
         public void AddResponse(HttpMethod method, string content, HttpStatusCode status)
             => _responses.Enqueue((method, content, status));
@@ -51,11 +52,15 @@ internal static class ProjectsTestHelpers
         public void AddResponse(HttpMethod method, string path, string content, HttpStatusCode status)
             => _pathResponses.Add((method, path, content, status));
 
-        protected override Task<HttpResponseMessage> SendAsync(
+        protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
             RequestUris.Add(request.RequestUri);
+            if (request.Content is not null)
+            {
+                RequestBodies.Add(await request.Content.ReadAsStringAsync(cancellationToken));
+            }
 
             var pathResponseIndex = _pathResponses.FindIndex(response =>
                 response.Method == request.Method && response.Path == request.RequestUri?.AbsolutePath);
@@ -63,25 +68,24 @@ internal static class ProjectsTestHelpers
             {
                 var matched = _pathResponses[pathResponseIndex];
                 _pathResponses.RemoveAt(pathResponseIndex);
-                return Task.FromResult(new HttpResponseMessage(matched.Status)
+                return new HttpResponseMessage(matched.Status)
                 {
                     Content = new StringContent(matched.Content, Encoding.UTF8, "application/json")
-                });
+                };
             }
 
             if (_responses.TryDequeue(out var r))
             {
-                var response = new HttpResponseMessage(r.Status)
+                return new HttpResponseMessage(r.Status)
                 {
                     Content = new StringContent(r.Content, Encoding.UTF8, "application/json")
                 };
-                return Task.FromResult(response);
             }
 
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent("[]", Encoding.UTF8, "application/json")
-            });
+            };
         }
     }
 
