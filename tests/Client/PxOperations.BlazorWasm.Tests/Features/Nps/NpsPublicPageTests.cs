@@ -263,6 +263,83 @@ public sealed class NpsPublicPageTests : BunitContext, IAsyncLifetime
         });
     }
 
+    /// <summary>
+    /// Aspecto que o respondente não pontuou tem que viajar como null. Numa
+    /// pesquisa simplificada nenhum é exibido, então os quatro saíam como 0 e o
+    /// servidor recusava o envio inteiro com 400 — a pessoa via só o erro
+    /// genérico, sem saber que campo consertar.
+    /// </summary>
+    [Fact]
+    public void Simplified_form_should_submit_every_hidden_aspect_as_null()
+    {
+        var token = Guid.NewGuid();
+        var handler = RegisterClient(PublicJson(token, "simplified", "pt", "open"));
+        handler.AddResponse(HttpMethod.Post, ResponseJson(), HttpStatusCode.Created);
+
+        var cut = Render<NpsPublicPage>(parameters => parameters.Add(page => page.Token, token));
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find(".nps-submit")));
+
+        cut.Find(".nps-score-scale button").Click();
+        cut.Find(".nps-submit").Click();
+        cut.WaitForAssertion(() => Assert.Contains("Sua resposta foi registrada.", cut.Markup, StringComparison.Ordinal));
+
+        AssertSubmittedAspects(handler, quality: null, schedule: null, communication: null, businessValue: null);
+    }
+
+    /// <summary>
+    /// No formato completo os aspectos são opcionais: pontuar só um não pode
+    /// mandar 0 nos outros três.
+    /// </summary>
+    [Fact]
+    public void Complete_form_should_submit_the_aspects_left_unrated_as_null()
+    {
+        var token = Guid.NewGuid();
+        var handler = RegisterClient(PublicJson(token, "complete", "pt", "open"));
+        handler.AddResponse(HttpMethod.Post, ResponseJson(), HttpStatusCode.Created);
+
+        var cut = Render<NpsPublicPage>(parameters => parameters.Add(page => page.Token, token));
+        cut.WaitForAssertion(() => Assert.Equal(4, cut.FindAll(".nps-aspect").Count));
+
+        cut.Find(".nps-score-scale button").Click();
+        cut.FindAll(".nps-aspect")[0].QuerySelectorAll("button")[2].Click();
+        cut.Find(".nps-submit").Click();
+        cut.WaitForAssertion(() => Assert.Contains("Sua resposta foi registrada.", cut.Markup, StringComparison.Ordinal));
+
+        AssertSubmittedAspects(handler, quality: 3, schedule: null, communication: null, businessValue: null);
+    }
+
+    private static void AssertSubmittedAspects(
+        ProjectsTestHelpers.MultiStubHttpMessageHandler handler,
+        int? quality,
+        int? schedule,
+        int? communication,
+        int? businessValue)
+    {
+        var submitted = Assert.Single(
+            handler.RequestBodies,
+            body => body.Contains("\"score\"", StringComparison.Ordinal));
+        using var document = JsonDocument.Parse(submitted);
+
+        var expected = new (string Code, int? Value)[]
+        {
+            ("quality", quality),
+            ("schedule", schedule),
+            ("communication", communication),
+            ("businessValue", businessValue)
+        };
+        foreach (var (code, value) in expected)
+        {
+            var property = document.RootElement.GetProperty(code);
+            if (value is null)
+            {
+                Assert.Equal(JsonValueKind.Null, property.ValueKind);
+                continue;
+            }
+
+            Assert.Equal(value, property.GetInt32());
+        }
+    }
+
     private ProjectsTestHelpers.MultiStubHttpMessageHandler RegisterClient(
         string response,
         HttpStatusCode status = HttpStatusCode.OK)

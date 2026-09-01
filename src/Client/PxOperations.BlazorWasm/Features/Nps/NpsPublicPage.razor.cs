@@ -96,7 +96,9 @@ public partial class NpsPublicPage : ComponentBase
         }
     }
 
-    private int? AspectValue(string code) => aspects.GetValueOrDefault(code);
+    // GetValueOrDefault devolve 0 para a chave ausente, e 0 vira int? com
+    // valor: aspecto não pontuado saía como 0 e o servidor recusava com 400.
+    private int? AspectValue(string code) => aspects.TryGetValue(code, out var value) ? value : null;
     private void SetAspect(string code, int value) => aspects[code] = value;
 
     private async Task SubmitAsync()
