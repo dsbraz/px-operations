@@ -1,3 +1,5 @@
+using PxOperations.Domain.Projects;
+
 namespace PxOperations.Domain.Nps;
 
 public static class NpsCollectionPolicy
@@ -38,12 +40,18 @@ public static class NpsCollectionPolicy
             : NpsCollectionStage.Current;
     }
 
+    // Projeto encerrado não tem mais relacionamento a medir: sai da coleta,
+    // mas o que já foi respondido continua valendo nos resultados.
+    public static bool AwaitsCollection(ProjectStatus projectStatus) => projectStatus != ProjectStatus.Closed;
+
     public static bool IsOverdue(
+        ProjectStatus projectStatus,
         bool isWaived,
         bool hasOpenDispatch,
         DateTimeOffset? lastResponseAt,
         DateTimeOffset now)
-        => !isWaived &&
+        => AwaitsCollection(projectStatus) &&
+           !isWaived &&
            !hasOpenDispatch &&
            (!lastResponseAt.HasValue || lastResponseAt.Value <= now.AddDays(-OverdueDays));
 

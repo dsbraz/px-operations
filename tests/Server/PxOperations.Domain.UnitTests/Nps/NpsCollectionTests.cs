@@ -1,5 +1,6 @@
 using PxOperations.Domain.Exceptions;
 using PxOperations.Domain.Nps;
+using PxOperations.Domain.Projects;
 
 namespace PxOperations.Domain.UnitTests.Nps;
 
@@ -123,9 +124,25 @@ public sealed class NpsCollectionTests
     [InlineData(90, true)]
     public void Overdue_should_use_the_ninety_day_boundary(int daysSinceResponse, bool expected)
     {
-        Assert.Equal(expected, NpsCollectionPolicy.IsOverdue(false, false, Now.AddDays(-daysSinceResponse), Now));
-        Assert.False(NpsCollectionPolicy.IsOverdue(true, false, Now.AddDays(-daysSinceResponse), Now));
-        Assert.False(NpsCollectionPolicy.IsOverdue(false, true, Now.AddDays(-daysSinceResponse), Now));
+        Assert.Equal(expected, NpsCollectionPolicy.IsOverdue(ProjectStatus.InProgress, false, false, Now.AddDays(-daysSinceResponse), Now));
+        Assert.False(NpsCollectionPolicy.IsOverdue(ProjectStatus.InProgress, true, false, Now.AddDays(-daysSinceResponse), Now));
+        Assert.False(NpsCollectionPolicy.IsOverdue(ProjectStatus.InProgress, false, true, Now.AddDays(-daysSinceResponse), Now));
+    }
+
+    [Theory]
+    [InlineData(ProjectStatus.InProgress, true)]
+    [InlineData(ProjectStatus.Scheduled, true)]
+    [InlineData(ProjectStatus.Closed, false)]
+    public void Only_projects_that_are_not_closed_should_await_collection(ProjectStatus status, bool expected)
+    {
+        Assert.Equal(expected, NpsCollectionPolicy.AwaitsCollection(status));
+    }
+
+    [Fact]
+    public void Closed_project_should_never_be_overdue()
+    {
+        Assert.False(NpsCollectionPolicy.IsOverdue(ProjectStatus.Closed, false, false, null, Now));
+        Assert.False(NpsCollectionPolicy.IsOverdue(ProjectStatus.Closed, false, false, Now.AddDays(-200), Now));
     }
 
     [Fact]

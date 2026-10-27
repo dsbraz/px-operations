@@ -86,7 +86,7 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
         Assert.Equal(HttpStatusCode.OK, get.StatusCode);
         Assert.Equal("expired", survey!.Availability);
         Assert.Equal(HttpStatusCode.Conflict, submit.StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/nps/public/{Guid.NewGuid()}" )).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/nps/public/{Guid.NewGuid()}")).StatusCode);
     }
 
     [Fact]
@@ -552,6 +552,32 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
     }
 
     [Fact]
+    public async Task Closed_project_should_leave_only_the_collection_board_and_the_overdue_indicator()
+    {
+        var time = new TestTimeProvider(InitialNow);
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString, time);
+        using var client = factory.CreateClient();
+        var answered = await CreateProjectAsync(client, "Closed answered", "Closed Client", "DC1", "Encerrado");
+        var dispatch = await CreateDispatchAsync(client, answered.Id, "simplified");
+        await SubmitAsync(client, dispatch.Targets.Single(target => target.IsGeneric).Token, 9);
+        // Sem disparo e sem resposta: estaria vencido se ainda estivesse ativo.
+        var neverCollected = await CreateProjectAsync(client, "Closed never collected", "Closed Client", "DC1", "Encerrado");
+        var active = await CreateProjectAsync(client, "Closed client active", "Closed Client", "DC1");
+
+        var board = await client.GetFromJsonAsync<List<NpsProjectView>>("/api/nps/projects?client=Closed%20Client");
+        var results = await client.GetFromJsonAsync<List<NpsProjectResultView>>("/api/nps/project-results?client=Closed%20Client");
+        var responses = await client.GetFromJsonAsync<List<NpsResponseView>>($"/api/nps/responses?projectId={answered.Id}");
+        var dashboard = await client.GetFromJsonAsync<NpsDashboardView>("/api/nps/dashboard?client=Closed%20Client");
+
+        Assert.Equal(active.Id, Assert.Single(board!).Id);
+        Assert.Equal(
+            new[] { answered.Id, neverCollected.Id, active.Id }.Order(),
+            results!.Select(result => result.Id).Order());
+        Assert.Single(responses!);
+        Assert.Equal(1, dashboard!.OverdueProjects);
+    }
+
+    [Fact]
     public async Task Pending_status_should_survive_a_date_range()
     {
         var time = new TestTimeProvider(InitialNow);
@@ -731,11 +757,12 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
         HttpClient client,
         string name,
         string clientName = "Client",
-        string dc = "DC1")
+        string dc = "DC1",
+        string status = "Em andamento")
     {
         var response = await client.PostAsJsonAsync("/api/projects", new CreateProjectRequest(
             dc,
-            "Em andamento",
+            status,
             $"{name} {Guid.NewGuid():N}",
             clientName,
             "Squad",

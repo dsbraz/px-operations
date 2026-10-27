@@ -212,6 +212,7 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
         DateTimeOffset now,
         CancellationToken ct)
         => (await LoadSnapshotsAsync(filter, now, ct))
+            .Where(snapshot => NpsCollectionPolicy.AwaitsCollection(snapshot.Project.Status))
             .Select(snapshot => NpsViewMappings.ToProjectView(snapshot, now))
             .OrderBy(project => project.Name)
             .ToArray();
