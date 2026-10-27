@@ -23,7 +23,6 @@ public partial class NpsPage : ComponentBase, IDisposable
     private CancellationTokenSource? searchCancellation;
     private int loadVersion;
     private NpsResultsView? resultsView;
-    private bool redirecting;
     private bool isLoading;
     private string? loadError;
     private string? actionError;
@@ -131,12 +130,9 @@ public partial class NpsPage : ComponentBase, IDisposable
         var path = NavigationManager.ToAbsoluteUri(NavigationManager.Uri).AbsolutePath.TrimEnd('/');
         if (path == "/nps")
         {
-            redirecting = true;
             NavigationManager.NavigateTo($"/nps/coleta{CurrentRawQuery()}", replace: true);
-            return;
         }
 
-        redirecting = false;
         var nextTab = path.EndsWith("/resultados", StringComparison.Ordinal)
             ? NpsTab.Results
             : path.EndsWith("/respostas", StringComparison.Ordinal)
@@ -167,11 +163,6 @@ public partial class NpsPage : ComponentBase, IDisposable
 
     private async Task ReloadAsync()
     {
-        if (redirecting)
-        {
-            return;
-        }
-
         loadCancellation?.Cancel();
         loadCancellation?.Dispose();
         loadCancellation = new CancellationTokenSource();

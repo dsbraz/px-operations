@@ -3,6 +3,7 @@ using System.Net;
 using Bunit;
 using Microsoft.JSInterop;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using PxOperations.BlazorWasm.Api;
 using PxOperations.BlazorWasm.Features.Nps;
@@ -17,16 +18,35 @@ public sealed class NpsPageTests : BunitContext
         JSInterop.Mode = JSRuntimeMode.Loose;
     }
 
+    /// <summary>
+    /// O menu superior aponta para /nps. O Router reaproveita a mesma instância
+    /// para /nps/coleta e não repassa parâmetros, então quem não carregar no
+    /// redirecionamento deixa o quadro vazio até um reload.
+    /// </summary>
     [Fact]
-    public void Root_route_should_redirect_to_collection_without_loading_data()
+    public void Root_route_should_redirect_to_collection_and_load_the_board()
     {
         var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
         Navigate("/nps?client=Alpha");
 
-        Render<NpsPage>();
+        // Pelo Router, e não pela página direto: é ele que decide se chama
+        // OnParametersSetAsync de novo depois do redirecionamento.
+        var cut = Render<Router>(parameters => parameters
+            .Add(p => p.AppAssembly, typeof(NpsPage).Assembly)
+            .Add(p => p.Found, routeData => builder =>
+            {
+                builder.OpenComponent<RouteView>(0);
+                builder.AddComponentParameter(1, nameof(RouteView.RouteData), routeData);
+                builder.CloseComponent();
+            }));
 
-        Assert.EndsWith("/nps/coleta?client=Alpha", Services.GetRequiredService<NavigationManager>().Uri);
-        Assert.Empty(handler.RequestUris);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.EndsWith("/nps/coleta?client=Alpha", Services.GetRequiredService<NavigationManager>().Uri);
+            Assert.Contains("Projeto ativo", cut.Markup);
+        });
     }
 
     [Fact]
