@@ -1,3 +1,4 @@
+@using PxOperations.BlazorWasm.Features.Team
 @using PxOperations.Ui.Components.Overlays
 
 <BrqDialog Open="@Open"
@@ -23,6 +24,13 @@
                             {
                                 <option value="@project.Id">@project.Name</option>
                             }
+                        </select>
+                    </label>
+                    <label class="nps-field nps-field-full">
+                        <span>Responsável pela coleta</span>
+                        <select class="nps-create-collector" value="@CollectorName" @onchange="CollectorChanged">
+                            <option value="">Selecione o responsável</option>
+                            <TeamMemberOptions Members="@TeamMembers" />
                         </select>
                     </label>
                     <label class="nps-field">
@@ -67,7 +75,7 @@
         @if (Created is null)
         {
             <button type="button" class="btn btn-ghost" @onclick="OnCancel">Cancelar</button>
-            <button type="button" class="btn btn-purple nps-create-submit" disabled="@(ProjectId == 0 || IsSubmitting)" @onclick="OnSubmit">Gerar link</button>
+            <button type="button" class="btn btn-purple nps-create-submit" disabled="@(!CanSubmit)" @onclick="OnSubmit">Gerar link</button>
         }
         else
         {

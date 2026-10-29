@@ -5,6 +5,45 @@
     "version": "1.0.0"
   },
   "paths": {
+    "/api/team-members": {
+      "get": {
+        "tags": [
+          "TeamMembers"
+        ],
+        "operationId": "ListTeamMembers",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamMemberView"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamMemberView"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamMemberView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/projects": {
       "get": {
         "tags": [
@@ -2928,7 +2967,8 @@
           "projectId",
           "format",
           "language",
-          "contactIds"
+          "contactIds",
+          "collectorName"
         ],
         "type": "object",
         "properties": {
@@ -2959,6 +2999,9 @@
               ],
               "format": "int32"
             }
+          },
+          "collectorName": {
+            "type": "string"
           }
         }
       },
@@ -3508,7 +3551,8 @@
           "responsesCount",
           "availability",
           "availabilityLabel",
-          "tone"
+          "tone",
+          "collectorName"
         ],
         "type": "object",
         "properties": {
@@ -3585,6 +3629,12 @@
           },
           "tone": {
             "type": "string"
+          },
+          "collectorName": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -3967,7 +4017,8 @@
           "activeLinks",
           "primaryAction",
           "isOverdue",
-          "lastDispatchClosedAt"
+          "lastDispatchClosedAt",
+          "collectorName"
         ],
         "type": "object",
         "properties": {
@@ -4049,6 +4100,12 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "collectorName": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -4833,6 +4890,29 @@
           }
         }
       },
+      "TeamMemberView": {
+        "required": [
+          "name",
+          "area",
+          "areaLabel",
+          "canBeDeliveryManager"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "area": {
+            "type": "string"
+          },
+          "areaLabel": {
+            "type": "string"
+          },
+          "canBeDeliveryManager": {
+            "type": "boolean"
+          }
+        }
+      },
       "UpdateMilestoneRequest": {
         "type": "object",
         "properties": {
@@ -5003,6 +5083,9 @@
     }
   },
   "tags": [
+    {
+      "name": "TeamMembers"
+    },
     {
       "name": "Projects"
     },

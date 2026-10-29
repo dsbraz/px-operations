@@ -19,6 +19,7 @@ public sealed class ProjectFormModalTests : BunitContext
     {
         Services.AddScoped(_ => ProjectsTestHelpers.CreateEmptyClient());
         Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
 
         var cut = Render<ProjectFormModal>();
 
@@ -31,6 +32,7 @@ public sealed class ProjectFormModalTests : BunitContext
     {
         Services.AddScoped(_ => ProjectsTestHelpers.CreateEmptyClient());
         Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
 
         var project = ProjectsTestHelpers.MakeProject(
             id: 1, dc: "DC2", status: "Programado", name: "Portal X",
@@ -47,11 +49,65 @@ public sealed class ProjectFormModalTests : BunitContext
         Assert.Contains("Portal X", cut.Markup);
     }
 
+    /// <summary>
+    /// O campo ainda grava o DeliveryManager do projeto, mas a tela fala em
+    /// "Responsável": Sales gera NPS e não responde por projeto.
+    /// </summary>
+    [Fact]
+    public void Should_offer_the_team_members_who_can_be_responsible_in_a_single_list()
+    {
+        Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(TeamTestHelpers.TeamMembersJson()));
+        Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
+
+        var cut = Render<ProjectFormModal>();
+
+        cut.WaitForAssertion(() =>
+        {
+            var select = ResponsibleSelect(cut);
+            Assert.Equal("Responsável", select.ParentElement!.QuerySelector("label")!.TextContent.Trim());
+            Assert.Equal("Sem responsável", select.QuerySelector("option")!.TextContent.Trim());
+            Assert.Empty(select.QuerySelectorAll("optgroup"));
+            Assert.Equal(
+                new[] { "", "Carla Paixão", "Denise Santos", "Pedro Vieira", "Renata Fabri" },
+                TeamTestHelpers.OptionValues(select));
+        });
+    }
+
+    /// <summary>
+    /// Projetos gravados antes da troca da lista guardam o nome antigo. Sem a
+    /// opção, o select aparecia em branco e escondia quem responde hoje.
+    /// </summary>
+    [Fact]
+    public void Should_keep_a_responsible_outside_the_list_visible_when_editing()
+    {
+        Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(TeamTestHelpers.TeamMembersJson()));
+        Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
+        var project = ProjectsTestHelpers.MakeProject(
+            id: 1, dc: "DC2", status: "Em andamento", name: "Portal X",
+            client: "Acme", type: "Squad",
+            startDate: "2026-03-01", endDate: "2026-09-01",
+            deliveryManager: "Flavia de Castro",
+            renewal: "None", renewalObservation: null);
+
+        var cut = Render<ProjectFormModal>(p => p.Add(c => c.EditingProject, project));
+
+        cut.WaitForAssertion(() =>
+        {
+            var select = ResponsibleSelect(cut);
+            Assert.Single(select.QuerySelectorAll("option"), option => option.GetAttribute("value") == "Flavia de Castro");
+            Assert.Equal("Flavia de Castro", select.GetAttribute("value"));
+            Assert.Contains("Pedro Vieira", TeamTestHelpers.OptionValues(select));
+        });
+    }
+
     [Fact]
     public void Should_fire_on_close_callback_when_cancel_is_clicked()
     {
         Services.AddScoped(_ => ProjectsTestHelpers.CreateEmptyClient());
         Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
 
         var closed = false;
 
@@ -69,6 +125,7 @@ public sealed class ProjectFormModalTests : BunitContext
     {
         Services.AddScoped(_ => ProjectsTestHelpers.CreateEmptyClient());
         Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
 
         var cut = Render<ProjectFormModal>();
 
@@ -86,6 +143,7 @@ public sealed class ProjectFormModalTests : BunitContext
         Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(
             ProjectsTestHelpers.ProjectJson(savedProject), HttpStatusCode.Created));
         Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
 
         ProjectResponse? result = null;
 
@@ -110,6 +168,7 @@ public sealed class ProjectFormModalTests : BunitContext
             """,
             HttpStatusCode.BadRequest));
         Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
 
         var cut = Render<ProjectFormModal>();
 
@@ -123,4 +182,7 @@ public sealed class ProjectFormModalTests : BunitContext
             Assert.Contains("Project end date must not precede start date.", cut.Markup);
         });
     }
+
+    private static AngleSharp.Dom.IElement ResponsibleSelect(IRenderedComponent<ProjectFormModal> cut)
+        => cut.FindAll("select").Single(select => select.QuerySelector("option")?.TextContent.Trim() == "Sem responsável");
 }

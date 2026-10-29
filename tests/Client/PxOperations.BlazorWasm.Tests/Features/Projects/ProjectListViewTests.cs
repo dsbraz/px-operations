@@ -28,6 +28,18 @@ public sealed class ProjectListViewTests : BunitContext
     }
 
     [Fact]
+    public void Should_label_the_delivery_manager_column_as_the_responsible()
+    {
+        var cut = Render<ProjectListView>(p => p
+            .Add(c => c.Projects, [ProjectsTestHelpers.MakeProject(id: 1, dc: "DC1", name: "Alpha", client: "Client A")])
+            .Add(c => c.IsLoading, false));
+
+        var headers = cut.FindAll("th").Select(header => header.TextContent.Trim()).ToArray();
+        Assert.Contains("Responsável", headers);
+        Assert.DoesNotContain("DM", headers);
+    }
+
+    [Fact]
     public void Should_render_empty_state_when_no_projects()
     {
         var cut = Render<ProjectListView>(p => p

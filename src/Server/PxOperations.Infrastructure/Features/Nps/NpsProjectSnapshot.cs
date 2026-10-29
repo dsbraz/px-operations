@@ -26,6 +26,14 @@ internal sealed record NpsProjectSnapshot(
         Responses.Any(response => response.DispatchId == dispatch.Id))).ToArray();
     public DateTimeOffset? LastResponseAt => Responses.Count == 0 ? null : Responses.Max(response => response.SubmittedAt);
     public DateTimeOffset? LastDispatchClosedAt => Collection?.Dispatches.Where(dispatch => dispatch.ClosedAt.HasValue).Max(dispatch => dispatch.ClosedAt);
+    public string? LatestCollectorName
+    {
+        get
+        {
+            var latest = Collection?.Dispatches.OrderByDescending(dispatch => dispatch.CreatedAt).FirstOrDefault();
+            return NpsCollectionPolicy.CollectorName(latest is not null, latest?.CollectorName, Project.DeliveryManager);
+        }
+    }
     public NpsFormFormat? MostRecentFormat => Collection?.Dispatches.OrderByDescending(dispatch => dispatch.CreatedAt).Select(dispatch => (NpsFormFormat?)dispatch.Format).FirstOrDefault();
     public NpsCollectionStage Stage(DateTimeOffset now) => NpsCollectionPolicy.DetermineStage(IsWaived, OpenStates, LastResponseAt, now);
     public bool IsOverdue(DateTimeOffset now) => NpsCollectionPolicy.IsOverdue(Project.Status, IsWaived, OpenDispatches.Count != 0, LastResponseAt, now);

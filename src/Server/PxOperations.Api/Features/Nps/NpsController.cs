@@ -140,7 +140,8 @@ public sealed class NpsController(
             request.ProjectId,
             request.Format,
             request.Language,
-            request.ContactIds ?? []), ct);
+            request.ContactIds ?? [],
+            request.CollectorName), ct);
         var dispatch = await queries.GetDispatchAsync(id, timeProvider.GetUtcNow(), ct);
         return CreatedAtAction(nameof(GetDispatch), new { id }, dispatch);
     }

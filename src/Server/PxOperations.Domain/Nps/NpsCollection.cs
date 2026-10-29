@@ -1,5 +1,6 @@
 using PxOperations.Domain.Abstractions;
 using PxOperations.Domain.Exceptions;
+using PxOperations.Domain.Team;
 
 namespace PxOperations.Domain.Nps;
 
@@ -20,6 +21,7 @@ public sealed class NpsCollection : AggregateRoot<int>
     public Dispatch CreateDispatch(
         NpsFormFormat format,
         NpsLanguage language,
+        string collectorName,
         IReadOnlyCollection<int> contactIds,
         Guid genericToken,
         IReadOnlyCollection<Guid> contactTokens,
@@ -28,6 +30,11 @@ public sealed class NpsCollection : AggregateRoot<int>
         if (IsWaived)
         {
             throw new BusinessStateConflictException("Waived NPS collections cannot create dispatches.");
+        }
+
+        if (!TeamRoster.IsMember(collectorName))
+        {
+            throw new BusinessRuleValidationException("NPS collector must be a member of the team roster.");
         }
 
         if (contactIds.Count != contactTokens.Count)
@@ -40,7 +47,7 @@ public sealed class NpsCollection : AggregateRoot<int>
             open.Close(now);
         }
 
-        var dispatch = Dispatch.Create(format, language, now);
+        var dispatch = Dispatch.Create(format, language, collectorName, now);
         dispatch.AddGenericTarget(genericToken, now);
 
         foreach (var pair in contactIds.Zip(contactTokens))

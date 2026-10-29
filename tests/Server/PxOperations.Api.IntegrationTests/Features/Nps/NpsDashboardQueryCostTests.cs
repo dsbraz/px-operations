@@ -55,7 +55,8 @@ public sealed class NpsDashboardQueryCostTests(PostgreSqlFixture fixture)
             projectId,
             format = "complete",
             language = "pt",
-            contactIds = Array.Empty<int>()
+            contactIds = Array.Empty<int>(),
+            collectorName = "Denise Santos"
         });
         var detail = await dispatch.Content.ReadFromJsonAsync<JsonElement>();
         var token = detail.GetProperty("targets")[0].GetProperty("token").GetGuid();

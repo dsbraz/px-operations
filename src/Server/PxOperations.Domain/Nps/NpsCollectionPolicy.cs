@@ -44,6 +44,12 @@ public static class NpsCollectionPolicy
     // mas o que já foi respondido continua valendo nos resultados.
     public static bool AwaitsCollection(ProjectStatus projectStatus) => projectStatus != ProjectStatus.Closed;
 
+    // Disparos gerados antes da escolha do responsável não guardam quem
+    // coletou: quem responde pelo projeto é o melhor palpite. Sem disparo,
+    // ninguém coletou ainda.
+    public static string? CollectorName(bool hasDispatch, string? dispatchCollectorName, string? projectDeliveryManager)
+        => hasDispatch ? dispatchCollectorName ?? projectDeliveryManager : null;
+
     public static bool IsOverdue(
         ProjectStatus projectStatus,
         bool isWaived,

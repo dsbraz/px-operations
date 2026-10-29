@@ -119,8 +119,8 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
         var project = await CreateProjectAsync(client, "Concurrent first rounds");
 
         var responses = await Task.WhenAll(
-            client.PostAsJsonAsync("/api/nps/dispatches", new CreateNpsDispatchRequest(project.Id, "complete", "pt", [])),
-            client.PostAsJsonAsync("/api/nps/dispatches", new CreateNpsDispatchRequest(project.Id, "simplified", "en", [])));
+            client.PostAsJsonAsync("/api/nps/dispatches", new CreateNpsDispatchRequest(project.Id, "complete", "pt", [], "Denise Santos")),
+            client.PostAsJsonAsync("/api/nps/dispatches", new CreateNpsDispatchRequest(project.Id, "simplified", "en", [], "Denise Santos")));
 
         Assert.All(responses, response => Assert.Equal(HttpStatusCode.Created, response.StatusCode));
         var dispatches = await client.GetFromJsonAsync<List<NpsDispatchView>>($"/api/nps/projects/{project.Id}/dispatches");
@@ -140,7 +140,7 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
         var repeated = await client.PostAsJsonAsync($"/api/nps/projects/{project.Id}/waiver", new WaiveNpsCollectionRequest("Outra"));
         var hidden = await client.GetFromJsonAsync<List<NpsProjectView>>($"/api/nps/projects?search={Uri.EscapeDataString(project.Name)}");
         var included = await client.GetFromJsonAsync<List<NpsProjectView>>($"/api/nps/projects?search={Uri.EscapeDataString(project.Name)}&includeWaived=true");
-        var blockedDispatch = await client.PostAsJsonAsync("/api/nps/dispatches", new CreateNpsDispatchRequest(project.Id, "complete", "pt", []));
+        var blockedDispatch = await client.PostAsJsonAsync("/api/nps/dispatches", new CreateNpsDispatchRequest(project.Id, "complete", "pt", [], "Denise Santos"));
 
         Assert.Equal(HttpStatusCode.Created, waive.StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, repeated.StatusCode);
@@ -578,6 +578,70 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
     }
 
     [Fact]
+    public async Task Collection_board_should_show_who_generated_the_most_recent_link()
+    {
+        var time = new TestTimeProvider(InitialNow);
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString, time);
+        using var client = factory.CreateClient();
+        var project = await CreateProjectAsync(client, "Collector");
+        var neverCollected = await CreateProjectAsync(client, "Collector never collected");
+
+        var first = await CreateDispatchAsync(client, project.Id, "complete", collectorName: "Julia Pereira");
+        time.Set(InitialNow.AddHours(1));
+        var second = await CreateDispatchAsync(client, project.Id, "simplified", collectorName: "Pedro Vieira");
+        var board = await client.GetFromJsonAsync<List<NpsProjectView>>(
+            $"/api/nps/projects?search={Uri.EscapeDataString("Collector")}");
+
+        Assert.Equal("Julia Pereira", first.Dispatch.CollectorName);
+        Assert.Equal("Pedro Vieira", second.Dispatch.CollectorName);
+        Assert.Equal("Pedro Vieira", board!.Single(item => item.Id == project.Id).CollectorName);
+        Assert.Null(board!.Single(item => item.Id == neverCollected.Id).CollectorName);
+    }
+
+    /// <summary>
+    /// Disparos gravados antes da coluna existir não sabem quem coletou; o
+    /// card reaproveita quem responde pelo projeto em vez de mostrar "—".
+    /// </summary>
+    [Fact]
+    public async Task Collection_board_should_show_the_project_responsible_for_links_sent_before_the_choice()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString, new TestTimeProvider(InitialNow));
+        using var client = factory.CreateClient();
+        var project = await CreateProjectAsync(client, "Legacy collector");
+        var dispatch = await CreateDispatchAsync(client, project.Id, "complete");
+        using (var scope = factory.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await dbContext.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE nps_dispatches SET collector_name = NULL WHERE id = {dispatch.Dispatch.Id}");
+        }
+
+        var board = await client.GetFromJsonAsync<List<NpsProjectView>>(
+            $"/api/nps/projects?search={Uri.EscapeDataString(project.Name)}");
+
+        Assert.Equal("Maria", Assert.Single(board!).CollectorName);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("Flavia de Castro")]
+    public async Task Dispatch_should_refuse_a_collector_outside_the_team_roster(string? collectorName)
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString, new TestTimeProvider(InitialNow));
+        using var client = factory.CreateClient();
+        var project = await CreateProjectAsync(client, "Unknown collector");
+
+        var response = await client.PostAsJsonAsync(
+            "/api/nps/dispatches",
+            new CreateNpsDispatchRequest(project.Id, "complete", "pt", [], collectorName!));
+        var dispatches = await client.GetFromJsonAsync<List<NpsDispatchView>>($"/api/nps/projects/{project.Id}/dispatches");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Empty(dispatches!);
+    }
+
+    [Fact]
     public async Task Pending_status_should_survive_a_date_range()
     {
         var time = new TestTimeProvider(InitialNow);
@@ -721,6 +785,7 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
         collection.CreateDispatch(
             NpsFormFormat.Complete,
             NpsLanguage.Portuguese,
+            "Denise Santos",
             [],
             Guid.NewGuid(),
             [],
@@ -779,11 +844,12 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
         HttpClient client,
         int projectId,
         string format,
-        IReadOnlyList<int>? contactIds = null)
+        IReadOnlyList<int>? contactIds = null,
+        string collectorName = "Denise Santos")
     {
         var response = await client.PostAsJsonAsync(
             "/api/nps/dispatches",
-            new CreateNpsDispatchRequest(projectId, format, "pt", contactIds ?? []));
+            new CreateNpsDispatchRequest(projectId, format, "pt", contactIds ?? [], collectorName));
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<NpsDispatchDetailView>())!;
     }

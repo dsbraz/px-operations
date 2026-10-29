@@ -7,6 +7,7 @@ namespace PxOperations.BlazorWasm.Features.Projects;
 public partial class ProjectFormModal : ComponentBase
 {
     [Inject] private ProjectsClient ProjectsClient { get; set; } = default!;
+    [Inject] private TeamMembersClient TeamMembersClient { get; set; } = default!;
 
     [Parameter] public ProjectResponse? EditingProject { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
@@ -23,8 +24,36 @@ public partial class ProjectFormModal : ComponentBase
     private string formRenewal = "None";
     private string? formRenewalObservation;
 
+    // Na tela o DeliveryManager se chama "Responsável"; a lista vem do servidor
+    // já dizendo quem pode responder por projeto.
+    private IReadOnlyList<TeamMemberView>? responsibleCandidates;
+
     private bool isSaving;
     private string? error;
+
+    // Projeto gravado antes da lista atual guarda um nome que não está nela;
+    // sem esta opção o select ficava em branco e escondia o valor salvo.
+    private string? ResponsibleOutsideList =>
+        !string.IsNullOrEmpty(formDeliveryManager) &&
+        responsibleCandidates?.All(member => member.Name != formDeliveryManager) == true
+            ? formDeliveryManager
+            : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            responsibleCandidates = (await TeamMembersClient.ListTeamMembersAsync())
+                .Where(member => member.CanBeDeliveryManager)
+                .ToArray();
+        }
+        catch (Exception)
+        {
+            // Sem a lista o formulário continua gravando, e o valor atual
+            // segue visível como opção avulsa.
+            responsibleCandidates = [];
+        }
+    }
 
     protected override void OnParametersSet()
     {

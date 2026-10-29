@@ -151,6 +151,24 @@ public sealed class NpsPageTests : BunitContext
     }
 
     [Fact]
+    public void Delivery_manager_chip_should_be_labelled_as_the_responsible()
+    {
+        var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
+        Navigate("/nps/coleta?deliveryManager=Maria");
+
+        var cut = Render<NpsPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            var chip = cut.Find(".nps-filter-chip").TextContent;
+            Assert.Contains("Responsável", chip);
+            Assert.DoesNotContain("DM", chip);
+        });
+    }
+
+    [Fact]
     public void Shared_filters_should_write_repeated_parameters_show_one_chip_per_facet_and_clear_everything()
     {
         var handler = RegisterClient();
@@ -213,7 +231,7 @@ public sealed class NpsPageTests : BunitContext
             });
             Assert.Contains("Sem respostas para Valor para o negócio", aspectSummary.QuerySelector(".nps-aspect-meter-empty")!.GetAttribute("aria-label"));
             var headers = cut.FindAll(".nps-results-table thead th");
-            Assert.Equal(new[] { "Projeto", "Cliente", "DC", "DM", "Respostas", "NPS", "Status" }, headers.Select(header => header.TextContent.Trim()));
+            Assert.Equal(new[] { "Projeto", "Cliente", "DC", "Responsável", "Respostas", "NPS", "Status" }, headers.Select(header => header.TextContent.Trim()));
             Assert.Equal("ascending", headers[0].GetAttribute("aria-sort"));
             Assert.Equal(new[] { "Alpha", "Zulu" }, cut.FindAll(".nps-result-row .nps-result-project").Select(cell => cell.TextContent.Trim()));
         });
@@ -372,6 +390,7 @@ public sealed class NpsPageTests : BunitContext
         handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
         handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
         handler.AddResponse(HttpMethod.Post, "/api/nps/dispatches", NpsTestHelpers.DispatchJson(token), HttpStatusCode.Created);
+        handler.AddResponse(HttpMethod.Get, "/api/team-members", TeamTestHelpers.TeamMembersJson(), HttpStatusCode.OK);
         Navigate("/nps/coleta");
 
         var cut = Render<NpsPage>();
@@ -382,16 +401,19 @@ public sealed class NpsPageTests : BunitContext
         {
             var dialog = Dialog(cut, "Gerar link NPS");
             Assert.Contains("Projeto, formato e idioma", dialog.TextContent);
-            Assert.Equal(new[] { "Projeto", "Formato", "Idioma" }, dialog.QuerySelectorAll(".nps-field > span").Select(label => label.TextContent.Trim()));
+            Assert.Equal(new[] { "Projeto", "Responsável pela coleta", "Formato", "Idioma" }, dialog.QuerySelectorAll(".nps-field > span").Select(label => label.TextContent.Trim()));
             Assert.Equal(new[] { "Cancelar", "Gerar link" }, dialog.QuerySelectorAll(".brq-dialog-footer button").Select(button => button.TextContent.Trim()));
         });
         cut.Find(".nps-create-project").Change("1");
+        cut.WaitForAssertion(() => cut.Find(".nps-create-collector option[value='Julia Pereira']"));
+        cut.Find(".nps-create-collector").Change("Julia Pereira");
         cut.Find(".nps-create-submit").Click();
 
         cut.WaitForAssertion(() =>
         {
             var dialog = Dialog(cut, "Gerar link NPS");
             Assert.Contains(token.ToString(), dialog.InnerHtml);
+            Assert.Contains(handler.RequestBodies, body => body.Contains("\"collectorName\":\"Julia Pereira\"", StringComparison.Ordinal));
             Assert.Contains("21/08/2026", dialog.TextContent);
             Assert.Equal(new[] { "Link", "Validade", "Mensagem sugerida" }, dialog.QuerySelectorAll(".nps-created-block > span").Select(label => label.TextContent.Trim()));
             Assert.Equal(new[] { "Copiar link", "Copiar mensagem" }, dialog.QuerySelectorAll(".brq-dialog-footer button").Select(button => button.TextContent.Trim()));
@@ -412,13 +434,15 @@ public sealed class NpsPageTests : BunitContext
         handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
         handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
         handler.AddResponse(HttpMethod.Post, "/api/nps/dispatches", NpsTestHelpers.DispatchJson(token, "2026-08-22T02:00:00Z"), HttpStatusCode.Created);
+        handler.AddResponse(HttpMethod.Get, "/api/team-members", TeamTestHelpers.TeamMembersJson(), HttpStatusCode.OK);
         Navigate("/nps/coleta");
 
         var cut = Render<NpsPage>();
         cut.WaitForAssertion(() => Assert.Contains("Projeto ativo", cut.Markup));
         cut.Find(".nps-page-actions button").Click();
-        cut.WaitForAssertion(() => cut.Find(".nps-create-project"));
+        cut.WaitForAssertion(() => cut.Find(".nps-create-collector option[value='Julia Pereira']"));
         cut.Find(".nps-create-project").Change("1");
+        cut.Find(".nps-create-collector").Change("Julia Pereira");
         cut.Find(".nps-create-submit").Click();
 
         cut.WaitForAssertion(() =>
@@ -581,13 +605,14 @@ public sealed class NpsPageTests : BunitContext
         handler.AddResponse(HttpMethod.Post, "/api/nps/dispatches", NpsTestHelpers.DispatchJson(Guid.NewGuid()), HttpStatusCode.Created);
         handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
         handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/team-members", TeamTestHelpers.TeamMembersJson(), HttpStatusCode.OK);
         Navigate("/nps/coleta");
 
         var cut = Render<NpsPage>();
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".nps-primary-action")));
 
         cut.Find(".nps-primary-action").Click();
-        cut.WaitForAssertion(() => Assert.NotNull(cut.Find(".nps-create-submit")));
+        ChooseCollector(cut);
         cut.Find(".nps-create-submit").Click();
 
         cut.WaitForAssertion(() => Assert.Equal(
@@ -606,13 +631,14 @@ public sealed class NpsPageTests : BunitContext
             "/api/nps/dispatches",
             """{"detail":"Waived NPS collections cannot create dispatches."}""",
             HttpStatusCode.Conflict);
+        handler.AddResponse(HttpMethod.Get, "/api/team-members", TeamTestHelpers.TeamMembersJson(), HttpStatusCode.OK);
         Navigate("/nps/coleta");
 
         var cut = Render<NpsPage>();
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".nps-primary-action")));
 
         cut.Find(".nps-primary-action").Click();
-        cut.WaitForAssertion(() => Assert.NotNull(cut.Find(".nps-create-submit")));
+        ChooseCollector(cut);
         cut.Find(".nps-create-submit").Click();
 
         cut.WaitForAssertion(() => Assert.Contains(
@@ -659,13 +685,14 @@ public sealed class NpsPageTests : BunitContext
         handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
         JSInterop.SetupVoid(invocation => invocation.Identifier == "navigator.clipboard.writeText")
             .SetException(new JSException("Clipboard indisponível."));
+        handler.AddResponse(HttpMethod.Get, "/api/team-members", TeamTestHelpers.TeamMembersJson(), HttpStatusCode.OK);
         Navigate("/nps/coleta");
 
         var cut = Render<NpsPage>();
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".nps-primary-action")));
 
         cut.Find(".nps-primary-action").Click();
-        cut.WaitForAssertion(() => Assert.NotNull(cut.Find(".nps-create-submit")));
+        ChooseCollector(cut);
         cut.Find(".nps-create-submit").Click();
         cut.WaitForAssertion(() => Assert.Contains(
             "Copiar link",
@@ -803,11 +830,18 @@ public sealed class NpsPageTests : BunitContext
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         Services.AddScoped(_ => httpClient);
         Services.AddScoped<NpsClient>();
+        Services.AddScoped<TeamMembersClient>();
         return handler;
     }
 
     private void Navigate(string path)
         => Services.GetRequiredService<NavigationManager>().NavigateTo($"http://localhost{path}");
+
+    private static void ChooseCollector(IRenderedComponent<NpsPage> cut)
+    {
+        cut.WaitForAssertion(() => cut.Find(".nps-create-collector option[value='Julia Pereira']"));
+        cut.Find(".nps-create-collector").Change("Julia Pereira");
+    }
 
     private static AngleSharp.Dom.IElement Dialog(IRenderedComponent<NpsPage> cut, string title)
         => cut.FindAll("dialog").Single(dialog => dialog.TextContent.Contains(title, StringComparison.Ordinal));

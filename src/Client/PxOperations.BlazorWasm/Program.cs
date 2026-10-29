@@ -21,6 +21,7 @@ builder.Services.AddScoped<ProjectHealthClient>();
 builder.Services.AddScoped<ProjectsClient>();
 builder.Services.AddScoped<MilestonesClient>();
 builder.Services.AddScoped<NpsClient>();
+builder.Services.AddScoped<TeamMembersClient>();
 builder.Services.AddPxOperationsUi();
 
 await builder.Build().RunAsync();

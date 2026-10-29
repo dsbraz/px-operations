@@ -16,14 +16,32 @@ public sealed class NpsCollectionTests
         var dispatch = collection.CreateDispatch(
             NpsFormFormat.Complete,
             NpsLanguage.Portuguese,
+            collectorName: "Julia Pereira",
             contactIds: [],
             genericToken: Guid.NewGuid(),
             contactTokens: [],
             Now);
 
         Assert.Equal(Now.AddDays(20), dispatch.ExpiresAt);
+        Assert.Equal("Julia Pereira", dispatch.CollectorName);
         Assert.Single(dispatch.Targets);
         Assert.True(dispatch.Targets.Single().IsGeneric);
+    }
+
+    [Fact]
+    public void Creating_a_dispatch_should_refuse_a_collector_outside_the_team_roster()
+    {
+        var collection = NpsCollection.Create(projectId: 7);
+
+        Assert.Throws<BusinessRuleValidationException>(() => collection.CreateDispatch(
+            NpsFormFormat.Complete,
+            NpsLanguage.Portuguese,
+            collectorName: "Flavia de Castro",
+            contactIds: [],
+            genericToken: Guid.NewGuid(),
+            contactTokens: [],
+            Now));
+        Assert.Empty(collection.Dispatches);
     }
 
     [Fact]
@@ -138,6 +156,20 @@ public sealed class NpsCollectionTests
         Assert.Equal(expected, NpsCollectionPolicy.AwaitsCollection(status));
     }
 
+    [Theory]
+    [InlineData(true, "Julia Pereira", "Maria", "Julia Pereira")]
+    [InlineData(true, null, "Maria", "Maria")]
+    [InlineData(true, null, null, null)]
+    [InlineData(false, null, "Maria", null)]
+    public void Collector_should_fall_back_to_the_project_responsible_only_for_links_sent_before_the_choice(
+        bool hasDispatch,
+        string? dispatchCollectorName,
+        string? projectDeliveryManager,
+        string? expected)
+    {
+        Assert.Equal(expected, NpsCollectionPolicy.CollectorName(hasDispatch, dispatchCollectorName, projectDeliveryManager));
+    }
+
     [Fact]
     public void Closed_project_should_never_be_overdue()
     {
@@ -186,7 +218,7 @@ public sealed class NpsCollectionTests
     }
 
     private static Dispatch CreateDispatch(NpsCollection collection, NpsFormFormat format, DateTimeOffset now)
-        => collection.CreateDispatch(format, NpsLanguage.Portuguese, [], Guid.NewGuid(), [], now);
+        => collection.CreateDispatch(format, NpsLanguage.Portuguese, "Denise Santos", [], Guid.NewGuid(), [], now);
 
     /// <summary>
     /// A coluna "Aguardando resposta" é sobre disparo aberto e zero respostas

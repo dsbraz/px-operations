@@ -525,7 +525,8 @@ public sealed class NpsQueries(AppDbContext dbContext) : INpsQueries
                 responseCounts.GetValueOrDefault(dispatch.Id),
                 availability.Code,
                 availability.Label,
-                availability.Tone);
+                availability.Tone,
+                dispatch.CollectorName);
         }).ToArray();
     }
 

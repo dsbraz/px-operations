@@ -8,6 +8,7 @@ namespace PxOperations.BlazorWasm.Features.Nps;
 public partial class NpsPage : ComponentBase, IDisposable
 {
     [Inject] private NpsClient NpsClient { get; set; } = default!;
+    [Inject] private TeamMembersClient TeamMembersClient { get; set; } = default!;
     [Inject] private HttpClient HttpClient { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private IJSRuntime JsRuntime { get; set; } = default!;
@@ -44,6 +45,8 @@ public partial class NpsPage : ComponentBase, IDisposable
     private int createProjectId;
     private string createFormat = "complete";
     private string createLanguage = "pt";
+    private string? createCollectorName;
+    private List<TeamMemberView> teamMembers = [];
     private NpsDispatchDetailView? createdDispatch;
     private bool detailDialogOpen;
     private NpsProjectDetailView? selectedDetail;
@@ -75,7 +78,7 @@ public partial class NpsPage : ComponentBase, IDisposable
             AddChip(chips, "client", "Cliente", clients);
             AddChip(chips, "dc", "DC", dcs);
             AddChip(chips, "projectType", "Tipo", projectTypes);
-            AddChip(chips, "deliveryManager", "DM", deliveryManagers);
+            AddChip(chips, "deliveryManager", "Responsável", deliveryManagers);
             if (ActiveTab == NpsTab.Results)
             {
                 AddChip(chips, "status", "Status", statuses);
@@ -380,6 +383,7 @@ public partial class NpsPage : ComponentBase, IDisposable
         createProjectId = 0;
         createFormat = "complete";
         createLanguage = "pt";
+        createCollectorName = null;
         if (projects.Count == 0)
         {
             try
@@ -393,12 +397,30 @@ public partial class NpsPage : ComponentBase, IDisposable
             }
         }
 
+        await LoadTeamMembersAsync();
         createDialogOpen = true;
+    }
+
+    private async Task LoadTeamMembersAsync()
+    {
+        if (teamMembers.Count != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            teamMembers = (await TeamMembersClient.ListTeamMembersAsync()).ToList();
+        }
+        catch (Exception exception)
+        {
+            actionError = ApiErrorFormatter.Format(exception, "Não foi possível carregar os responsáveis pela coleta.");
+        }
     }
 
     private async Task CreateDispatchAsync()
     {
-        if (createProjectId == 0)
+        if (createProjectId == 0 || string.IsNullOrEmpty(createCollectorName))
         {
             return;
         }
@@ -412,7 +434,8 @@ public partial class NpsPage : ComponentBase, IDisposable
                 ProjectId = createProjectId,
                 Format = createFormat,
                 Language = createLanguage,
-                ContactIds = []
+                ContactIds = [],
+                CollectorName = createCollectorName
             });
         }
         catch (Exception exception)
@@ -459,6 +482,8 @@ public partial class NpsPage : ComponentBase, IDisposable
         createProjectId = project.Id;
         createFormat = action.Format ?? "complete";
         createLanguage = "pt";
+        createCollectorName = null;
+        await LoadTeamMembersAsync();
         createDialogOpen = true;
     }
 

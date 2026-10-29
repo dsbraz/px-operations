@@ -106,8 +106,9 @@ O quadro tem **quatro colunas** por regra objetiva sobre dados que a API já ent
 | Recoleta | última resposta há mais de 45 dias | Nova rodada |
 | Em dia | última resposta há 45 dias ou menos | nenhuma |
 
-**Nada é ocultado por status de projeto (D9):** a carteira inteira aparece; a única ocultação é a
-**coleta dispensada** (§7). O limiar de 45 dias (recoleta) é proposta do quadro; 90 dias (vencido) já
+**Projeto encerrado sai do quadro (D9):** ele não está mais pendente de coleta, então não aparece nas
+colunas nem conta como vencido (`NpsCollectionPolicy.AwaitsCollection`); o histórico continua em
+Resultados e Respostas. A outra ocultação é a **coleta dispensada** (§7). O limiar de 45 dias (recoleta) é proposta do quadro; 90 dias (vencido) já
 é regra do backend (`IsOverdue`). Confirmar a política antes de parametrizar.
 
 ### Cobrança como ação (opcionais)
@@ -115,8 +116,12 @@ O quadro tem **quatro colunas** por regra objetiva sobre dados que a API já ent
 - **Não há registro de cobrança/reenvio.** O backend guarda `Dispatch.CreatedAt`, mas não "última
   cobrança" nem "nº de lembretes". Para medir/mostrar: **B9** (`LastRemindedAt`, `ReminderCount` em
   `Dispatch` ou log de lembretes). Sem isso, "cobrar" = recopiar link/mensagem.
-- **"Responsável pela coleta" não existe** (só `DeliveryManager`, por isso o card usa o DM). Se a
-  cobrança tiver dono diferente do DM: **B10**, campo novo em `Project`/`Dispatch`.
+- **"Responsável pela coleta" (B10, entregue):** escolhido ao gerar o link, entre todas as pessoas da
+  lista de governança (Sales, TaaS, Operações e Projetos), e gravado no disparo
+  (`Dispatch.CollectorName`). O card mostra o responsável do disparo mais recente, ou "—" antes do
+  primeiro link. Disparo gerado antes da escolha existir não guarda quem coletou: o card mostra o
+  responsável pelo projeto no lugar (`NpsCollectionPolicy.CollectorName`). O `DeliveryManager` do projeto não muda: a tela só passou a chamá-lo de
+  "Responsável", e ele aceita todos da lista, menos Sales.
 
 ---
 
@@ -205,7 +210,7 @@ O comentário na tabela é só prévia de uma linha, para não estourar o layout
 
 A barra é **busca + um botão "Filtro"** (padrão Linear/Vercel), não uma fileira de dropdowns. O botão
 abre um menu de duas camadas (faceta → valores); o que está ligado vira **chip removível**. Facetas de
-lista (empresa, DC, tipo, DM, status, formato, classificação) são **multi-seleção**; data de coleta é
+lista (empresa, DC, tipo, responsável, status, formato, classificação) são **multi-seleção**; data de coleta é
 intervalo (single) e dispensadas é toggle.
 
 - **Front:** o mockup filtra no cliente. Só a **empresa** e a **data de coleta** eram ausentes na v1.
@@ -259,7 +264,7 @@ compartilhando o layout (header, barra de filtros) em vez de estado de aba local
 | B11 | Agregar médias por aspecto (só Completo, 1 a 5) | novo use case/repo | Não | Opcional |
 | B8 | `ExpectedRecipients` p/ taxa aproximada | `Dispatch` | **Sim** | Opcional |
 | B9 | `LastRemindedAt`/`ReminderCount` (registro de cobrança) | `Dispatch` | **Sim** | Opcional |
-| B10 | "Responsável pela coleta" distinto do DM | `Project`/`Dispatch` | **Sim** | Opcional |
+| B10 | "Responsável pela coleta" distinto do DM (entregue) | `Dispatch.CollectorName`, `TeamRoster` | **Sim** | Opcional |
 
 **Conclusão.** O bloqueio de partida continua sendo o **uso único do token genérico** (B1 a B4). O que
 subiu para obrigatório junto na Fase 1 é regra de domínio, não acabamento de tela: **validade do link**
