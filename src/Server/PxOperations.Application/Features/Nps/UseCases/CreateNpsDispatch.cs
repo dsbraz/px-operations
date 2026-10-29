@@ -8,7 +8,8 @@ public sealed record CreateNpsDispatchCommand(
     int ProjectId,
     string Format,
     string Language,
-    IReadOnlyList<int> ContactIds);
+    IReadOnlyList<int> ContactIds,
+    string CollectorName);
 
 public sealed class CreateNpsDispatchUseCase(
     INpsRepository repository,
@@ -35,6 +36,7 @@ public sealed class CreateNpsDispatchUseCase(
         var dispatch = collection.CreateDispatch(
             NpsCodes.ParseFormat(command.Format),
             NpsCodes.ParseLanguage(command.Language),
+            command.CollectorName,
             contactIds,
             Guid.NewGuid(),
             contactIds.Select(_ => Guid.NewGuid()).ToArray(),

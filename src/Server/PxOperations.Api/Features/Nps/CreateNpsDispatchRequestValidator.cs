@@ -10,5 +10,6 @@ public sealed class CreateNpsDispatchRequestValidator : AbstractValidator<Create
         RuleFor(request => request.ProjectId).GreaterThan(0);
         RuleFor(request => request.Format).Must(value => value is "complete" or "simplified");
         RuleFor(request => request.Language).Must(value => value is "pt" or "en" or "es");
+        RuleFor(request => request.CollectorName).NotEmpty();
     }
 }

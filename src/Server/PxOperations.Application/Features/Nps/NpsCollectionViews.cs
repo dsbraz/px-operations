@@ -35,7 +35,8 @@ public sealed record NpsProjectView(
     IReadOnlyList<NpsLinkView> ActiveLinks,
     NpsPrimaryActionView? PrimaryAction,
     bool IsOverdue,
-    DateTimeOffset? LastDispatchClosedAt);
+    DateTimeOffset? LastDispatchClosedAt,
+    string? CollectorName);
 
 public sealed record NpsProjectDetailView(
     NpsProjectView Project,

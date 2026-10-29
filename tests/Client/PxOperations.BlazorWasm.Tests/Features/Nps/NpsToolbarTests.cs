@@ -50,6 +50,26 @@ public sealed class NpsToolbarTests : BunitContext
     }
 
     [Fact]
+    public void Delivery_manager_facet_should_be_labelled_as_the_responsible()
+    {
+        var cut = Render<NpsToolbar>(parameters => parameters
+            .Add(toolbar => toolbar.ShowsFilters, true)
+            .Add(toolbar => toolbar.ActiveTab, NpsTab.Collection)
+            .Add(toolbar => toolbar.FilterOptions, new NpsFilterOptionsView
+            {
+                Clients = [], Dcs = [], ProjectTypes = [],
+                DeliveryManagers = [new NpsOptionView { Code = "Maria", Label = "Maria" }],
+                Statuses = [], Formats = [], Classifications = []
+            }));
+
+        cut.Find("button.fmenu__btn").Click();
+
+        var legends = cut.FindAll(".fmenu__pop legend").Select(legend => legend.TextContent.Trim()).ToArray();
+        Assert.Contains("Responsável", legends);
+        Assert.DoesNotContain("Delivery Manager", legends);
+    }
+
+    [Fact]
     public async Task Toggling_a_facet_should_report_the_key_and_the_value()
     {
         NpsFacetToggle? reported = null;

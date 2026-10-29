@@ -33,7 +33,7 @@
                 }
             </fieldset>
             <fieldset>
-                <legend>Delivery Manager</legend>
+                <legend>Responsável</legend>
                 @foreach (var option in FilterOptions.DeliveryManagers)
                 {
                     <label><input type="checkbox" checked="@DeliveryManagers.Contains(option.Code)" @onchange='() => ToggleAsync("deliveryManager", option.Code)' />@option.Label</label>

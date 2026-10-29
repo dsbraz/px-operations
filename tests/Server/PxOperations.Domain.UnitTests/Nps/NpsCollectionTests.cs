@@ -1,5 +1,6 @@
 using PxOperations.Domain.Exceptions;
 using PxOperations.Domain.Nps;
+using PxOperations.Domain.Projects;
 
 namespace PxOperations.Domain.UnitTests.Nps;
 
@@ -15,14 +16,32 @@ public sealed class NpsCollectionTests
         var dispatch = collection.CreateDispatch(
             NpsFormFormat.Complete,
             NpsLanguage.Portuguese,
+            collectorName: "Julia Pereira",
             contactIds: [],
             genericToken: Guid.NewGuid(),
             contactTokens: [],
             Now);
 
         Assert.Equal(Now.AddDays(20), dispatch.ExpiresAt);
+        Assert.Equal("Julia Pereira", dispatch.CollectorName);
         Assert.Single(dispatch.Targets);
         Assert.True(dispatch.Targets.Single().IsGeneric);
+    }
+
+    [Fact]
+    public void Creating_a_dispatch_should_refuse_a_collector_outside_the_team_roster()
+    {
+        var collection = NpsCollection.Create(projectId: 7);
+
+        Assert.Throws<BusinessRuleValidationException>(() => collection.CreateDispatch(
+            NpsFormFormat.Complete,
+            NpsLanguage.Portuguese,
+            collectorName: "Flavia de Castro",
+            contactIds: [],
+            genericToken: Guid.NewGuid(),
+            contactTokens: [],
+            Now));
+        Assert.Empty(collection.Dispatches);
     }
 
     [Fact]
@@ -123,9 +142,39 @@ public sealed class NpsCollectionTests
     [InlineData(90, true)]
     public void Overdue_should_use_the_ninety_day_boundary(int daysSinceResponse, bool expected)
     {
-        Assert.Equal(expected, NpsCollectionPolicy.IsOverdue(false, false, Now.AddDays(-daysSinceResponse), Now));
-        Assert.False(NpsCollectionPolicy.IsOverdue(true, false, Now.AddDays(-daysSinceResponse), Now));
-        Assert.False(NpsCollectionPolicy.IsOverdue(false, true, Now.AddDays(-daysSinceResponse), Now));
+        Assert.Equal(expected, NpsCollectionPolicy.IsOverdue(ProjectStatus.InProgress, false, false, Now.AddDays(-daysSinceResponse), Now));
+        Assert.False(NpsCollectionPolicy.IsOverdue(ProjectStatus.InProgress, true, false, Now.AddDays(-daysSinceResponse), Now));
+        Assert.False(NpsCollectionPolicy.IsOverdue(ProjectStatus.InProgress, false, true, Now.AddDays(-daysSinceResponse), Now));
+    }
+
+    [Theory]
+    [InlineData(ProjectStatus.InProgress, true)]
+    [InlineData(ProjectStatus.Scheduled, true)]
+    [InlineData(ProjectStatus.Closed, false)]
+    public void Only_projects_that_are_not_closed_should_await_collection(ProjectStatus status, bool expected)
+    {
+        Assert.Equal(expected, NpsCollectionPolicy.AwaitsCollection(status));
+    }
+
+    [Theory]
+    [InlineData(true, "Julia Pereira", "Maria", "Julia Pereira")]
+    [InlineData(true, null, "Maria", "Maria")]
+    [InlineData(true, null, null, null)]
+    [InlineData(false, null, "Maria", null)]
+    public void Collector_should_fall_back_to_the_project_responsible_only_for_links_sent_before_the_choice(
+        bool hasDispatch,
+        string? dispatchCollectorName,
+        string? projectDeliveryManager,
+        string? expected)
+    {
+        Assert.Equal(expected, NpsCollectionPolicy.CollectorName(hasDispatch, dispatchCollectorName, projectDeliveryManager));
+    }
+
+    [Fact]
+    public void Closed_project_should_never_be_overdue()
+    {
+        Assert.False(NpsCollectionPolicy.IsOverdue(ProjectStatus.Closed, false, false, null, Now));
+        Assert.False(NpsCollectionPolicy.IsOverdue(ProjectStatus.Closed, false, false, Now.AddDays(-200), Now));
     }
 
     [Fact]
@@ -169,7 +218,7 @@ public sealed class NpsCollectionTests
     }
 
     private static Dispatch CreateDispatch(NpsCollection collection, NpsFormFormat format, DateTimeOffset now)
-        => collection.CreateDispatch(format, NpsLanguage.Portuguese, [], Guid.NewGuid(), [], now);
+        => collection.CreateDispatch(format, NpsLanguage.Portuguese, "Denise Santos", [], Guid.NewGuid(), [], now);
 
     /// <summary>
     /// A coluna "Aguardando resposta" é sobre disparo aberto e zero respostas
