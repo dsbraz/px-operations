@@ -379,6 +379,7 @@ public partial class NpsPage : ComponentBase, IDisposable
 
     private async Task OpenCreateDialog()
     {
+        actionError = null;
         createdDispatch = null;
         createProjectId = 0;
         createFormat = "complete";

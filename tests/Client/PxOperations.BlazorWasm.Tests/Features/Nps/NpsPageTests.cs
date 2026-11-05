@@ -620,6 +620,35 @@ public sealed class NpsPageTests : BunitContext
             handler.RequestUris.Count(uri => uri!.AbsolutePath == "/api/nps/projects")));
     }
 
+    /// <summary>
+    /// O erro de uma tentativa anterior não pode reaparecer quando o diálogo
+    /// volta a abrir e a carga desta vez dá certo.
+    /// </summary>
+    [Fact]
+    public void Reopening_the_create_dialog_should_not_show_a_previous_error()
+    {
+        var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/team-members", "{}", HttpStatusCode.InternalServerError);
+        handler.AddResponse(HttpMethod.Get, "/api/team-members", TeamTestHelpers.TeamMembersJson(), HttpStatusCode.OK);
+        Navigate("/nps/coleta");
+
+        var cut = Render<NpsPage>();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".nps-primary-action")));
+        cut.Find(".nps-page-actions button").Click();
+        cut.WaitForAssertion(() => Assert.NotNull(Dialog(cut, "Gerar link NPS").QuerySelector(".nps-action-error")));
+
+        Dialog(cut, "Gerar link NPS").QuerySelector(".brq-dialog-footer .btn-ghost")!.Click();
+        cut.Find(".nps-page-actions button").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find(".nps-create-collector option[value='Julia Pereira']"));
+            Assert.Null(Dialog(cut, "Gerar link NPS").QuerySelector(".nps-action-error"));
+        });
+    }
+
     [Fact]
     public void Failed_link_generation_should_report_the_reason_the_server_gave()
     {
