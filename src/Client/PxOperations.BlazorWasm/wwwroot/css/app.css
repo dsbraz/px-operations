@@ -56,7 +56,9 @@ body::after {
 
 /* ── PAGE HEADER ── */
 .page-header-bar { padding: 24px 40px 0; }
-.page-header-bar .page-head { margin-bottom: 0; }
+.page-header-bar .page-head { align-items: center; margin-bottom: 0; }
+/* Fora do BrqAppShell o reset de títulos do design system não se aplica. */
+.page-header-bar .page-head__title { font-family: var(--font-display); font-weight: var(--fw-medium); margin: 0; }
 
 /* ── BUTTONS ── */
 .btn {
