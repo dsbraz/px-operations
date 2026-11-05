@@ -6,6 +6,9 @@ namespace PxOperations.Ui.Tests.Components;
 /// <summary>
 /// Abas de visão no contrato do painel de NPS: sublinhado no item ativo,
 /// botão quando a visão é estado da página e link quando ela tem rota própria.
+/// Não usa role="tab": sem tabpanel e navegação por setas o padrão ARIA de
+/// abas fica pela metade. Botões viram um grupo com aria-pressed; links, uma
+/// navegação com aria-current.
 /// </summary>
 public sealed class BrqTabsTests : BunitContext
 {
@@ -23,9 +26,10 @@ public sealed class BrqTabsTests : BunitContext
             .Add(component => component.SelectedKey, "lista")
             .Add(component => component.OnSelect, key => chosen = key));
 
-        Assert.Equal("Visões de projetos", cut.Find("[role=tablist]").GetAttribute("aria-label"));
+        Assert.Equal("Visões de projetos", cut.Find("[role=group]").GetAttribute("aria-label"));
         var tabs = cut.FindAll("button.tab");
-        Assert.Equal(new[] { "true", "false" }, tabs.Select(tab => tab.GetAttribute("aria-selected")));
+        Assert.Equal(new[] { "true", "false" }, tabs.Select(tab => tab.GetAttribute("aria-pressed")));
+        Assert.Empty(cut.FindAll("[role=tab]"));
 
         tabs[1].Click();
 
@@ -45,9 +49,11 @@ public sealed class BrqTabsTests : BunitContext
             .Add(component => component.SelectedKey, "resultados")
             .Add(component => component.OnSelect, key => chosen = key));
 
-        var links = cut.FindAll("a.tab");
+        Assert.Equal("Visões", cut.Find("nav").GetAttribute("aria-label"));
+        var links = cut.FindAll("nav a.tab");
         Assert.Equal(new[] { "/nps/coleta", "/nps/resultados" }, links.Select(link => link.GetAttribute("href")));
-        Assert.Equal("true", links[1].GetAttribute("aria-selected"));
+        Assert.Equal(new string?[] { null, "page" }, links.Select(link => link.GetAttribute("aria-current")));
+        Assert.Empty(cut.FindAll("[role=tab]"));
 
         links[0].Click();
 

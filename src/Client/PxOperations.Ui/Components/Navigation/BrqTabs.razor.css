@@ -23,7 +23,8 @@
     color: var(--color-text);
 }
 
-.tab[aria-selected="true"] {
+.tab[aria-pressed="true"],
+.tab[aria-current="page"] {
     border-block-end-color: var(--color-accent);
     color: var(--color-text);
 }

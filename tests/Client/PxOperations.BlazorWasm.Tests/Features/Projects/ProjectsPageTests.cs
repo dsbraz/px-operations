@@ -170,7 +170,7 @@ public sealed class ProjectsPageTests : BunitContext
 
         cut.WaitForAssertion(() => Assert.Contains("Alpha Renewal", cut.Markup));
 
-        cut.FindAll("button[role=tab]")[2].Click();
+        cut.FindAll(".toolbar-tabs button")[2].Click();
         cut.Find(".toolbar input[type=text]").Input("Alpha");
 
         cut.WaitForAssertion(() =>
@@ -199,7 +199,7 @@ public sealed class ProjectsPageTests : BunitContext
 
         cut.WaitForAssertion(() => Assert.Contains("Renewal One", cut.Markup));
 
-        cut.FindAll("button[role=tab]")[2].Click();
+        cut.FindAll(".toolbar-tabs button")[2].Click();
         cut.FindAll(".toolbar select")[0].Change("DC1");
 
         cut.WaitForAssertion(() =>
@@ -228,7 +228,7 @@ public sealed class ProjectsPageTests : BunitContext
 
         cut.WaitForAssertion(() => Assert.Contains("Scheduled Renewal", cut.Markup));
 
-        cut.FindAll("button[role=tab]")[2].Click();
+        cut.FindAll(".toolbar-tabs button")[2].Click();
         cut.FindAll(".toolbar select")[1].Change("Programado");
 
         cut.WaitForAssertion(() =>
@@ -259,7 +259,7 @@ public sealed class ProjectsPageTests : BunitContext
 
         cut.WaitForAssertion(() => Assert.Contains("Approved Renewal", cut.Markup));
 
-        cut.FindAll("button[role=tab]")[2].Click();
+        cut.FindAll(".toolbar-tabs button")[2].Click();
         cut.FindAll(".toolbar select")[3].Change("Aprovada");
 
         cut.WaitForAssertion(() =>

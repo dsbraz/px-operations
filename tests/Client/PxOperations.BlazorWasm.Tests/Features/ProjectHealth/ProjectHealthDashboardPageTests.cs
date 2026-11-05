@@ -101,7 +101,7 @@ public sealed class ProjectHealthDashboardPageTests : BunitContext
             Assert.Contains("Saúde Geral", cut.Markup);
         });
 
-        var projetosTab = cut.FindAll("button[role=tab]")[1];
+        var projetosTab = cut.FindAll(".toolbar-tabs button")[1];
         projetosTab.Click();
 
         cut.WaitForAssertion(() =>

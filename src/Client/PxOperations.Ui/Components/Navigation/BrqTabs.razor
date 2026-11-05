@@ -1,30 +1,35 @@
-<div class="tabs" role="tablist" aria-label="@AccessibleName">
-    @foreach (var item in Items)
-    {
-        var selected = item.Key == SelectedKey;
-        @if (item.Href is null)
-        {
-            <button type="button"
-                    class="tab"
-                    role="tab"
-                    aria-selected="@(selected ? "true" : "false")"
-                    @onclick="() => OnSelect.InvokeAsync(item.Key)">@item.Label</button>
-        }
-        else
+@if (HasRoutes)
+{
+    <nav class="tabs" aria-label="@AccessibleName">
+        @foreach (var item in Items)
         {
             <a class="tab"
-               role="tab"
                href="@item.Href"
-               aria-selected="@(selected ? "true" : "false")"
+               aria-current="@(item.Key == SelectedKey ? "page" : null)"
                @onclick="() => OnSelect.InvokeAsync(item.Key)"
                @onclick:preventDefault="@OnSelect.HasDelegate">@item.Label</a>
         }
-    }
-</div>
+    </nav>
+}
+else
+{
+    <div class="tabs" role="group" aria-label="@AccessibleName">
+        @foreach (var item in Items)
+        {
+            <button type="button"
+                    class="tab"
+                    aria-pressed="@(item.Key == SelectedKey ? "true" : "false")"
+                    @onclick="() => OnSelect.InvokeAsync(item.Key)">@item.Label</button>
+        }
+    </div>
+}
 
 @code {
     [Parameter] public string AccessibleName { get; set; } = "Visões";
     [Parameter, EditorRequired] public IReadOnlyList<BrqTabItem> Items { get; set; } = [];
     [Parameter] public string? SelectedKey { get; set; }
     [Parameter] public EventCallback<string> OnSelect { get; set; }
+
+    // Visões com rota própria são navegação; as demais, estado da página.
+    private bool HasRoutes => Items.Any(item => item.Href is not null);
 }

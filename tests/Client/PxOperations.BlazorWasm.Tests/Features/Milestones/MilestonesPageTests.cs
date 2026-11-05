@@ -206,7 +206,7 @@ public sealed class MilestonesPageTests : BunitContext
         var cut = Render<MilestonesPage>();
         cut.WaitForAssertion(() => Assert.Contains("Mês", cut.Markup));
 
-        cut.FindAll("button[role=tab]")[1].Click();
+        cut.FindAll(".toolbar-tabs button")[1].Click();
 
         cut.WaitForAssertion(() => Assert.Contains("cal-grid", cut.Markup));
     }
