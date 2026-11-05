@@ -50,6 +50,21 @@ public sealed class ProjectsPageTests : BunitContext
         Assert.Equal("http://localhost/projects", navigation.Uri);
     }
 
+    [Fact]
+    public void Page_should_render_the_design_system_header_with_its_actions()
+    {
+        Services.AddScoped(_ => ProjectsTestHelpers.CreateDelayedClient());
+        Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
+
+        var cut = Render<ProjectsPage>();
+
+        Assert.Equal("Projetos", cut.Find("h1.page-head__title").TextContent.Trim());
+        Assert.Equal(
+            new[] { "↓ Exportar CSV", "+ Novo Projeto" },
+            cut.FindAll(".page-head__actions .brq-button").Select(action => action.TextContent.Trim()));
+    }
+
     // ── STATS BAR ────────────────────────────────────────────────────────────
 
     [Fact]
@@ -239,7 +254,7 @@ public sealed class ProjectsPageTests : BunitContext
 
         cut.WaitForAssertion(() => Assert.DoesNotContain("overlay open", cut.Markup));
 
-        cut.Find("button.btn-purple").Click();
+        cut.Find(".page-head__actions .brq-button--primary").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -285,7 +300,7 @@ public sealed class ProjectsPageTests : BunitContext
 
         var cut = Render<ProjectsPage>();
 
-        cut.Find("button.btn-purple").Click();
+        cut.Find(".page-head__actions .brq-button--primary").Click();
         cut.WaitForAssertion(() => Assert.Contains("overlay open", cut.Markup));
 
         cut.Find(".mfoot .btn-ghost").Click();

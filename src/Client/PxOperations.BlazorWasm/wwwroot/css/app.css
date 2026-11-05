@@ -54,15 +54,9 @@ body::after {
 .topbar nav a:hover { color: var(--purple); background: var(--pl); }
 .topbar nav a.active { color: var(--purple); background: var(--pl); }
 
-/* ── PAGE ACTIONS BAR ── */
-.page-actions-bar {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    padding: 10px 40px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-}
+/* ── PAGE HEADER ── */
+.page-header-bar { padding: 24px 40px 0; }
+.page-header-bar .page-head { margin-bottom: 0; }
 
 /* ── BUTTONS ── */
 .btn {
@@ -1090,7 +1084,7 @@ tbody tr:hover td:first-child { border-left-color: var(--purple); }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 900px) {
-    .topbar, .page-kpis, .toolbar, .table-wrap, .renov-view, .pulse-wrap, .table-header, .page-actions-bar {
+    .topbar, .page-kpis, .toolbar, .table-wrap, .renov-view, .pulse-wrap, .table-header, .page-header-bar {
         padding-left: 16px; padding-right: 16px;
     }
     .fgrid { grid-template-columns: 1fr; }
@@ -1187,10 +1181,6 @@ textarea.fi { resize: vertical; min-height: 90px; line-height: 1.65; }
 
 /* Dashboard */
 .ph-dash { padding: 0 40px 60px; }
-.ph-header { background: var(--surface); border-bottom: 2px solid var(--border); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; height: 60px; }
-.ph-header-title { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-.ph-header-link { font-size: 11px; color: var(--purple); font-weight: 700; text-decoration: none; border: 1.5px solid rgba(75,20,140,.20); padding: 7px 14px; border-radius: 6px; background: var(--pl); transition: background .12s; }
-.ph-header-link:hover { background: rgba(75,20,140,.20); }
 
 /* Score badge */
 .score-badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; font-family: 'Space Mono', monospace; font-weight: 700; padding: 2px 9px; font-size: 12px; }

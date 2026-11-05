@@ -1,9 +1,14 @@
 @page "/milestones"
+@using PxOperations.Ui.Components.Navigation
 
 <PageTitle>Marcos de Projeto · Operations PX</PageTitle>
 
-<div class="page-actions-bar">
-    <button class="btn btn-purple" @onclick="OpenCreateModal">+ Novo Marco</button>
+<div class="page-header-bar">
+    <BrqPageHeader Title="Marcos">
+        <Actions>
+            <button type="button" class="brq-button brq-button--primary" @onclick="OpenCreateModal">+ Novo Marco</button>
+        </Actions>
+    </BrqPageHeader>
 </div>
 
 <MilestonesStatsBar

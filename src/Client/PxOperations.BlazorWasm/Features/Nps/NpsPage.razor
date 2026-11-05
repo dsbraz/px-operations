@@ -4,18 +4,20 @@
 @page "/nps/respostas"
 @using PxOperations.Ui.Components.DataDisplay
 @using PxOperations.Ui.Components.Forms
+@using PxOperations.Ui.Components.Navigation
 @using PxOperations.Ui.Components.Overlays
 
 <PageTitle>NPS · Operations PX</PageTitle>
 
 <section class="nps-page">
-    <header class="page-actions-bar nps-page-header">
-        <h1 class="brq-visually-hidden">NPS</h1>
-        <div class="nps-page-actions">
-            <a class="btn btn-ghost" href="@ExportHref">&#8595; Exportar CSV</a>
-            <button type="button" class="btn btn-purple" @onclick="OpenCreateDialog">+ Gerar link</button>
-        </div>
-    </header>
+    <div class="page-header-bar">
+        <BrqPageHeader Title="NPS">
+            <Actions>
+                <a class="brq-button brq-button--secondary" href="@ExportHref">&#8595; Exportar CSV</a>
+                <button type="button" class="brq-button brq-button--primary" @onclick="OpenCreateDialog">+ Gerar link</button>
+            </Actions>
+        </BrqPageHeader>
+    </div>
 
     @if (ShowsIndicators)
     {

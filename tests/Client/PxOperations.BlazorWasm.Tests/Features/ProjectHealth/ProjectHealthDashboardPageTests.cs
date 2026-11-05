@@ -25,6 +25,20 @@ public sealed class ProjectHealthDashboardPageTests : BunitContext
     }
 
     [Fact]
+    public void Page_should_render_the_design_system_header_with_the_leader_form_link()
+    {
+        Services.AddScoped(_ => ProjectsTestHelpers.CreateDelayedClient());
+        Services.AddScoped<ProjectHealthClient>();
+
+        var cut = Render<ProjectHealthDashboardPage>();
+
+        Assert.Equal("Saúde de Projetos", cut.Find("h1.page-head__title").TextContent.Trim());
+        var link = cut.Find(".page-head__actions a.brq-button");
+        Assert.Equal("/project-health/new", link.GetAttribute("href"));
+        Assert.Equal("↗ Formulário do Líder", link.TextContent.Trim());
+    }
+
+    [Fact]
     public void Page_should_render_stats_bar_with_summary_data()
     {
         var handler = new ProjectsTestHelpers.MultiStubHttpMessageHandler();

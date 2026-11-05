@@ -1,12 +1,16 @@
 @page "/"
 @page "/projects"
+@using PxOperations.Ui.Components.Navigation
 
 <PageTitle>Base de Projetos · Operations PX</PageTitle>
 
-<!-- PAGE ACTIONS BAR -->
-<div class="page-actions-bar">
-    <button class="btn btn-ghost">&#8595; Exportar CSV</button>
-    <button class="btn btn-purple" @onclick="OpenCreateModal">+ Novo Projeto</button>
+<div class="page-header-bar">
+    <BrqPageHeader Title="Projetos">
+        <Actions>
+            <button type="button" class="brq-button brq-button--secondary">&#8595; Exportar CSV</button>
+            <button type="button" class="brq-button brq-button--primary" @onclick="OpenCreateModal">+ Novo Projeto</button>
+        </Actions>
+    </BrqPageHeader>
 </div>
 
 <ProjectsStatsBar

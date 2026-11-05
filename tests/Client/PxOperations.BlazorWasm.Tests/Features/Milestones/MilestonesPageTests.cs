@@ -21,6 +21,19 @@ public sealed class MilestonesPageTests : BunitContext
     }
 
     [Fact]
+    public void Page_should_render_the_design_system_header_with_its_action()
+    {
+        Services.AddScoped(_ => ProjectsTestHelpers.CreateDelayedClient());
+        Services.AddScoped<MilestonesClient>();
+        Services.AddScoped<ProjectsClient>();
+
+        var cut = Render<MilestonesPage>();
+
+        Assert.Equal("Marcos", cut.Find("h1.page-head__title").TextContent.Trim());
+        Assert.Equal("+ Novo Marco", cut.Find(".page-head__actions .brq-button").TextContent.Trim());
+    }
+
+    [Fact]
     public void Page_should_render_week_view_with_loaded_milestones()
     {
         var today = MondayOfCurrentWeek();
