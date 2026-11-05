@@ -89,6 +89,40 @@ public sealed class MilestonesPageTests : BunitContext
         });
     }
 
+    /// <summary>
+    /// Remover um marco que falha fecha o detalhe e avisa que a ação não foi
+    /// concluída; a semana continua visível e não há "Tentar novamente".
+    /// </summary>
+    [Fact]
+    public void Failed_delete_should_keep_the_week_and_report_the_action()
+    {
+        var today = MondayOfCurrentWeek();
+        var handler = new MilestonesTestHelpers.MultiStubHttpMessageHandler();
+        handler.AddResponse(MilestonesTestHelpers.MilestonesJson(
+            MilestonesTestHelpers.MakeMilestone(title: "Kickoff Alfa", date: today)));
+        handler.AddResponse(ProjectsTestHelpers.ProjectsJson());
+        handler.AddResponse("{}", HttpStatusCode.InternalServerError);
+        Services.AddScoped(_ => new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
+        Services.AddScoped<MilestonesClient>();
+        Services.AddScoped<ProjectsClient>();
+
+        var cut = Render<MilestonesPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Kickoff Alfa", cut.Markup));
+
+        cut.Find("button.event-pill").Click();
+        cut.FindAll("button").Single(button => button.TextContent.Contains("Remover")).Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var alert = cut.Find(".brq-error-state");
+            Assert.Equal("Não foi possível concluir a ação", alert.QuerySelector("h2")!.TextContent.Trim());
+            Assert.Equal("Não foi possível remover o marco.", alert.QuerySelector("p")!.TextContent.Trim());
+            Assert.Null(alert.QuerySelector("button"));
+            Assert.DoesNotContain("✕ Remover", cut.Markup);
+            Assert.Contains("Kickoff Alfa", cut.Markup);
+        });
+    }
+
     [Fact]
     public void Page_should_filter_by_search_term()
     {

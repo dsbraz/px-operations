@@ -16,6 +16,7 @@ public partial class ProjectsPage : ComponentBase
     // ── Data ─────────────────────────────────────────────────────────────────
     private bool isLoading = true;
     private string? errorMessage;
+    private string? actionError;
     private List<ProjectResponse> projects = [];
 
     // ── Filter / navigation state ─────────────────────────────────────────────
@@ -127,19 +128,21 @@ public partial class ProjectsPage : ComponentBase
 
     private async Task DeleteProject(int id)
     {
+        actionError = null;
+
         try
         {
             await ProjectsClient.DeleteAsync(id, default);
             projects.RemoveAll(p => p.Id == id);
             await ShowToast("Projeto excluído com sucesso!");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            errorMessage = ex.Message;
+            actionError = "Não foi possível excluir o projeto.";
         }
     }
 
-    private void HandleError(string message) => errorMessage = message;
+    private void HandleError(string message) => actionError = message;
 
     // ── Toast ─────────────────────────────────────────────────────────────────
     private async Task ShowToast(string message)

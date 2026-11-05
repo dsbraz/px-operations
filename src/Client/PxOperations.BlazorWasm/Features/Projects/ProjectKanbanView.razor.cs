@@ -102,9 +102,9 @@ public partial class ProjectKanbanView : ComponentBase
             await OnProjectUpdated.InvokeAsync(updated);
             await OnToast.InvokeAsync("Projeto movido com sucesso!");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            await OnError.InvokeAsync(ex.Message);
+            await OnError.InvokeAsync("Não foi possível mover o projeto.");
         }
         finally
         {

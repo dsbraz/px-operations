@@ -37,6 +37,11 @@
     OnFilterProjectIdChanged="@(value => filterProjectId = value)"
     OnViewChanged="@(value => activeView = value)" />
 
+@if (actionError is not null)
+{
+    <div class="page-alert"><BrqErrorState Title="Não foi possível concluir a ação" Description="@actionError" /></div>
+}
+
 @if (isLoading)
 {
     <div class="page-state"><BrqLoadingState AccessibleLabel="Carregando marcos" /></div>

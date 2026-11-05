@@ -1,5 +1,6 @@
 @page "/"
 @page "/projects"
+@using PxOperations.Ui.Components.DataDisplay
 @using PxOperations.Ui.Components.Navigation
 
 <PageTitle>Base de Projetos · Operations PX</PageTitle>
@@ -40,6 +41,11 @@
 
 <!-- WEEKLY PULSE -->
 <WeeklyPulse Projects="@projects" />
+
+@if (actionError is not null)
+{
+    <div class="page-alert"><BrqErrorState Title="Não foi possível concluir a ação" Description="@actionError" /></div>
+}
 
 @if (activeTab == "lista")
 {

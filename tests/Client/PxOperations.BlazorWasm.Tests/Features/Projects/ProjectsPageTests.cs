@@ -360,4 +360,35 @@ public sealed class ProjectsPageTests : BunitContext
 
         cut.WaitForAssertion(() => Assert.DoesNotContain("ToDelete", cut.Markup));
     }
+
+    /// <summary>
+    /// Uma exclusão que falha não é falha de carga: a lista continua na tela
+    /// e o aviso diz que a ação não foi concluída, sem "Tentar novamente".
+    /// </summary>
+    [Fact]
+    public void Failed_delete_should_keep_the_list_and_report_the_action()
+    {
+        var handler = new ProjectsTestHelpers.MultiStubHttpMessageHandler();
+        handler.AddResponse(HttpMethod.Get, ProjectsTestHelpers.ProjectsJson(
+            ProjectsTestHelpers.MakeProject(id: 1, name: "Portal Mantido")),
+            HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Delete, "{}", HttpStatusCode.InternalServerError);
+        Services.AddScoped(_ => new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
+        Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
+
+        var cut = Render<ProjectsPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Portal Mantido", cut.Markup));
+
+        cut.Find("button.ibtn.del").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var alert = cut.Find(".brq-error-state");
+            Assert.Equal("Não foi possível concluir a ação", alert.QuerySelector("h2")!.TextContent.Trim());
+            Assert.Equal("Não foi possível excluir o projeto.", alert.QuerySelector("p")!.TextContent.Trim());
+            Assert.Null(alert.QuerySelector("button"));
+            Assert.Contains("Portal Mantido", cut.Markup);
+        });
+    }
 }

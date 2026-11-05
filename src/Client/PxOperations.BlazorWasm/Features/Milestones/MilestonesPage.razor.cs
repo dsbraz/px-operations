@@ -24,6 +24,7 @@ public partial class MilestonesPage : ComponentBase
     private readonly DateOnly today = DateOnly.FromDateTime(DateTime.Today);
     private bool isLoading = true;
     private string? errorMessage;
+    private string? actionError;
     private List<MilestoneResponse> milestones = [];
     private List<ProjectResponse> projects = [];
 
@@ -121,6 +122,8 @@ public partial class MilestonesPage : ComponentBase
         if (selectedMilestone is null)
             return;
 
+        actionError = null;
+
         try
         {
             await MilestonesClient.DeleteAsync(selectedMilestone.Id, default);
@@ -128,9 +131,10 @@ public partial class MilestonesPage : ComponentBase
             CloseDetail();
             await ShowToast("Marco removido.");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            errorMessage = ex.Message;
+            CloseDetail();
+            actionError = "Não foi possível remover o marco.";
         }
     }
 
