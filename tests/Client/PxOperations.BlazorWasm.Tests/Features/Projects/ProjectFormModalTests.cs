@@ -102,6 +102,23 @@ public sealed class ProjectFormModalTests : BunitContext
         });
     }
 
+    /// <summary>
+    /// Sem a lista, o select só oferece "Sem responsável": o usuário precisa
+    /// saber que a falha foi na carga, e não que não há ninguém para escolher.
+    /// </summary>
+    [Fact]
+    public void Should_tell_the_user_when_the_responsible_list_fails_to_load()
+    {
+        Services.AddScoped(_ => ProjectsTestHelpers.CreateClient("{}", HttpStatusCode.InternalServerError));
+        Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
+
+        var cut = Render<ProjectFormModal>();
+
+        cut.WaitForAssertion(() =>
+            Assert.Contains("Não foi possível carregar a lista de responsáveis.", cut.Markup));
+    }
+
     [Fact]
     public void Should_fire_on_close_callback_when_cancel_is_clicked()
     {

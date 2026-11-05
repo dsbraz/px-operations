@@ -31,6 +31,12 @@ public partial class ProjectFormModal : ComponentBase
     private bool isSaving;
     private string? error;
 
+    // Fica separado de error porque OnParametersSet limpa error, e ele roda
+    // depois de OnInitializedAsync terminar a carga.
+    private string? responsibleListError;
+
+    private string? ErrorMessage => error ?? responsibleListError;
+
     // Projeto gravado antes da lista atual guarda um nome que não está nela;
     // sem esta opção o select ficava em branco e escondia o valor salvo.
     private string? ResponsibleOutsideList =>
@@ -47,11 +53,12 @@ public partial class ProjectFormModal : ComponentBase
                 .Where(member => member.CanBeDeliveryManager)
                 .ToArray();
         }
-        catch (Exception)
+        catch (Exception exception)
         {
             // Sem a lista o formulário continua gravando, e o valor atual
             // segue visível como opção avulsa.
             responsibleCandidates = [];
+            responsibleListError = ApiErrorFormatter.Format(exception, "Não foi possível carregar a lista de responsáveis.");
         }
     }
 

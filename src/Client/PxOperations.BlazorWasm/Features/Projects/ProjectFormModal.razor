@@ -11,10 +11,10 @@
             <button class="mcls" @onclick="() => OnClose.InvokeAsync()">&#215;</button>
         </div>
 
-        @if (error is not null)
+        @if (ErrorMessage is not null)
         {
             <div class="status-card error" style="margin-bottom:16px;padding:12px 16px;">
-                <p>@error</p>
+                <p>@ErrorMessage</p>
             </div>
         }
 
