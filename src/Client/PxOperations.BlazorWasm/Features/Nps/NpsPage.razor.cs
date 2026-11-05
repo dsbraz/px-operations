@@ -483,8 +483,13 @@ public partial class NpsPage : ComponentBase, IDisposable
         createProjectId = project.Id;
         createFormat = action.Format ?? "complete";
         createLanguage = "pt";
-        createCollectorName = null;
         await LoadTeamMembersAsync();
+        // O card mostra quem coletou por último; para link antigo esse nome é
+        // o responsável pelo projeto, que pode não estar na lista e seria
+        // recusado pelo servidor.
+        createCollectorName = teamMembers.Any(member => member.Name == project.CollectorName)
+            ? project.CollectorName
+            : null;
         createDialogOpen = true;
     }
 

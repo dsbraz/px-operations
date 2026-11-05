@@ -649,6 +649,36 @@ public sealed class NpsPageTests : BunitContext
         });
     }
 
+    /// <summary>
+    /// Na nova rodada o card já mostra quem coletou por último: o diálogo
+    /// começa com essa pessoa, desde que ela ainda esteja na lista.
+    /// </summary>
+    [Theory]
+    [InlineData("Julia Pereira", "Julia Pereira")]
+    [InlineData("Maria", "")]
+    public void Primary_action_should_start_with_the_last_collector_when_they_are_still_on_the_list(string lastCollector, string expected)
+    {
+        var handler = RegisterClient();
+        var projects = NpsTestHelpers.ProjectsJson().Replace(
+            "\"isOverdue\":true,\"lastDispatchClosedAt\":null",
+            $"\"isOverdue\":true,\"lastDispatchClosedAt\":null,\"collectorName\":\"{lastCollector}\"",
+            StringComparison.Ordinal);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", projects, HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/team-members", TeamTestHelpers.TeamMembersJson(), HttpStatusCode.OK);
+        Navigate("/nps/coleta");
+
+        var cut = Render<NpsPage>();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".nps-primary-action")));
+        cut.Find(".nps-primary-action").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find(".nps-create-collector option[value='Julia Pereira']"));
+            Assert.Equal(expected, cut.Find(".nps-create-collector").GetAttribute("value") ?? "");
+        });
+    }
+
     [Fact]
     public void Failed_link_generation_should_report_the_reason_the_server_gave()
     {
