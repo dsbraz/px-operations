@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PxOperations.Application.Abstractions;
 using PxOperations.Application.Features.Diagnostics;
 using PxOperations.Application.Features.Nps;
+using PxOperations.Application.Features.Team;
 using PxOperations.Application.Features.Nps.UseCases;
 using PxOperations.Application.Features.ProjectHealth;
 using PxOperations.Application.Features.ProjectHealth.UseCases;
@@ -13,6 +14,7 @@ using PxOperations.Application.Features.Projects;
 using PxOperations.Application.Features.Projects.UseCases;
 using PxOperations.Infrastructure.Features.Diagnostics;
 using PxOperations.Infrastructure.Features.Nps;
+using PxOperations.Infrastructure.Features.Team;
 using PxOperations.Infrastructure.Features.ProjectHealth;
 using PxOperations.Infrastructure.Features.Milestones;
 using PxOperations.Infrastructure.Persistence;
@@ -64,6 +66,8 @@ public static class DependencyInjection
         services.AddScoped<WaiveNpsCollectionUseCase>();
         services.AddScoped<ReactivateNpsCollectionUseCase>();
         services.AddScoped<SubmitNpsPublicResponseUseCase>();
+
+        services.AddScoped<ITeamMemberQueries, TeamMemberQueries>();
 
         services.AddScoped<IReadinessService, DatabaseReadinessService>();
 

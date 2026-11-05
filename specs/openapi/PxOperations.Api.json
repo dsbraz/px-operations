@@ -4893,19 +4893,11 @@
       "TeamMemberView": {
         "required": [
           "name",
-          "area",
-          "areaLabel",
           "canBeDeliveryManager"
         ],
         "type": "object",
         "properties": {
           "name": {
-            "type": "string"
-          },
-          "area": {
-            "type": "string"
-          },
-          "areaLabel": {
             "type": "string"
           },
           "canBeDeliveryManager": {

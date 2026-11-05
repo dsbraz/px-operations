@@ -6,19 +6,19 @@ internal static class TeamTestHelpers
 {
     internal static string TeamMembersJson() => """
         [
-          {"name":"Julia Pereira","area":"sales","areaLabel":"Sales","canBeDeliveryManager":false},
-          {"name":"Renata Fabri","area":"taas","areaLabel":"TaaS","canBeDeliveryManager":true},
-          {"name":"Denise Santos","area":"operations","areaLabel":"Operações","canBeDeliveryManager":true},
-          {"name":"Carla Paixão","area":"projects","areaLabel":"Projetos","canBeDeliveryManager":true},
-          {"name":"Pedro Vieira","area":"projects","areaLabel":"Projetos","canBeDeliveryManager":true}
+          {"name":"Julia Pereira","canBeDeliveryManager":false},
+          {"name":"Renata Fabri","canBeDeliveryManager":true},
+          {"name":"Denise Santos","canBeDeliveryManager":true},
+          {"name":"Carla Paixão","canBeDeliveryManager":true},
+          {"name":"Pedro Vieira","canBeDeliveryManager":true}
         ]
         """;
 
     internal static IReadOnlyList<TeamMemberView> TeamMembers() =>
     [
-        new() { Name = "Julia Pereira", Area = "sales", AreaLabel = "Sales", CanBeDeliveryManager = false },
-        new() { Name = "Denise Santos", Area = "operations", AreaLabel = "Operações", CanBeDeliveryManager = true },
-        new() { Name = "Pedro Vieira", Area = "projects", AreaLabel = "Projetos", CanBeDeliveryManager = true }
+        new() { Name = "Julia Pereira", CanBeDeliveryManager = false },
+        new() { Name = "Denise Santos", CanBeDeliveryManager = true },
+        new() { Name = "Pedro Vieira", CanBeDeliveryManager = true }
     ];
 
     internal static string?[] OptionValues(AngleSharp.Dom.IElement select)

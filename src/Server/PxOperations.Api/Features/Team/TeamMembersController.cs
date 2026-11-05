@@ -5,8 +5,8 @@ namespace PxOperations.Api.Features.Team;
 
 [ApiController]
 [Route("api/team-members")]
-public sealed class TeamMembersController : ControllerBase
+public sealed class TeamMembersController(ITeamMemberQueries queries) : ControllerBase
 {
     [HttpGet]
-    public ActionResult<IReadOnlyList<TeamMemberView>> ListTeamMembers() => Ok(TeamMemberViews.List());
+    public ActionResult<IReadOnlyList<TeamMemberView>> ListTeamMembers() => Ok(queries.ListTeamMembers());
 }
