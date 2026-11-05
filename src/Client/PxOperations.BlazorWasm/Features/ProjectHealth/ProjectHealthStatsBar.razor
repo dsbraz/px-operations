@@ -4,7 +4,7 @@
     <BrqKpiBar Label="Indicadores de saúde">
         <BrqKpiCard Label="Projetos" Value="@(TotalProjects?.ToString() ?? "—")" />
         <BrqKpiCard Label="Média / 10" Value="@(AverageScore?.ToString("0.0") ?? "—")" />
-        <BrqKpiCard Label="Críticos" Value="@(CriticalCount?.ToString() ?? "—")" />
-        <BrqKpiCard Label="Sem resp" Value="@(NoResponseCount?.ToString() ?? "—")" />
+        <BrqKpiCard Label="Críticos" Value="@(CriticalCount?.ToString() ?? "—")" Tone="BrqStatusTone.Danger" />
+        <BrqKpiCard Label="Sem resp" Value="@(NoResponseCount?.ToString() ?? "—")" Tone="BrqStatusTone.Warning" />
     </BrqKpiBar>
 </div>
