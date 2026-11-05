@@ -126,6 +126,9 @@ body::after {
 }
 .toolbar .fmenu__btn:hover, .toolbar .fmenu__btn:focus-visible { border-color: var(--purple); }
 
+/* ── PAGE STATES ── */
+.page-state { padding: 16px 40px 40px; }
+
 /* ── VIEW TABS ── */
 .toolbar-tabs { margin-left: auto; }
 

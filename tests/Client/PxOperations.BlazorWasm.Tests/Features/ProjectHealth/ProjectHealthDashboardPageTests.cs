@@ -21,7 +21,23 @@ public sealed class ProjectHealthDashboardPageTests : BunitContext
 
         var cut = Render<ProjectHealthDashboardPage>();
 
-        Assert.Contains("Carregando", cut.Markup);
+        Assert.Single(cut.FindAll(".brq-loading-state"));
+    }
+
+    [Fact]
+    public void Page_should_show_the_load_error_with_retry()
+    {
+        Services.AddScoped(_ => ProjectsTestHelpers.CreateClient("{}", HttpStatusCode.InternalServerError));
+        Services.AddScoped<ProjectHealthClient>();
+
+        var cut = Render<ProjectHealthDashboardPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            var error = cut.Find(".brq-error-state");
+            Assert.Contains("Não foi possível carregar os dados.", error.TextContent);
+            Assert.Equal("Tentar novamente", error.QuerySelector("button")!.TextContent.Trim());
+        });
     }
 
     [Fact]

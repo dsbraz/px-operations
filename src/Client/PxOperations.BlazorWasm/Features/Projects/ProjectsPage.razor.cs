@@ -43,14 +43,22 @@ public partial class ProjectsPage : ComponentBase
             NavigationManager.NavigateTo("/projects", replace: true);
         }
 
+        await LoadProjectsAsync();
+    }
+
+    private async Task LoadProjectsAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+
         try
         {
             var result = await ProjectsClient.ListAsync(null, null, null, null, null, default);
             projects = result.ToList();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            errorMessage = ex.Message;
+            errorMessage = "Não foi possível carregar os projetos.";
         }
         finally
         {

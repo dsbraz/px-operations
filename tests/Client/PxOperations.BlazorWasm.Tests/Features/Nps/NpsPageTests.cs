@@ -562,7 +562,7 @@ public sealed class NpsPageTests : BunitContext
         cut.WaitForAssertion(() =>
         {
             Assert.Equal(4, cut.FindAll(".nps-board-column").Count);
-            Assert.Contains("Tentar novamente", cut.Markup);
+            Assert.Equal("Tentar novamente", cut.Find(".brq-error-state button").TextContent.Trim());
             Assert.DoesNotContain("Projeto ativo", cut.Markup);
         });
     }

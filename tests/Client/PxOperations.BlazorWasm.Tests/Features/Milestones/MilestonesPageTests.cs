@@ -34,6 +34,37 @@ public sealed class MilestonesPageTests : BunitContext
     }
 
     [Fact]
+    public void Page_should_show_loading_while_api_is_pending()
+    {
+        Services.AddScoped(_ => ProjectsTestHelpers.CreateDelayedClient());
+        Services.AddScoped<MilestonesClient>();
+        Services.AddScoped<ProjectsClient>();
+
+        var cut = Render<MilestonesPage>();
+
+        Assert.Equal("Carregando marcos", cut.Find(".brq-loading-state").GetAttribute("aria-label"));
+    }
+
+    [Fact]
+    public void Page_should_show_a_friendly_load_error_and_retry()
+    {
+        var handler = new MilestonesTestHelpers.MultiStubHttpMessageHandler();
+        handler.AddResponse("{}", HttpStatusCode.InternalServerError);
+        Services.AddScoped(_ => new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
+        Services.AddScoped<MilestonesClient>();
+        Services.AddScoped<ProjectsClient>();
+
+        var cut = Render<MilestonesPage>();
+
+        cut.WaitForAssertion(() =>
+            Assert.Contains("Não foi possível carregar os marcos.", cut.Find(".brq-error-state").TextContent));
+
+        cut.Find(".brq-error-state button").Click();
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".brq-error-state")));
+    }
+
+    [Fact]
     public void Page_should_render_week_view_with_loaded_milestones()
     {
         var today = MondayOfCurrentWeek();

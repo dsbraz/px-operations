@@ -49,6 +49,9 @@ public partial class MilestonesPage : ComponentBase
 
     private async Task LoadAsync()
     {
+        isLoading = true;
+        errorMessage = null;
+
         try
         {
             var milestonesResult = await MilestonesClient.ListAsync(null, null, null, null, null, null, null, default);
@@ -57,9 +60,9 @@ public partial class MilestonesPage : ComponentBase
             milestones = milestonesResult.ToList();
             projects = projectsResult.OrderBy(p => p.Name).ToList();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            errorMessage = ex.Message;
+            errorMessage = "Não foi possível carregar os marcos.";
         }
         finally
         {

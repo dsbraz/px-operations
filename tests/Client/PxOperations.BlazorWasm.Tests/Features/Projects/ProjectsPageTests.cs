@@ -29,7 +29,35 @@ public sealed class ProjectsPageTests : BunitContext
 
         var cut = Render<ProjectsPage>();
 
-        Assert.Contains("Carregando", cut.Markup);
+        Assert.Equal("Carregando projetos", cut.Find(".brq-loading-state").GetAttribute("aria-label"));
+    }
+
+    /// <summary>
+    /// A falha de carga não expõe a mensagem técnica ("TypeError: Failed to
+    /// fetch") e oferece nova tentativa sem recarregar a página.
+    /// </summary>
+    [Fact]
+    public void Page_should_show_a_friendly_load_error_and_retry()
+    {
+        var handler = new ProjectsTestHelpers.MultiStubHttpMessageHandler();
+        handler.AddResponse(HttpMethod.Get, "{}", HttpStatusCode.InternalServerError);
+        handler.AddResponse(HttpMethod.Get, ProjectsTestHelpers.ProjectsJson(ProjectsTestHelpers.MakeProject(id: 1, name: "Portal Recuperado")), HttpStatusCode.OK);
+        Services.AddScoped(_ => new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
+        Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
+
+        var cut = Render<ProjectsPage>();
+
+        cut.WaitForAssertion(() =>
+            Assert.Contains("Não foi possível carregar os projetos.", cut.Find(".brq-error-state").TextContent));
+
+        cut.Find(".brq-error-state button").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll(".brq-error-state"));
+            Assert.Contains("Portal Recuperado", cut.Markup);
+        });
     }
 
     /// <summary>

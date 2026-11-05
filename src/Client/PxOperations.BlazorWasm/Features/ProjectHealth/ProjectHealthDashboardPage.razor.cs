@@ -55,7 +55,7 @@ public partial class ProjectHealthDashboardPage : ComponentBase
         }
         catch (Exception)
         {
-            loadError = "Não foi possível carregar os dados. Tente recarregar a página.";
+            loadError = "Não foi possível carregar os dados.";
         }
         finally
         {
@@ -78,7 +78,7 @@ public partial class ProjectHealthDashboardPage : ComponentBase
         }
         catch (Exception)
         {
-            loadError = "Não foi possível carregar os dados. Tente recarregar a página.";
+            loadError = "Não foi possível carregar os dados.";
         }
         finally
         {

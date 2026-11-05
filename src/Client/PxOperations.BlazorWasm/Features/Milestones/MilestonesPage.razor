@@ -1,4 +1,5 @@
 @page "/milestones"
+@using PxOperations.Ui.Components.DataDisplay
 @using PxOperations.Ui.Components.Navigation
 
 <PageTitle>Marcos de Projeto · Operations PX</PageTitle>
@@ -38,11 +39,11 @@
 
 @if (isLoading)
 {
-    <div class="status-card"><strong>Carregando marcos...</strong></div>
+    <div class="page-state"><BrqLoadingState AccessibleLabel="Carregando marcos" /></div>
 }
 else if (errorMessage is not null)
 {
-    <div class="status-card error"><strong>Falha ao carregar</strong><p>@errorMessage</p></div>
+    <div class="page-state"><BrqErrorState Description="@errorMessage" OnRetry="LoadAsync" /></div>
 }
 else if (activeView == "semana")
 {

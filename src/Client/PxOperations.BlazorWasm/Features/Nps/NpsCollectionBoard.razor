@@ -6,10 +6,7 @@
 }
 @if (LoadError is not null)
 {
-    <div class="status-card error nps-load-error">
-        <p>@LoadError</p>
-        <button type="button" class="btn btn-purple" @onclick="OnReload">Tentar novamente</button>
-    </div>
+    <BrqErrorState Description="@LoadError" OnRetry="OnReload" />
 }
 
 <div class="kanban-board nps-board" aria-busy="@IsLoading">
