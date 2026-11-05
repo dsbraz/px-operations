@@ -88,6 +88,7 @@ public sealed class ProjectsPageTests : BunitContext
         var cut = Render<ProjectsPage>();
 
         Assert.Equal("Projetos", cut.Find("h1.page-head__title").TextContent.Trim());
+        Assert.Equal("Carteira de projetos, status e renovações.", cut.Find(".page-head__sub").TextContent.Trim());
         Assert.Equal(
             new[] { "↓ Exportar CSV", "+ Novo Projeto" },
             cut.FindAll(".page-head__actions .brq-button").Select(action => action.TextContent.Trim()));

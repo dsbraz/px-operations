@@ -370,6 +370,7 @@ public sealed class NpsPageTests : BunitContext
         cut.WaitForAssertion(() =>
         {
             Assert.Equal("NPS", cut.Find("h1.page-head__title").TextContent.Trim());
+            Assert.Equal("Coleta e leitura do relacionamento com clientes.", cut.Find(".page-head__sub").TextContent.Trim());
             Assert.Equal(
                 new[] { "↓ Exportar CSV", "+ Gerar link" },
                 cut.FindAll(".page-head__actions .brq-button").Select(action => action.TextContent.Trim()));

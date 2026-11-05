@@ -30,6 +30,7 @@ public sealed class MilestonesPageTests : BunitContext
         var cut = Render<MilestonesPage>();
 
         Assert.Equal("Marcos", cut.Find("h1.page-head__title").TextContent.Trim());
+        Assert.Equal("Agenda de marcos e entregas dos projetos.", cut.Find(".page-head__sub").TextContent.Trim());
         Assert.Equal("+ Novo Marco", cut.Find(".page-head__actions .brq-button").TextContent.Trim());
     }
 

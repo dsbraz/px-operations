@@ -49,6 +49,7 @@ public sealed class ProjectHealthDashboardPageTests : BunitContext
         var cut = Render<ProjectHealthDashboardPage>();
 
         Assert.Equal("Saúde de Projetos", cut.Find("h1.page-head__title").TextContent.Trim());
+        Assert.Equal("Avaliação semanal dos líderes sobre cada projeto.", cut.Find(".page-head__sub").TextContent.Trim());
         var link = cut.Find(".page-head__actions a.brq-button");
         Assert.Equal("/project-health/new", link.GetAttribute("href"));
         Assert.Equal("↗ Formulário do Líder", link.TextContent.Trim());
