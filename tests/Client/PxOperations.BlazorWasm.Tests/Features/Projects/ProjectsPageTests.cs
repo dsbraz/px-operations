@@ -25,6 +25,7 @@ public sealed class ProjectsPageTests : BunitContext
     {
         Services.AddScoped(_ => ProjectsTestHelpers.CreateDelayedClient());
         Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
 
         var cut = Render<ProjectsPage>();
 
@@ -45,6 +46,7 @@ public sealed class ProjectsPageTests : BunitContext
 
         Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(ProjectsTestHelpers.ProjectsJson(projects)));
         Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
 
         var cut = Render<ProjectsPage>();
 
@@ -68,6 +70,7 @@ public sealed class ProjectsPageTests : BunitContext
 
         Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(ProjectsTestHelpers.ProjectsJson(projects)));
         Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
 
         var cut = Render<ProjectsPage>();
 
@@ -99,6 +102,7 @@ public sealed class ProjectsPageTests : BunitContext
 
         Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(ProjectsTestHelpers.ProjectsJson(projects)));
         Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
 
         var cut = Render<ProjectsPage>();
 
@@ -127,6 +131,7 @@ public sealed class ProjectsPageTests : BunitContext
 
         Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(ProjectsTestHelpers.ProjectsJson(projects)));
         Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
 
         var cut = Render<ProjectsPage>();
 
@@ -155,6 +160,7 @@ public sealed class ProjectsPageTests : BunitContext
 
         Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(ProjectsTestHelpers.ProjectsJson(projects)));
         Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
 
         var cut = Render<ProjectsPage>();
 
@@ -185,6 +191,7 @@ public sealed class ProjectsPageTests : BunitContext
 
         Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(ProjectsTestHelpers.ProjectsJson(projects)));
         Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
 
         var cut = Render<ProjectsPage>();
 
@@ -208,6 +215,7 @@ public sealed class ProjectsPageTests : BunitContext
     {
         Services.AddScoped(_ => ProjectsTestHelpers.CreateEmptyClient());
         Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
 
         var cut = Render<ProjectsPage>();
 
@@ -234,6 +242,7 @@ public sealed class ProjectsPageTests : BunitContext
 
         Services.AddScoped(_ => ProjectsTestHelpers.CreateClient(ProjectsTestHelpers.ProjectsJson(projects)));
         Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
 
         var cut = Render<ProjectsPage>();
 
@@ -254,6 +263,7 @@ public sealed class ProjectsPageTests : BunitContext
     {
         Services.AddScoped(_ => ProjectsTestHelpers.CreateEmptyClient());
         Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
 
         var cut = Render<ProjectsPage>();
 
@@ -278,6 +288,7 @@ public sealed class ProjectsPageTests : BunitContext
 
         Services.AddScoped(_ => new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
         Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
 
         var cut = Render<ProjectsPage>();
 

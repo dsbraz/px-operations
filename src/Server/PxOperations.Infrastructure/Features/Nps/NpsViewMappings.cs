@@ -43,7 +43,8 @@ internal static class NpsViewMappings
             links,
             PrimaryAction(domainAction, stage, links),
             snapshot.IsOverdue(now),
-            snapshot.LastDispatchClosedAt);
+            snapshot.LastDispatchClosedAt,
+            snapshot.LatestCollectorName);
     }
 
     internal static NpsLinkView? ToLinkView(Dispatch dispatch, DateTimeOffset now)

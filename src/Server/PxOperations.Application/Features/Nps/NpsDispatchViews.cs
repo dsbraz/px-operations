@@ -16,7 +16,8 @@ public sealed record NpsDispatchView(
     int ResponsesCount,
     string Availability,
     string AvailabilityLabel,
-    string Tone);
+    string Tone,
+    string? CollectorName);
 
 public sealed record NpsDispatchTargetView(
     int Id,

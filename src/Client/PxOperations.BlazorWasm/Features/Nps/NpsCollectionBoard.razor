@@ -42,7 +42,7 @@
                                 <BrqStatusPill Label="@project.Temporal.Label" Tone="@NpsTone.From(project.Temporal.Tone)" Size="BrqSize.Small" />
                             </div>
                             <dl>
-                                <div><dt>Delivery Manager</dt><dd>@(project.DeliveryManager ?? "—")</dd></div>
+                                <div><dt>Responsável pela coleta</dt><dd>@(project.CollectorName ?? "—")</dd></div>
                                 <div><dt>Respostas</dt><dd>@project.ResponsesCount</dd></div>
                             </dl>
                             @if (project.ActiveLinks.Count != 0)

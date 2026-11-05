@@ -14,6 +14,7 @@ public sealed class DispatchConfiguration : IEntityTypeConfiguration<Dispatch>
         builder.Property(dispatch => dispatch.CollectionId).HasColumnName("collection_id").IsRequired();
         builder.Property(dispatch => dispatch.Format).HasColumnName("format").IsRequired();
         builder.Property(dispatch => dispatch.Language).HasColumnName("language").IsRequired();
+        builder.Property(dispatch => dispatch.CollectorName).HasColumnName("collector_name").HasMaxLength(100);
         builder.Property(dispatch => dispatch.Status).HasColumnName("status").IsRequired();
         builder.Property(dispatch => dispatch.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(dispatch => dispatch.ExpiresAt).HasColumnName("expires_at").IsRequired();

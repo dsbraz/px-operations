@@ -30,6 +30,14 @@ public sealed class NpsArchitectureTests
     }
 
     [Fact]
+    public void Team_members_controller_should_read_through_an_application_query_interface()
+    {
+        var controller = File.ReadAllText(Path.Combine(Root(), "src/Server/PxOperations.Api/Features/Team/TeamMembersController.cs"));
+
+        Assert.Contains("ITeamMemberQueries", controller, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Command_repository_should_not_return_application_views()
     {
         var returnTypes = typeof(INpsRepository)

@@ -11,6 +11,8 @@ public sealed class Dispatch : Entity<int>
     public int CollectionId { get; private set; }
     public NpsFormFormat Format { get; private set; }
     public NpsLanguage Language { get; private set; }
+    // Nulo nos disparos gerados antes de a escolha existir.
+    public string? CollectorName { get; private set; }
     public NpsDispatchStatus Status { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset ExpiresAt { get; private set; }
@@ -18,11 +20,12 @@ public sealed class Dispatch : Entity<int>
     public IReadOnlyCollection<DispatchTarget> Targets => _targets.AsReadOnly();
     public bool IsOpen => Status == NpsDispatchStatus.Open;
 
-    internal static Dispatch Create(NpsFormFormat format, NpsLanguage language, DateTimeOffset now)
+    internal static Dispatch Create(NpsFormFormat format, NpsLanguage language, string collectorName, DateTimeOffset now)
         => new()
         {
             Format = format,
             Language = language,
+            CollectorName = collectorName,
             Status = NpsDispatchStatus.Open,
             CreatedAt = now,
             ExpiresAt = now.AddDays(NpsCollectionPolicy.LinkValidityDays)

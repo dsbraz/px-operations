@@ -58,6 +58,32 @@ public sealed class NpsCollectionBoardTests : BunitContext
         Assert.Equal("Projeto Alfa", reported?.Name);
     }
 
+    [Fact]
+    public void Card_should_show_who_collects_the_nps_instead_of_the_delivery_manager()
+    {
+        var collected = Project("awaiting_response");
+        collected.DeliveryManager = "Maria Gestora";
+        collected.CollectorName = "Julia Pereira";
+
+        var cut = Render<NpsCollectionBoard>(parameters => parameters
+            .Add(board => board.Projects, [collected]));
+
+        var details = cut.Find(".nps-board-column dl").TextContent;
+        Assert.Contains("Responsável pela coleta", details);
+        Assert.Contains("Julia Pereira", details);
+        Assert.DoesNotContain("Delivery Manager", details);
+        Assert.DoesNotContain("Maria Gestora", details);
+    }
+
+    [Fact]
+    public void Card_should_show_a_dash_until_a_link_is_generated()
+    {
+        var cut = Render<NpsCollectionBoard>(parameters => parameters
+            .Add(board => board.Projects, [Project("no_link")]));
+
+        Assert.Equal("—", cut.Find(".nps-board-column dl dd").TextContent.Trim());
+    }
+
     /// <summary>
     /// Link expirado é um estado dentro de "Aguardando resposta", e o PRD pede
     /// que ele fique no topo da coluna: é o card que exige ação imediata.

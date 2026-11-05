@@ -1,0 +1,10 @@
+@using PxOperations.BlazorWasm.Api
+
+@foreach (var member in Members.OrderBy(member => member.Name, StringComparer.CurrentCultureIgnoreCase))
+{
+    <option value="@member.Name">@member.Name</option>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<TeamMemberView> Members { get; set; } = [];
+}

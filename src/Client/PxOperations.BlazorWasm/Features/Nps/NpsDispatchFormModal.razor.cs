@@ -15,6 +15,9 @@ public partial class NpsDispatchFormModal : ComponentBase
     [Parameter] public EventCallback<int> ProjectIdChanged { get; set; }
     [Parameter] public string Format { get; set; } = "complete";
     [Parameter] public EventCallback<string> FormatChanged { get; set; }
+    [Parameter] public IReadOnlyList<TeamMemberView> TeamMembers { get; set; } = [];
+    [Parameter] public string? CollectorName { get; set; }
+    [Parameter] public EventCallback<string?> CollectorNameChanged { get; set; }
     [Parameter] public string Language { get; set; } = "pt";
     [Parameter] public EventCallback<string> LanguageChanged { get; set; }
 
@@ -33,6 +36,11 @@ public partial class NpsDispatchFormModal : ComponentBase
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public EventCallback OnSubmit { get; set; }
     [Parameter] public EventCallback<string> OnCopy { get; set; }
+
+    private bool CanSubmit => ProjectId != 0 && !string.IsNullOrEmpty(CollectorName) && !IsSubmitting;
+
+    private Task CollectorChanged(ChangeEventArgs args)
+        => CollectorNameChanged.InvokeAsync(string.IsNullOrEmpty(args.Value?.ToString()) ? null : args.Value.ToString());
 
     private Task ProjectChanged(ChangeEventArgs args)
         => ProjectIdChanged.InvokeAsync(

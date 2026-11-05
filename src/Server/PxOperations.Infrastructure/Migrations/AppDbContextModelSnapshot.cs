@@ -131,6 +131,11 @@ namespace PxOperations.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("collection_id");
 
+                    b.Property<string>("CollectorName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("collector_name");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
