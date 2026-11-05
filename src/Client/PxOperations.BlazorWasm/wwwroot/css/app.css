@@ -96,29 +96,8 @@ body::after {
 .ibtn:hover { border-color: var(--purple); color: var(--purple); background: var(--pl); }
 .ibtn.del:hover { border-color: var(--red); color: var(--red); background: var(--rl); }
 
-/* ── STATS BAR ── */
-.stats-bar {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    display: flex; padding: 0 40px; position: relative; z-index: 1; flex-wrap: wrap;
-}
-.stat {
-    padding: 14px 24px 14px 0; margin-right: 24px;
-    border-right: 1px solid var(--border);
-    display: flex; align-items: center; gap: 10px;
-}
-.stat:last-child { border-right: none; margin-right: 0; }
-.sico { width: 30px; height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 13px; }
-.sico.p { background: var(--pl); color: var(--purple); }
-.sico.g { background: var(--gl); color: var(--green); }
-.sico.b { background: var(--bl); color: var(--blue); }
-.sico.o { background: var(--ol); color: var(--orange); }
-.sval { font-size: 17px; font-weight: 700; font-family: 'Space Mono', monospace; line-height: 1; }
-.slbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 3px; font-weight: 600; }
-.stat.p .sval { color: var(--purple); }
-.stat.g .sval { color: var(--green); }
-.stat.b .sval { color: var(--blue); }
-.stat.o .sval { color: var(--orange); }
+/* ── KPIs (BrqKpiBar) ── */
+.page-kpis { padding: 16px 40px 0; position: relative; z-index: 1; }
 
 /* ── TOOLBAR ── */
 .toolbar {
@@ -1111,7 +1090,7 @@ tbody tr:hover td:first-child { border-left-color: var(--purple); }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 900px) {
-    .topbar, .stats-bar, .toolbar, .table-wrap, .renov-view, .pulse-wrap, .table-header, .page-actions-bar {
+    .topbar, .page-kpis, .toolbar, .table-wrap, .renov-view, .pulse-wrap, .table-header, .page-actions-bar {
         padding-left: 16px; padding-right: 16px;
     }
     .fgrid { grid-template-columns: 1fr; }

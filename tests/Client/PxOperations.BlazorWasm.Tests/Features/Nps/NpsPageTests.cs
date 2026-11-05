@@ -63,7 +63,7 @@ public sealed class NpsPageTests : BunitContext
         {
             Assert.Single(cut.FindAll("h1"));
             Assert.Equal("NPS", cut.Find("h1").TextContent.Trim());
-            Assert.Equal(4, cut.FindAll(".nps-indicators .stat").Count);
+            Assert.Equal(4, cut.FindAll("[aria-label='Indicadores do NPS'] .kpi").Count);
             Assert.Equal(4, cut.FindAll(".nps-board-column").Count);
             Assert.Empty(cut.FindAll(".nps-aspect-summary"));
             Assert.Contains("kb-gray", cut.FindAll(".nps-board-column")[0].ClassList);
@@ -95,7 +95,7 @@ public sealed class NpsPageTests : BunitContext
         {
             var markup = cut.Markup;
             var actions = markup.IndexOf("nps-page-header", StringComparison.Ordinal);
-            var indicators = markup.IndexOf("nps-indicators", StringComparison.Ordinal);
+            var indicators = markup.IndexOf("Indicadores do NPS", StringComparison.Ordinal);
             var toolbar = markup.IndexOf("nps-toolbar", StringComparison.Ordinal);
             var content = markup.IndexOf("nps-content", StringComparison.Ordinal);
 
@@ -202,7 +202,7 @@ public sealed class NpsPageTests : BunitContext
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Equal(4, cut.FindAll(".nps-indicators .stat").Count);
+            Assert.Equal(4, cut.FindAll("[aria-label='Indicadores do NPS'] .kpi").Count);
             Assert.Empty(cut.FindAll(".nps-results .nps-kpi"));
             var executivePanels = cut.Find(".nps-executive-panels");
             Assert.Equal(new[] { "nps-results", "nps-aspect-summary" }, executivePanels.Children.Select(child => child.ClassName));
@@ -323,7 +323,7 @@ public sealed class NpsPageTests : BunitContext
         cut.Find("[aria-label='Expandir respostas de Zulu']").Click();
 
         cut.WaitForAssertion(() => Assert.Contains("Não foi possível carregar as respostas deste projeto.", cut.Find(".nps-result-expansion").TextContent));
-        Assert.Equal(4, cut.FindAll(".nps-indicators .stat").Count);
+        Assert.Equal(4, cut.FindAll("[aria-label='Indicadores do NPS'] .kpi").Count);
         Assert.Equal(2, cut.FindAll(".nps-result-row").Count);
 
         cut.Find(".nps-expansion-error button").Click();
@@ -342,7 +342,7 @@ public sealed class NpsPageTests : BunitContext
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Empty(cut.FindAll(".nps-indicators"));
+            Assert.Empty(cut.FindAll("[aria-label='Indicadores do NPS']"));
             Assert.Empty(cut.FindAll(".nps-aspect-summary"));
             Assert.Equal("Buscar projeto, pessoa ou comentário", cut.Find(".nps-search input").GetAttribute("placeholder"));
             Assert.Single(cut.FindAll(".fmenu__btn"));
