@@ -121,7 +121,8 @@ Resultados e Respostas. A outra ocultação é a **coleta dispensada** (§7). O 
   (`Dispatch.CollectorName`). O card mostra o responsável do disparo mais recente, ou "—" antes do
   primeiro link. Disparo gerado antes da escolha existir não guarda quem coletou: o card mostra o
   responsável pelo projeto no lugar (`NpsCollectionPolicy.CollectorName`). O `DeliveryManager` do projeto não muda: a tela só passou a chamá-lo de
-  "Responsável", e ele aceita todos da lista, menos Sales.
+  "Responsável". O formulário de projeto oferece todos da lista, menos Sales, mas isso é filtro da
+  tela: o servidor continua aceitando qualquer nome, inclusive os já gravados fora da lista.
 
 ---
 
