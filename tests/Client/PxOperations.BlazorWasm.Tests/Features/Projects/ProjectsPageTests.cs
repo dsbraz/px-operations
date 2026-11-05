@@ -89,8 +89,9 @@ public sealed class ProjectsPageTests : BunitContext
 
         Assert.Equal("Projetos", cut.Find("h1.page-head__title").TextContent.Trim());
         Assert.Equal("Carteira de projetos, status e renovações.", cut.Find(".page-head__sub").TextContent.Trim());
+        // Sem endpoint de exportação de projetos, um "Exportar CSV" seria um botão morto.
         Assert.Equal(
-            new[] { "↓ Exportar CSV", "+ Novo Projeto" },
+            new[] { "+ Novo Projeto" },
             cut.FindAll(".page-head__actions .brq-button").Select(action => action.TextContent.Trim()));
     }
 
