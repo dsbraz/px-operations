@@ -102,7 +102,7 @@ public sealed class NpsPageTests : BunitContext
             Assert.True(actions < indicators, "A barra de ações deve vir antes dos indicadores.");
             Assert.True(indicators < toolbar, "Os indicadores devem vir antes da toolbar.");
             Assert.True(toolbar < content, "A toolbar deve vir antes do conteúdo.");
-            Assert.Contains("nps-toolbar", cut.Find(".view-tabs").ParentElement!.ClassList);
+            Assert.NotNull(cut.Find("[role=tablist]").Closest(".nps-toolbar"));
         });
     }
 

@@ -127,16 +127,7 @@ body::after {
 .toolbar .fmenu__btn:hover, .toolbar .fmenu__btn:focus-visible { border-color: var(--purple); }
 
 /* ── VIEW TABS ── */
-.view-tabs {
-    display: flex; gap: 2px; background: var(--surface2);
-    border: 1px solid var(--border); border-radius: 7px; padding: 3px; margin-left: auto;
-}
-.vtab {
-    padding: 6px 16px; border-radius: 5px; font-size: 11px; font-weight: 600;
-    cursor: pointer; border: none; background: transparent; color: var(--muted);
-    font-family: 'Inter', sans-serif; transition: all .12s; text-decoration: none;
-}
-.vtab.active { background: var(--surface); color: var(--purple); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+.toolbar-tabs { margin-left: auto; }
 
 /* ── WEEKLY PULSE ── */
 .pulse-wrap { padding: 12px 40px 0; position: relative; z-index: 1; }
@@ -1089,7 +1080,7 @@ tbody tr:hover td:first-child { border-left-color: var(--purple); }
     }
     .fgrid { grid-template-columns: 1fr; }
     .fg.full { grid-column: 1; }
-    .view-tabs { margin-left: 0; }
+    .toolbar-tabs { margin-left: 0; }
     .pulse-inner { grid-template-columns: 1fr 1fr; }
     .renov-indicator { min-width: unset; flex-wrap: wrap; margin-left: 0; }
     .kanban-wrap { padding-left: 16px; padding-right: 16px; }

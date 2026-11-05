@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using PxOperations.BlazorWasm.Api;
+using PxOperations.Ui.Components.Navigation;
 
 namespace PxOperations.BlazorWasm.Features.Nps;
 
@@ -41,6 +42,15 @@ public partial class NpsToolbar : ComponentBase
     [Parameter] public string ResultsHref { get; set; } = string.Empty;
     [Parameter] public string ResponsesHref { get; set; } = string.Empty;
     [Parameter] public EventCallback<NpsTab> OnTabChange { get; set; }
+
+    private BrqTabItem[] Tabs =>
+    [
+        new(nameof(NpsTab.Collection), "Coleta", CollectionHref),
+        new(nameof(NpsTab.Results), "Resultados", ResultsHref),
+        new(nameof(NpsTab.Responses), "Respostas", ResponsesHref)
+    ];
+
+    private Task SelectTab(string key) => OnTabChange.InvokeAsync(Enum.Parse<NpsTab>(key));
 
     private Task ToggleAsync(string key, string value)
         => OnToggleFacet.InvokeAsync(new NpsFacetToggle(key, value));

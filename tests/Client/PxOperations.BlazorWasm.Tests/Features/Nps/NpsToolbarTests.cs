@@ -20,9 +20,10 @@ public sealed class NpsToolbarTests : BunitContext
             .Add(toolbar => toolbar.ResultsHref, "/nps/resultados?client=Alpha")
             .Add(toolbar => toolbar.ResponsesHref, "/nps/respostas?client=Alpha"));
 
-        var active = cut.Find("a.vtab.active");
+        Assert.Equal("Visões do NPS", cut.Find("[role=tablist]").GetAttribute("aria-label"));
+        var active = cut.Find("a[role=tab][aria-selected=true]");
         Assert.Equal("Resultados", active.TextContent.Trim());
-        Assert.Equal("/nps/coleta?client=Alpha", cut.FindAll("a.vtab")[0].GetAttribute("href"));
+        Assert.Equal("/nps/coleta?client=Alpha", cut.FindAll("a[role=tab]")[0].GetAttribute("href"));
     }
 
     /// <summary>
