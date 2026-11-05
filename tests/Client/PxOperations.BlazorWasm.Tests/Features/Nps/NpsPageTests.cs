@@ -354,6 +354,30 @@ public sealed class NpsPageTests : BunitContext
         Assert.DoesNotContain("status=", cut.Find("a[href*='responses/export']").GetAttribute("href"));
     }
 
+    /// <summary>
+    /// O cabeçalho segue o das outras páginas: só as ações à vista. O título
+    /// continua no documento para leitores de tela e para o foco da navegação.
+    /// </summary>
+    [Fact]
+    public void Header_should_show_only_the_actions_and_keep_the_title_for_screen_readers()
+    {
+        var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
+        Navigate("/nps/coleta");
+
+        var cut = Render<NpsPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("brq-visually-hidden", cut.Find("h1").ClassList);
+            Assert.Empty(cut.FindAll(".nps-page-header p"));
+            Assert.Equal(
+                new[] { "↓ Exportar CSV", "+ Gerar link" },
+                cut.FindAll(".nps-page-actions > *").Select(action => action.TextContent.Trim()));
+        });
+    }
+
     [Fact]
     public void Response_dialog_should_show_full_attribution_and_aspects_only_for_complete_format()
     {
