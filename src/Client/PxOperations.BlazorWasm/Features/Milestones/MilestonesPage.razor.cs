@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using PxOperations.BlazorWasm.Api;
 
 namespace PxOperations.BlazorWasm.Features.Milestones;
@@ -19,6 +20,7 @@ public partial class MilestonesPage : ComponentBase
 
     [Inject] private MilestonesClient MilestonesClient { get; set; } = default!;
     [Inject] private ProjectsClient ProjectsClient { get; set; } = default!;
+    [Inject] private ILogger<MilestonesPage> Logger { get; set; } = default!;
 
     private readonly CultureInfo portugueseCulture = CultureInfo.GetCultureInfo("pt-BR");
     private readonly DateOnly today = DateOnly.FromDateTime(DateTime.Today);
@@ -61,8 +63,9 @@ public partial class MilestonesPage : ComponentBase
             milestones = milestonesResult.ToList();
             projects = projectsResult.OrderBy(p => p.Name).ToList();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Logger.LogError(ex, "Falha ao carregar os marcos.");
             errorMessage = "Não foi possível carregar os marcos.";
         }
         finally
@@ -131,8 +134,9 @@ public partial class MilestonesPage : ComponentBase
             CloseDetail();
             await ShowToast("Marco removido.");
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Logger.LogError(ex, "Falha ao remover o marco {MilestoneId}.", selectedMilestone.Id);
             CloseDetail();
             actionError = "Não foi possível remover o marco.";
         }

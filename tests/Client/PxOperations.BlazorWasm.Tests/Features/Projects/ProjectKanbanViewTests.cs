@@ -3,6 +3,7 @@ using System.Net.Http;
 using Bunit;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using PxOperations.BlazorWasm.Api;
 using PxOperations.BlazorWasm.Features.Projects;
 using PxOperations.BlazorWasm.Tests.Helpers;
@@ -210,6 +211,8 @@ public sealed class ProjectKanbanViewTests : BunitContext
         handler.AddResponse(HttpMethod.Patch, "{}", HttpStatusCode.InternalServerError);
         Services.AddScoped(_ => new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
         Services.AddScoped<ProjectsClient>();
+        var logger = new CapturingLogger<ProjectKanbanView>();
+        Services.AddSingleton<ILogger<ProjectKanbanView>>(logger);
 
         string? error = null;
         var cut = Render<ProjectKanbanView>(p => p
@@ -221,5 +224,6 @@ public sealed class ProjectKanbanViewTests : BunitContext
         cut.FindAll(".kanban-col-body")[1].TriggerEvent("ondrop", new DragEventArgs());
 
         cut.WaitForAssertion(() => Assert.Equal("Não foi possível mover o projeto.", error));
+        Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Error && entry.Exception is not null);
     }
 }

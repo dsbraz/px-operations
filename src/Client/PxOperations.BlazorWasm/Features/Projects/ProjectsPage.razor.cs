@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using PxOperations.BlazorWasm.Api;
 
 namespace PxOperations.BlazorWasm.Features.Projects;
@@ -12,6 +13,7 @@ public partial class ProjectsPage : ComponentBase
 
     [Inject] private ProjectsClient ProjectsClient { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] private ILogger<ProjectsPage> Logger { get; set; } = default!;
 
     // ── Data ─────────────────────────────────────────────────────────────────
     private bool isLoading = true;
@@ -57,8 +59,9 @@ public partial class ProjectsPage : ComponentBase
             var result = await ProjectsClient.ListAsync(null, null, null, null, null, default);
             projects = result.ToList();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Logger.LogError(ex, "Falha ao carregar os projetos.");
             errorMessage = "Não foi possível carregar os projetos.";
         }
         finally
@@ -136,8 +139,9 @@ public partial class ProjectsPage : ComponentBase
             projects.RemoveAll(p => p.Id == id);
             await ShowToast("Projeto excluído com sucesso!");
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Logger.LogError(ex, "Falha ao excluir o projeto {ProjectId}.", id);
             actionError = "Não foi possível excluir o projeto.";
         }
     }

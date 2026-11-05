@@ -1,6 +1,7 @@
 using System.Net;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using PxOperations.BlazorWasm.Api;
 using PxOperations.BlazorWasm.Features.Milestones;
 using PxOperations.BlazorWasm.Tests.Helpers;
@@ -54,11 +55,14 @@ public sealed class MilestonesPageTests : BunitContext
         Services.AddScoped(_ => new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
         Services.AddScoped<MilestonesClient>();
         Services.AddScoped<ProjectsClient>();
+        var logger = new CapturingLogger<MilestonesPage>();
+        Services.AddSingleton<ILogger<MilestonesPage>>(logger);
 
         var cut = Render<MilestonesPage>();
 
         cut.WaitForAssertion(() =>
             Assert.Contains("Não foi possível carregar os marcos.", cut.Find(".brq-error-state").TextContent));
+        Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Error && entry.Exception is not null);
 
         cut.Find(".brq-error-state button").Click();
 
@@ -105,6 +109,8 @@ public sealed class MilestonesPageTests : BunitContext
         Services.AddScoped(_ => new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
         Services.AddScoped<MilestonesClient>();
         Services.AddScoped<ProjectsClient>();
+        var logger = new CapturingLogger<MilestonesPage>();
+        Services.AddSingleton<ILogger<MilestonesPage>>(logger);
 
         var cut = Render<MilestonesPage>();
         cut.WaitForAssertion(() => Assert.Contains("Kickoff Alfa", cut.Markup));
@@ -120,6 +126,7 @@ public sealed class MilestonesPageTests : BunitContext
             Assert.Null(alert.QuerySelector("button"));
             Assert.DoesNotContain("✕ Remover", cut.Markup);
             Assert.Contains("Kickoff Alfa", cut.Markup);
+            Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Error && entry.Exception is not null);
         });
     }
 

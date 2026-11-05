@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using PxOperations.BlazorWasm.Api;
 using PxOperations.BlazorWasm.Features.Projects;
 using PxOperations.BlazorWasm.Tests.Helpers;
@@ -45,11 +46,14 @@ public sealed class ProjectsPageTests : BunitContext
         Services.AddScoped(_ => new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
         Services.AddScoped<ProjectsClient>();
         Services.AddScoped<TeamMembersClient>();
+        var logger = new CapturingLogger<ProjectsPage>();
+        Services.AddSingleton<ILogger<ProjectsPage>>(logger);
 
         var cut = Render<ProjectsPage>();
 
         cut.WaitForAssertion(() =>
             Assert.Contains("Não foi possível carregar os projetos.", cut.Find(".brq-error-state").TextContent));
+        Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Error && entry.Exception is not null);
 
         cut.Find(".brq-error-state button").Click();
 
@@ -377,6 +381,8 @@ public sealed class ProjectsPageTests : BunitContext
         Services.AddScoped(_ => new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
         Services.AddScoped<ProjectsClient>();
         Services.AddScoped<TeamMembersClient>();
+        var logger = new CapturingLogger<ProjectsPage>();
+        Services.AddSingleton<ILogger<ProjectsPage>>(logger);
 
         var cut = Render<ProjectsPage>();
         cut.WaitForAssertion(() => Assert.Contains("Portal Mantido", cut.Markup));
@@ -390,6 +396,7 @@ public sealed class ProjectsPageTests : BunitContext
             Assert.Equal("Não foi possível excluir o projeto.", alert.QuerySelector("p")!.TextContent.Trim());
             Assert.Null(alert.QuerySelector("button"));
             Assert.Contains("Portal Mantido", cut.Markup);
+            Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Error && entry.Exception is not null);
         });
     }
 }
