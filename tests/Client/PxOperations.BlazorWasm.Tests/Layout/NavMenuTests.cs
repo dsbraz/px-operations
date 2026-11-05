@@ -18,6 +18,21 @@ public sealed class NavMenuTests : BunitContext
         Assert.Contains("/nps", cut.Markup);
     }
 
+    /// <summary>
+    /// Os outros módulos acendem no menu; Projetos ficava apagado em
+    /// /projects porque o link só casava com "/" exato.
+    /// </summary>
+    [Fact]
+    public void NavMenu_should_highlight_projects_on_the_projects_route()
+    {
+        Services.GetRequiredService<NavigationManager>().NavigateTo("/projects");
+
+        var cut = Render<NavMenu>();
+
+        var projects = cut.FindAll("nav a").Single(link => link.TextContent.Trim() == "Projetos");
+        Assert.Contains("active", projects.ClassList);
+    }
+
     [Fact]
     public void NavMenu_should_hide_module_links_on_public_nps_form()
     {

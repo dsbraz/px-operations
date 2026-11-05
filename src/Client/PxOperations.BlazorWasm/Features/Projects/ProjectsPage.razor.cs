@@ -11,6 +11,7 @@ public partial class ProjectsPage : ComponentBase
     private static readonly string[] projectTypes = ["Squad", "Escopo Fechado", "Alocação"];
 
     [Inject] private ProjectsClient ProjectsClient { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
 
     // ── Data ─────────────────────────────────────────────────────────────────
     private bool isLoading = true;
@@ -36,6 +37,12 @@ public partial class ProjectsPage : ComponentBase
     // ── Lifecycle ─────────────────────────────────────────────────────────────
     protected override async Task OnInitializedAsync()
     {
+        // A URL canônica é /projects, a que o menu reconhece como Projetos.
+        if (NavigationManager.ToBaseRelativePath(NavigationManager.Uri).Split('?', '#')[0].Trim('/').Length == 0)
+        {
+            NavigationManager.NavigateTo("/projects", replace: true);
+        }
+
         try
         {
             var result = await ProjectsClient.ListAsync(null, null, null, null, null, default);
