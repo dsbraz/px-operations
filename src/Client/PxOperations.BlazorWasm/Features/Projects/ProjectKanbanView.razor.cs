@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using PxOperations.BlazorWasm.Api;
 
 namespace PxOperations.BlazorWasm.Features.Projects;
@@ -6,6 +7,7 @@ namespace PxOperations.BlazorWasm.Features.Projects;
 public partial class ProjectKanbanView : ComponentBase
 {
     [Inject] private ProjectsClient ProjectsClient { get; set; } = default!;
+    [Inject] private ILogger<ProjectKanbanView> Logger { get; set; } = default!;
 
     [Parameter, EditorRequired] public List<ProjectResponse> Projects { get; set; } = [];
     [Parameter] public EventCallback<int> OnEdit { get; set; }
@@ -96,15 +98,19 @@ public partial class ProjectKanbanView : ComponentBase
             case "dc":      request.Dc      = columnKey; break;
         }
 
+        // O dragend do navegador zera draggedProject antes de o PATCH responder.
+        var projectId = draggedProject.Id;
+
         try
         {
-            var updated = await ProjectsClient.UpdateAsync(draggedProject.Id, request, default);
+            var updated = await ProjectsClient.UpdateAsync(projectId, request, default);
             await OnProjectUpdated.InvokeAsync(updated);
             await OnToast.InvokeAsync("Projeto movido com sucesso!");
         }
         catch (Exception ex)
         {
-            await OnError.InvokeAsync(ex.Message);
+            Logger.LogError(ex, "Falha ao mover o projeto {ProjectId}.", projectId);
+            await OnError.InvokeAsync("Não foi possível mover o projeto.");
         }
         finally
         {

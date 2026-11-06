@@ -1,6 +1,7 @@
 using System.Net;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using PxOperations.BlazorWasm.Api;
 using PxOperations.BlazorWasm.Features.Milestones;
 using PxOperations.BlazorWasm.Tests.Helpers;
@@ -18,6 +19,54 @@ public sealed class MilestonesPageTests : BunitContext
         var today = DateOnly.FromDateTime(DateTime.Today);
         var offset = (7 + ((int)today.DayOfWeek - (int)DayOfWeek.Monday)) % 7;
         return today.AddDays(-offset).ToString("yyyy-MM-dd");
+    }
+
+    [Fact]
+    public void Page_should_render_the_design_system_header_with_its_action()
+    {
+        Services.AddScoped(_ => ProjectsTestHelpers.CreateDelayedClient());
+        Services.AddScoped<MilestonesClient>();
+        Services.AddScoped<ProjectsClient>();
+
+        var cut = Render<MilestonesPage>();
+
+        Assert.Equal("Marcos", cut.Find("h1.page-head__title").TextContent.Trim());
+        Assert.Equal("Agenda de marcos e entregas dos projetos.", cut.Find(".page-head__sub").TextContent.Trim());
+        Assert.Equal("+ Novo Marco", cut.Find(".page-head__actions .brq-button").TextContent.Trim());
+    }
+
+    [Fact]
+    public void Page_should_show_loading_while_api_is_pending()
+    {
+        Services.AddScoped(_ => ProjectsTestHelpers.CreateDelayedClient());
+        Services.AddScoped<MilestonesClient>();
+        Services.AddScoped<ProjectsClient>();
+
+        var cut = Render<MilestonesPage>();
+
+        Assert.Equal("Carregando marcos", cut.Find(".brq-loading-state").GetAttribute("aria-label"));
+    }
+
+    [Fact]
+    public void Page_should_show_a_friendly_load_error_and_retry()
+    {
+        var handler = new MilestonesTestHelpers.MultiStubHttpMessageHandler();
+        handler.AddResponse("{}", HttpStatusCode.InternalServerError);
+        Services.AddScoped(_ => new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
+        Services.AddScoped<MilestonesClient>();
+        Services.AddScoped<ProjectsClient>();
+        var logger = new CapturingLogger<MilestonesPage>();
+        Services.AddSingleton<ILogger<MilestonesPage>>(logger);
+
+        var cut = Render<MilestonesPage>();
+
+        cut.WaitForAssertion(() =>
+            Assert.Contains("Não foi possível carregar os marcos.", cut.Find(".brq-error-state").TextContent));
+        Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Error && entry.Exception is not null);
+
+        cut.Find(".brq-error-state button").Click();
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".brq-error-state")));
     }
 
     [Fact]
@@ -42,6 +91,71 @@ public sealed class MilestonesPageTests : BunitContext
             Assert.Contains("Kickoff Alfa", cut.Markup);
             Assert.Contains("Semana", cut.Markup);
         });
+    }
+
+    /// <summary>
+    /// Remover um marco que falha fecha o detalhe e avisa que a ação não foi
+    /// concluída; a semana continua visível e não há "Tentar novamente".
+    /// </summary>
+    [Fact]
+    public void Failed_delete_should_keep_the_week_and_report_the_action()
+    {
+        var today = MondayOfCurrentWeek();
+        var handler = new MilestonesTestHelpers.MultiStubHttpMessageHandler();
+        handler.AddResponse(MilestonesTestHelpers.MilestonesJson(
+            MilestonesTestHelpers.MakeMilestone(title: "Kickoff Alfa", date: today)));
+        handler.AddResponse(ProjectsTestHelpers.ProjectsJson());
+        handler.AddResponse("{}", HttpStatusCode.InternalServerError);
+        Services.AddScoped(_ => new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
+        Services.AddScoped<MilestonesClient>();
+        Services.AddScoped<ProjectsClient>();
+        var logger = new CapturingLogger<MilestonesPage>();
+        Services.AddSingleton<ILogger<MilestonesPage>>(logger);
+
+        var cut = Render<MilestonesPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Kickoff Alfa", cut.Markup));
+
+        cut.Find("button.event-pill").Click();
+        cut.FindAll("button").Single(button => button.TextContent.Contains("Remover")).Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var alert = cut.Find(".brq-error-state");
+            Assert.Equal("Não foi possível concluir a ação", alert.QuerySelector("h2")!.TextContent.Trim());
+            Assert.Equal("Não foi possível remover o marco.", alert.QuerySelector("p")!.TextContent.Trim());
+            Assert.Null(alert.QuerySelector("button"));
+            Assert.DoesNotContain("✕ Remover", cut.Markup);
+            Assert.Contains("Kickoff Alfa", cut.Markup);
+            Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Error && entry.Exception is not null);
+        });
+    }
+
+    /// <summary>
+    /// O modal continua fechável durante a exclusão. Fechá-lo antes de a
+    /// falha chegar não pode engolir o aviso.
+    /// </summary>
+    [Fact]
+    public void Failed_delete_should_be_reported_even_after_closing_the_detail()
+    {
+        var today = MondayOfCurrentWeek();
+        var handler = new GatedHttpMessageHandler(HttpMethod.Delete);
+        handler.AddResponse(MilestonesTestHelpers.MilestonesJson(
+            MilestonesTestHelpers.MakeMilestone(title: "Kickoff Alfa", date: today)));
+        handler.AddResponse(ProjectsTestHelpers.ProjectsJson());
+        Services.AddScoped(_ => new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
+        Services.AddScoped<MilestonesClient>();
+        Services.AddScoped<ProjectsClient>();
+
+        var cut = Render<MilestonesPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Kickoff Alfa", cut.Markup));
+
+        cut.Find("button.event-pill").Click();
+        cut.FindAll("button").Single(button => button.TextContent.Contains("Remover")).Click();
+        cut.Find("button.mcls").Click();
+        handler.Release(HttpStatusCode.InternalServerError);
+
+        cut.WaitForAssertion(() =>
+            Assert.Equal("Não foi possível remover o marco.", cut.Find(".brq-error-state p").TextContent.Trim()));
     }
 
     [Fact]
@@ -127,7 +241,7 @@ public sealed class MilestonesPageTests : BunitContext
         var cut = Render<MilestonesPage>();
         cut.WaitForAssertion(() => Assert.Contains("Mês", cut.Markup));
 
-        cut.FindAll("button.vtab")[1].Click();
+        cut.FindAll(".toolbar-tabs button")[1].Click();
 
         cut.WaitForAssertion(() => Assert.Contains("cal-grid", cut.Markup));
     }

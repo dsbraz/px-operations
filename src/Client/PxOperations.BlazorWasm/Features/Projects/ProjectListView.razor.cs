@@ -8,6 +8,7 @@ public partial class ProjectListView : ComponentBase
     [Parameter, EditorRequired] public List<ProjectResponse> Projects { get; set; } = [];
     [Parameter, EditorRequired] public bool IsLoading { get; set; }
     [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public EventCallback OnRetry { get; set; }
     [Parameter] public EventCallback<int> OnEdit { get; set; }
     [Parameter] public EventCallback<int> OnDelete { get; set; }
 

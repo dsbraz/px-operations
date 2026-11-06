@@ -56,7 +56,7 @@ public sealed class ProjectListViewTests : BunitContext
             .Add(c => c.Projects, [])
             .Add(c => c.IsLoading, true));
 
-        Assert.Contains("Carregando", cut.Markup);
+        Assert.Single(cut.FindAll(".brq-loading-state"));
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public sealed class ProjectListViewTests : BunitContext
             .Add(c => c.IsLoading, false)
             .Add(c => c.ErrorMessage, "Erro ao carregar projetos"));
 
-        Assert.Contains("Erro ao carregar projetos", cut.Markup);
+        Assert.Contains("Erro ao carregar projetos", cut.Find(".brq-error-state").TextContent);
     }
 
     [Fact]

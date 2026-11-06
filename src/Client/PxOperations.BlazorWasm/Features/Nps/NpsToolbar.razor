@@ -1,4 +1,5 @@
 @using PxOperations.Ui.Components.Forms
+@using PxOperations.Ui.Components.Navigation
 
 <div class="toolbar nps-toolbar">
     @if (ShowsFilters)
@@ -86,9 +87,10 @@
         </BrqFilterPanel>
     }
 
-    <nav class="view-tabs" aria-label="Visões do NPS">
-        <a class="vtab @(ActiveTab == NpsTab.Collection ? "active" : null)" href="@CollectionHref" @onclick="() => OnTabChange.InvokeAsync(NpsTab.Collection)" @onclick:preventDefault="true">Coleta</a>
-        <a class="vtab @(ActiveTab == NpsTab.Results ? "active" : null)" href="@ResultsHref" @onclick="() => OnTabChange.InvokeAsync(NpsTab.Results)" @onclick:preventDefault="true">Resultados</a>
-        <a class="vtab @(ActiveTab == NpsTab.Responses ? "active" : null)" href="@ResponsesHref" @onclick="() => OnTabChange.InvokeAsync(NpsTab.Responses)" @onclick:preventDefault="true">Respostas</a>
-    </nav>
+    <div class="toolbar-tabs">
+        <BrqTabs AccessibleName="Visões do NPS"
+                 Items="@Tabs"
+                 SelectedKey="@ActiveTab.ToString()"
+                 OnSelect="SelectTab" />
+    </div>
 </div>

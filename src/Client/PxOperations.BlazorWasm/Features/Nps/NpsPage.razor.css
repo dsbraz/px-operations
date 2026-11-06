@@ -28,25 +28,8 @@
 }
 
 @media (max-width: 56.25rem) {
-    .nps-page-header,
     .nps-filter-chips,
     .nps-content {
         padding-inline: 16px;
-    }
-}
-
-@media (max-width: 48rem) {
-    .nps-page-header {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .nps-page-actions {
-        width: 100%;
-    }
-
-    .nps-page-actions > * {
-        flex: 1;
-        text-align: center;
     }
 }

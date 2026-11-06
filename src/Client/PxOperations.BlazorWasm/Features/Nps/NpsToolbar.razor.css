@@ -11,10 +11,6 @@
     .nps-toolbar {
         padding-inline: 16px;
     }
-
-    .nps-toolbar .view-tabs {
-        margin-left: auto;
-    }
 }
 
 @media (max-width: 48rem) {
@@ -27,15 +23,10 @@
         inset-inline-start: auto;
     }
 
-    .nps-toolbar .view-tabs {
+    .nps-toolbar .toolbar-tabs {
         margin-left: 0;
         order: 3;
         overflow-x: auto;
         width: 100%;
-    }
-
-    .nps-toolbar .vtab {
-        flex: 1;
-        text-align: center;
     }
 }
