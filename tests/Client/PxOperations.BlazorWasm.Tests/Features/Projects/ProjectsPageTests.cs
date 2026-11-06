@@ -32,6 +32,24 @@ public sealed class ProjectsPageTests : BunitContext
         Assert.Contains("Carregando", cut.Markup);
     }
 
+    /// <summary>
+    /// "/" e "/projects" mostram a mesma página; a URL canônica é
+    /// /projects, que é a que o menu reconhece como Projetos.
+    /// </summary>
+    [Fact]
+    public void Root_route_should_redirect_to_projects()
+    {
+        Services.AddScoped(_ => ProjectsTestHelpers.CreateDelayedClient());
+        Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
+        var navigation = Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
+        navigation.NavigateTo("/");
+
+        Render<ProjectsPage>();
+
+        Assert.Equal("http://localhost/projects", navigation.Uri);
+    }
+
     // ── STATS BAR ────────────────────────────────────────────────────────────
 
     [Fact]

@@ -3,21 +3,6 @@
     overflow: clip;
 }
 
-.nps-page-header {
-    justify-content: space-between;
-}
-
-.nps-page-title h1 {
-    font-size: 1.05rem;
-    line-height: 1.2;
-}
-
-.nps-page-title p {
-    color: var(--muted);
-    font-size: .72rem;
-    margin-top: .2rem;
-}
-
 .nps-filter-chips {
     flex-wrap: wrap;
     padding: 0 40px 12px;
