@@ -130,6 +130,34 @@ public sealed class MilestonesPageTests : BunitContext
         });
     }
 
+    /// <summary>
+    /// O modal continua fechável durante a exclusão. Fechá-lo antes de a
+    /// falha chegar não pode engolir o aviso.
+    /// </summary>
+    [Fact]
+    public void Failed_delete_should_be_reported_even_after_closing_the_detail()
+    {
+        var today = MondayOfCurrentWeek();
+        var handler = new GatedHttpMessageHandler(HttpMethod.Delete);
+        handler.AddResponse(MilestonesTestHelpers.MilestonesJson(
+            MilestonesTestHelpers.MakeMilestone(title: "Kickoff Alfa", date: today)));
+        handler.AddResponse(ProjectsTestHelpers.ProjectsJson());
+        Services.AddScoped(_ => new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
+        Services.AddScoped<MilestonesClient>();
+        Services.AddScoped<ProjectsClient>();
+
+        var cut = Render<MilestonesPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Kickoff Alfa", cut.Markup));
+
+        cut.Find("button.event-pill").Click();
+        cut.FindAll("button").Single(button => button.TextContent.Contains("Remover")).Click();
+        cut.Find("button.mcls").Click();
+        handler.Release(HttpStatusCode.InternalServerError);
+
+        cut.WaitForAssertion(() =>
+            Assert.Equal("Não foi possível remover o marco.", cut.Find(".brq-error-state p").TextContent.Trim()));
+    }
+
     [Fact]
     public void Page_should_filter_by_search_term()
     {

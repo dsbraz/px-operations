@@ -226,4 +226,32 @@ public sealed class ProjectKanbanViewTests : BunitContext
         cut.WaitForAssertion(() => Assert.Equal("Não foi possível mover o projeto.", error));
         Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Error && entry.Exception is not null);
     }
+
+    /// <summary>
+    /// O navegador dispara dragend logo após o drop, antes de o PATCH
+    /// responder. A falha que chega depois ainda precisa virar aviso.
+    /// </summary>
+    [Fact]
+    public void Should_report_a_move_that_fails_after_the_drag_ended()
+    {
+        var handler = new GatedHttpMessageHandler(HttpMethod.Patch);
+        Services.AddScoped(_ => new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
+        Services.AddScoped<ProjectsClient>();
+        var logger = new CapturingLogger<ProjectKanbanView>();
+        Services.AddSingleton<ILogger<ProjectKanbanView>>(logger);
+
+        string? error = null;
+        var cut = Render<ProjectKanbanView>(p => p
+            .Add(c => c.Projects, new[] { ProjectsTestHelpers.MakeProject(id: 1, status: "Programado", name: "Mover Projeto") }.ToList())
+            .Add(c => c.OnError, Microsoft.AspNetCore.Components.EventCallback.Factory.Create<string>(
+                this, message => error = message)));
+
+        cut.Find(".kanban-card").TriggerEvent("ondragstart", new DragEventArgs());
+        cut.FindAll(".kanban-col-body")[1].TriggerEvent("ondrop", new DragEventArgs());
+        cut.Find(".kanban-card").TriggerEvent("ondragend", new DragEventArgs());
+        handler.Release(HttpStatusCode.InternalServerError);
+
+        cut.WaitForAssertion(() => Assert.Equal("Não foi possível mover o projeto.", error));
+        Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Error && entry.Exception is not null);
+    }
 }

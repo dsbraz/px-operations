@@ -98,15 +98,18 @@ public partial class ProjectKanbanView : ComponentBase
             case "dc":      request.Dc      = columnKey; break;
         }
 
+        // O dragend do navegador zera draggedProject antes de o PATCH responder.
+        var projectId = draggedProject.Id;
+
         try
         {
-            var updated = await ProjectsClient.UpdateAsync(draggedProject.Id, request, default);
+            var updated = await ProjectsClient.UpdateAsync(projectId, request, default);
             await OnProjectUpdated.InvokeAsync(updated);
             await OnToast.InvokeAsync("Projeto movido com sucesso!");
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Falha ao mover o projeto {ProjectId}.", draggedProject.Id);
+            Logger.LogError(ex, "Falha ao mover o projeto {ProjectId}.", projectId);
             await OnError.InvokeAsync("Não foi possível mover o projeto.");
         }
         finally

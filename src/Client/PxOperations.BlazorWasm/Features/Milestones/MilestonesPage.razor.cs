@@ -125,18 +125,20 @@ public partial class MilestonesPage : ComponentBase
         if (selectedMilestone is null)
             return;
 
+        // O modal pode ser fechado durante a exclusão, o que zera selectedMilestone.
+        var milestoneId = selectedMilestone.Id;
         actionError = null;
 
         try
         {
-            await MilestonesClient.DeleteAsync(selectedMilestone.Id, default);
-            milestones.RemoveAll(m => m.Id == selectedMilestone.Id);
+            await MilestonesClient.DeleteAsync(milestoneId, default);
+            milestones.RemoveAll(m => m.Id == milestoneId);
             CloseDetail();
             await ShowToast("Marco removido.");
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Falha ao remover o marco {MilestoneId}.", selectedMilestone.Id);
+            Logger.LogError(ex, "Falha ao remover o marco {MilestoneId}.", milestoneId);
             CloseDetail();
             actionError = "Não foi possível remover o marco.";
         }
