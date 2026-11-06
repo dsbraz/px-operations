@@ -11,8 +11,11 @@
     }
 }
 
+/* Em tela larga, todos os indicadores numa linha só, seja qual for a quantidade. */
 @media (min-width: 64em) {
     .kpi-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-auto-columns: minmax(0, 1fr);
+        grid-auto-flow: column;
+        grid-template-columns: none;
     }
 }

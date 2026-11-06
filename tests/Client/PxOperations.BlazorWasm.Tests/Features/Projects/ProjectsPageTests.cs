@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using PxOperations.BlazorWasm.Api;
 using PxOperations.BlazorWasm.Features.Projects;
 using PxOperations.BlazorWasm.Tests.Helpers;
@@ -29,7 +30,38 @@ public sealed class ProjectsPageTests : BunitContext
 
         var cut = Render<ProjectsPage>();
 
-        Assert.Contains("Carregando", cut.Markup);
+        Assert.Equal("Carregando projetos", cut.Find(".brq-loading-state").GetAttribute("aria-label"));
+    }
+
+    /// <summary>
+    /// A falha de carga não expõe a mensagem técnica ("TypeError: Failed to
+    /// fetch") e oferece nova tentativa sem recarregar a página.
+    /// </summary>
+    [Fact]
+    public void Page_should_show_a_friendly_load_error_and_retry()
+    {
+        var handler = new ProjectsTestHelpers.MultiStubHttpMessageHandler();
+        handler.AddResponse(HttpMethod.Get, "{}", HttpStatusCode.InternalServerError);
+        handler.AddResponse(HttpMethod.Get, ProjectsTestHelpers.ProjectsJson(ProjectsTestHelpers.MakeProject(id: 1, name: "Portal Recuperado")), HttpStatusCode.OK);
+        Services.AddScoped(_ => new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
+        Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
+        var logger = new CapturingLogger<ProjectsPage>();
+        Services.AddSingleton<ILogger<ProjectsPage>>(logger);
+
+        var cut = Render<ProjectsPage>();
+
+        cut.WaitForAssertion(() =>
+            Assert.Contains("Não foi possível carregar os projetos.", cut.Find(".brq-error-state").TextContent));
+        Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Error && entry.Exception is not null);
+
+        cut.Find(".brq-error-state button").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll(".brq-error-state"));
+            Assert.Contains("Portal Recuperado", cut.Markup);
+        });
     }
 
     /// <summary>
@@ -48,6 +80,23 @@ public sealed class ProjectsPageTests : BunitContext
         Render<ProjectsPage>();
 
         Assert.Equal("http://localhost/projects", navigation.Uri);
+    }
+
+    [Fact]
+    public void Page_should_render_the_design_system_header_with_its_actions()
+    {
+        Services.AddScoped(_ => ProjectsTestHelpers.CreateDelayedClient());
+        Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
+
+        var cut = Render<ProjectsPage>();
+
+        Assert.Equal("Projetos", cut.Find("h1.page-head__title").TextContent.Trim());
+        Assert.Equal("Carteira de projetos, status e renovações.", cut.Find(".page-head__sub").TextContent.Trim());
+        // Sem endpoint de exportação de projetos, um "Exportar CSV" seria um botão morto.
+        Assert.Equal(
+            new[] { "+ Novo Projeto" },
+            cut.FindAll(".page-head__actions .brq-button").Select(action => action.TextContent.Trim()));
     }
 
     // ── STATS BAR ────────────────────────────────────────────────────────────
@@ -126,7 +175,7 @@ public sealed class ProjectsPageTests : BunitContext
 
         cut.WaitForAssertion(() => Assert.Contains("Alpha Renewal", cut.Markup));
 
-        cut.FindAll("button.vtab")[2].Click();
+        cut.FindAll(".toolbar-tabs button")[2].Click();
         cut.Find(".toolbar input[type=text]").Input("Alpha");
 
         cut.WaitForAssertion(() =>
@@ -155,7 +204,7 @@ public sealed class ProjectsPageTests : BunitContext
 
         cut.WaitForAssertion(() => Assert.Contains("Renewal One", cut.Markup));
 
-        cut.FindAll("button.vtab")[2].Click();
+        cut.FindAll(".toolbar-tabs button")[2].Click();
         cut.FindAll(".toolbar select")[0].Change("DC1");
 
         cut.WaitForAssertion(() =>
@@ -184,7 +233,7 @@ public sealed class ProjectsPageTests : BunitContext
 
         cut.WaitForAssertion(() => Assert.Contains("Scheduled Renewal", cut.Markup));
 
-        cut.FindAll("button.vtab")[2].Click();
+        cut.FindAll(".toolbar-tabs button")[2].Click();
         cut.FindAll(".toolbar select")[1].Change("Programado");
 
         cut.WaitForAssertion(() =>
@@ -215,7 +264,7 @@ public sealed class ProjectsPageTests : BunitContext
 
         cut.WaitForAssertion(() => Assert.Contains("Approved Renewal", cut.Markup));
 
-        cut.FindAll("button.vtab")[2].Click();
+        cut.FindAll(".toolbar-tabs button")[2].Click();
         cut.FindAll(".toolbar select")[3].Change("Aprovada");
 
         cut.WaitForAssertion(() =>
@@ -239,7 +288,7 @@ public sealed class ProjectsPageTests : BunitContext
 
         cut.WaitForAssertion(() => Assert.DoesNotContain("overlay open", cut.Markup));
 
-        cut.Find("button.btn-purple").Click();
+        cut.Find(".page-head__actions .brq-button--primary").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -285,7 +334,7 @@ public sealed class ProjectsPageTests : BunitContext
 
         var cut = Render<ProjectsPage>();
 
-        cut.Find("button.btn-purple").Click();
+        cut.Find(".page-head__actions .brq-button--primary").Click();
         cut.WaitForAssertion(() => Assert.Contains("overlay open", cut.Markup));
 
         cut.Find(".mfoot .btn-ghost").Click();
@@ -315,5 +364,39 @@ public sealed class ProjectsPageTests : BunitContext
         cut.Find("button.ibtn.del").Click();
 
         cut.WaitForAssertion(() => Assert.DoesNotContain("ToDelete", cut.Markup));
+    }
+
+    /// <summary>
+    /// Uma exclusão que falha não é falha de carga: a lista continua na tela
+    /// e o aviso diz que a ação não foi concluída, sem "Tentar novamente".
+    /// </summary>
+    [Fact]
+    public void Failed_delete_should_keep_the_list_and_report_the_action()
+    {
+        var handler = new ProjectsTestHelpers.MultiStubHttpMessageHandler();
+        handler.AddResponse(HttpMethod.Get, ProjectsTestHelpers.ProjectsJson(
+            ProjectsTestHelpers.MakeProject(id: 1, name: "Portal Mantido")),
+            HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Delete, "{}", HttpStatusCode.InternalServerError);
+        Services.AddScoped(_ => new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
+        Services.AddScoped<ProjectsClient>();
+        Services.AddScoped<TeamMembersClient>();
+        var logger = new CapturingLogger<ProjectsPage>();
+        Services.AddSingleton<ILogger<ProjectsPage>>(logger);
+
+        var cut = Render<ProjectsPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Portal Mantido", cut.Markup));
+
+        cut.Find("button.ibtn.del").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var alert = cut.Find(".brq-error-state");
+            Assert.Equal("Não foi possível concluir a ação", alert.QuerySelector("h2")!.TextContent.Trim());
+            Assert.Equal("Não foi possível excluir o projeto.", alert.QuerySelector("p")!.TextContent.Trim());
+            Assert.Null(alert.QuerySelector("button"));
+            Assert.Contains("Portal Mantido", cut.Markup);
+            Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Error && entry.Exception is not null);
+        });
     }
 }

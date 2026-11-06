@@ -26,6 +26,32 @@ public sealed class BrqKpiCardTests : BunitContext
         Assert.Equal("carteira completa", cut.Find(".kpi__foot").TextContent);
     }
 
+    /// <summary>
+    /// O tom é estado, não decoração: só o card que sinaliza algo ganha cor,
+    /// e o rótulo continua dizendo o que é (nunca só cor).
+    /// </summary>
+    [Fact]
+    public void Should_mark_only_the_cards_that_carry_a_tone()
+    {
+        var cut = Render<BrqKpiBar>(parameters => parameters
+            .AddChildContent<BrqKpiCard>(card => card
+                .Add(component => component.Label, "Projetos")
+                .Add(component => component.Value, "19"))
+            .AddChildContent<BrqKpiCard>(card => card
+                .Add(component => component.Label, "Críticos")
+                .Add(component => component.Value, "2")
+                .Add(component => component.Tone, BrqStatusTone.Danger))
+            .AddChildContent<BrqKpiCard>(card => card
+                .Add(component => component.Label, "Sem resp")
+                .Add(component => component.Value, "3")
+                .Add(component => component.Tone, BrqStatusTone.Warning)));
+
+        var cards = cut.FindAll("article.kpi");
+        Assert.Equal("kpi", cards[0].ClassName);
+        Assert.Equal("kpi kpi--danger", cards[1].ClassName);
+        Assert.Equal("kpi kpi--warn", cards[2].ClassName);
+    }
+
     [Fact]
     public void Should_not_render_a_decorative_icon()
     {

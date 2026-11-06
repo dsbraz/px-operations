@@ -14,10 +14,10 @@ public sealed class NpsStatsBarTests : BunitContext
             .Add(bar => bar.AverageScore, 8.25)
             .Add(bar => bar.OverdueProjects, 1));
 
-        var labels = cut.FindAll(".stat .slbl").Select(cell => cell.TextContent.Trim()).ToArray();
+        var labels = cut.FindAll(".kpi .kpi__label").Select(cell => cell.TextContent.Trim()).ToArray();
         Assert.Equal(new[] { "NPS oficial", "Respostas", "Média", "Vencidos" }, labels);
 
-        var values = cut.FindAll(".stat .sval").Select(cell => cell.TextContent.Trim()).ToArray();
+        var values = cut.FindAll(".kpi .kpi__value").Select(cell => cell.TextContent.Trim()).ToArray();
         Assert.Equal("4", values[1]);
         Assert.Equal("1", values[3]);
     }
@@ -28,7 +28,7 @@ public sealed class NpsStatsBarTests : BunitContext
         var cut = Render<NpsStatsBar>();
 
         Assert.All(
-            cut.FindAll(".stat .sval").Select(cell => cell.TextContent.Trim()),
+            cut.FindAll(".kpi .kpi__value").Select(cell => cell.TextContent.Trim()),
             value => Assert.Equal("—", value));
     }
 }

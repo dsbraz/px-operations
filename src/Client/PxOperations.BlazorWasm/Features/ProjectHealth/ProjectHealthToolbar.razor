@@ -1,4 +1,5 @@
 @using static PxOperations.BlazorWasm.Features.ProjectHealth.ProjectHealthFormat
+@using PxOperations.Ui.Components.Navigation
 
 <div class="toolbar">
     <div class="search-wrap">
@@ -36,8 +37,10 @@
         <option value="md">Atenção (4–6)</option>
         <option value="lo">Crítico (0–3)</option>
     </select>
-    <div class="view-tabs">
-        <button class="vtab @(ActiveTab == "dash" ? "active" : "")" @onclick='() => OnTabChanged.InvokeAsync("dash")'>Dashboard</button>
-        <button class="vtab @(ActiveTab == "lista" ? "active" : "")" @onclick='() => OnTabChanged.InvokeAsync("lista")'>Projetos</button>
+    <div class="toolbar-tabs">
+        <BrqTabs AccessibleName="Visões de saúde"
+                 Items="@(new BrqTabItem[] { new("dash", "Dashboard"), new("lista", "Projetos") })"
+                 SelectedKey="@ActiveTab"
+                 OnSelect="OnTabChanged" />
     </div>
 </div>

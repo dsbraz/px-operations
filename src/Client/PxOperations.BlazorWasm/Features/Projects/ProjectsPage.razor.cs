@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using PxOperations.BlazorWasm.Api;
 
 namespace PxOperations.BlazorWasm.Features.Projects;
@@ -12,10 +13,12 @@ public partial class ProjectsPage : ComponentBase
 
     [Inject] private ProjectsClient ProjectsClient { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] private ILogger<ProjectsPage> Logger { get; set; } = default!;
 
     // ── Data ─────────────────────────────────────────────────────────────────
     private bool isLoading = true;
     private string? errorMessage;
+    private string? actionError;
     private List<ProjectResponse> projects = [];
 
     // ── Filter / navigation state ─────────────────────────────────────────────
@@ -43,6 +46,14 @@ public partial class ProjectsPage : ComponentBase
             NavigationManager.NavigateTo("/projects", replace: true);
         }
 
+        await LoadProjectsAsync();
+    }
+
+    private async Task LoadProjectsAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+
         try
         {
             var result = await ProjectsClient.ListAsync(null, null, null, null, null, default);
@@ -50,7 +61,8 @@ public partial class ProjectsPage : ComponentBase
         }
         catch (Exception ex)
         {
-            errorMessage = ex.Message;
+            Logger.LogError(ex, "Falha ao carregar os projetos.");
+            errorMessage = "Não foi possível carregar os projetos.";
         }
         finally
         {
@@ -119,6 +131,8 @@ public partial class ProjectsPage : ComponentBase
 
     private async Task DeleteProject(int id)
     {
+        actionError = null;
+
         try
         {
             await ProjectsClient.DeleteAsync(id, default);
@@ -127,11 +141,12 @@ public partial class ProjectsPage : ComponentBase
         }
         catch (Exception ex)
         {
-            errorMessage = ex.Message;
+            Logger.LogError(ex, "Falha ao excluir o projeto {ProjectId}.", id);
+            actionError = "Não foi possível excluir o projeto.";
         }
     }
 
-    private void HandleError(string message) => errorMessage = message;
+    private void HandleError(string message) => actionError = message;
 
     // ── Toast ─────────────────────────────────────────────────────────────────
     private async Task ShowToast(string message)

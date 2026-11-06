@@ -1,20 +1,10 @@
-@using PxOperations.BlazorWasm.Api
+@using PxOperations.Ui.Components.DataDisplay
 
-<div class="stats-bar">
-    <div class="stat pu">
-        <div class="sico">◈</div>
-        <div><div class="sval">@(TotalProjects?.ToString() ?? "—")</div><div class="slbl">Projetos</div></div>
-    </div>
-    <div class="stat pu">
-        <div class="sico">◎</div>
-        <div><div class="sval">@(AverageScore?.ToString("0.0") ?? "—")</div><div class="slbl">Média / 10</div></div>
-    </div>
-    <div class="stat re">
-        <div class="sico">▼</div>
-        <div><div class="sval">@(CriticalCount?.ToString() ?? "—")</div><div class="slbl">Críticos</div></div>
-    </div>
-    <div class="stat or">
-        <div class="sico">!</div>
-        <div><div class="sval">@(NoResponseCount?.ToString() ?? "—")</div><div class="slbl">Sem resp</div></div>
-    </div>
+<div class="page-kpis">
+    <BrqKpiBar Label="Indicadores de saúde">
+        <BrqKpiCard Label="Projetos" Value="@(TotalProjects?.ToString() ?? "—")" />
+        <BrqKpiCard Label="Média / 10" Value="@(AverageScore?.ToString("0.0") ?? "—")" />
+        <BrqKpiCard Label="Críticos" Value="@(CriticalCount?.ToString() ?? "—")" Tone="BrqStatusTone.Danger" />
+        <BrqKpiCard Label="Sem resp" Value="@(NoResponseCount?.ToString() ?? "—")" Tone="BrqStatusTone.Warning" />
+    </BrqKpiBar>
 </div>

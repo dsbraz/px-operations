@@ -63,7 +63,7 @@ public sealed class NpsPageTests : BunitContext
         {
             Assert.Single(cut.FindAll("h1"));
             Assert.Equal("NPS", cut.Find("h1").TextContent.Trim());
-            Assert.Equal(4, cut.FindAll(".nps-indicators .stat").Count);
+            Assert.Equal(4, cut.FindAll("[aria-label='Indicadores do NPS'] .kpi").Count);
             Assert.Equal(4, cut.FindAll(".nps-board-column").Count);
             Assert.Empty(cut.FindAll(".nps-aspect-summary"));
             Assert.Contains("kb-gray", cut.FindAll(".nps-board-column")[0].ClassList);
@@ -94,15 +94,15 @@ public sealed class NpsPageTests : BunitContext
         cut.WaitForAssertion(() =>
         {
             var markup = cut.Markup;
-            var actions = markup.IndexOf("nps-page-header", StringComparison.Ordinal);
-            var indicators = markup.IndexOf("nps-indicators", StringComparison.Ordinal);
+            var actions = markup.IndexOf("page-head", StringComparison.Ordinal);
+            var indicators = markup.IndexOf("Indicadores do NPS", StringComparison.Ordinal);
             var toolbar = markup.IndexOf("nps-toolbar", StringComparison.Ordinal);
             var content = markup.IndexOf("nps-content", StringComparison.Ordinal);
 
             Assert.True(actions < indicators, "A barra de ações deve vir antes dos indicadores.");
             Assert.True(indicators < toolbar, "Os indicadores devem vir antes da toolbar.");
             Assert.True(toolbar < content, "A toolbar deve vir antes do conteúdo.");
-            Assert.Contains("nps-toolbar", cut.Find(".view-tabs").ParentElement!.ClassList);
+            Assert.NotNull(cut.Find("nav[aria-label='Visões do NPS']").Closest(".nps-toolbar"));
         });
     }
 
@@ -202,7 +202,7 @@ public sealed class NpsPageTests : BunitContext
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Equal(4, cut.FindAll(".nps-indicators .stat").Count);
+            Assert.Equal(4, cut.FindAll("[aria-label='Indicadores do NPS'] .kpi").Count);
             Assert.Empty(cut.FindAll(".nps-results .nps-kpi"));
             var executivePanels = cut.Find(".nps-executive-panels");
             Assert.Equal(new[] { "nps-results", "nps-aspect-summary" }, executivePanels.Children.Select(child => child.ClassName));
@@ -323,7 +323,7 @@ public sealed class NpsPageTests : BunitContext
         cut.Find("[aria-label='Expandir respostas de Zulu']").Click();
 
         cut.WaitForAssertion(() => Assert.Contains("Não foi possível carregar as respostas deste projeto.", cut.Find(".nps-result-expansion").TextContent));
-        Assert.Equal(4, cut.FindAll(".nps-indicators .stat").Count);
+        Assert.Equal(4, cut.FindAll("[aria-label='Indicadores do NPS'] .kpi").Count);
         Assert.Equal(2, cut.FindAll(".nps-result-row").Count);
 
         cut.Find(".nps-expansion-error button").Click();
@@ -342,7 +342,7 @@ public sealed class NpsPageTests : BunitContext
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Empty(cut.FindAll(".nps-indicators"));
+            Assert.Empty(cut.FindAll("[aria-label='Indicadores do NPS']"));
             Assert.Empty(cut.FindAll(".nps-aspect-summary"));
             Assert.Equal("Buscar projeto, pessoa ou comentário", cut.Find(".nps-search input").GetAttribute("placeholder"));
             Assert.Single(cut.FindAll(".fmenu__btn"));
@@ -355,11 +355,10 @@ public sealed class NpsPageTests : BunitContext
     }
 
     /// <summary>
-    /// O cabeçalho segue o das outras páginas: só as ações à vista. O título
-    /// continua no documento para leitores de tela e para o foco da navegação.
+    /// O cabeçalho é o do design system, igual ao das outras páginas.
     /// </summary>
     [Fact]
-    public void Header_should_show_only_the_actions_and_keep_the_title_for_screen_readers()
+    public void Header_should_use_the_design_system_page_header()
     {
         var handler = RegisterClient();
         handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
@@ -370,11 +369,11 @@ public sealed class NpsPageTests : BunitContext
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("brq-visually-hidden", cut.Find("h1").ClassList);
-            Assert.Empty(cut.FindAll(".nps-page-header p"));
+            Assert.Equal("NPS", cut.Find("h1.page-head__title").TextContent.Trim());
+            Assert.Equal("Coleta e leitura do relacionamento com clientes.", cut.Find(".page-head__sub").TextContent.Trim());
             Assert.Equal(
                 new[] { "↓ Exportar CSV", "+ Gerar link" },
-                cut.FindAll(".nps-page-actions > *").Select(action => action.TextContent.Trim()));
+                cut.FindAll(".page-head__actions .brq-button").Select(action => action.TextContent.Trim()));
         });
     }
 
@@ -419,7 +418,7 @@ public sealed class NpsPageTests : BunitContext
 
         var cut = Render<NpsPage>();
         cut.WaitForAssertion(() => Assert.Contains("Projeto ativo", cut.Markup));
-        cut.Find(".nps-page-actions button").Click();
+        cut.Find(".page-head__actions button").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -463,7 +462,7 @@ public sealed class NpsPageTests : BunitContext
 
         var cut = Render<NpsPage>();
         cut.WaitForAssertion(() => Assert.Contains("Projeto ativo", cut.Markup));
-        cut.Find(".nps-page-actions button").Click();
+        cut.Find(".page-head__actions button").Click();
         cut.WaitForAssertion(() => cut.Find(".nps-create-collector option[value='Julia Pereira']"));
         cut.Find(".nps-create-project").Change("1");
         cut.Find(".nps-create-collector").Change("Julia Pereira");
@@ -564,7 +563,7 @@ public sealed class NpsPageTests : BunitContext
         cut.WaitForAssertion(() =>
         {
             Assert.Equal(4, cut.FindAll(".nps-board-column").Count);
-            Assert.Contains("Tentar novamente", cut.Markup);
+            Assert.Equal("Tentar novamente", cut.Find(".brq-error-state button").TextContent.Trim());
             Assert.DoesNotContain("Projeto ativo", cut.Markup);
         });
     }
@@ -660,11 +659,11 @@ public sealed class NpsPageTests : BunitContext
 
         var cut = Render<NpsPage>();
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".nps-primary-action")));
-        cut.Find(".nps-page-actions button").Click();
+        cut.Find(".page-head__actions button").Click();
         cut.WaitForAssertion(() => Assert.NotNull(Dialog(cut, "Gerar link NPS").QuerySelector(".nps-action-error")));
 
         Dialog(cut, "Gerar link NPS").QuerySelector(".brq-dialog-footer .btn-ghost")!.Click();
-        cut.Find(".nps-page-actions button").Click();
+        cut.Find(".page-head__actions button").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -904,7 +903,7 @@ public sealed class NpsPageTests : BunitContext
             var request = handler.RequestUris.Single(uri => uri!.AbsolutePath == "/api/nps/responses");
             Assert.Contains("includeWaived=true", request!.Query, StringComparison.Ordinal);
         });
-        Assert.Contains("includeWaived=true", cut.Find("a.btn-ghost").GetAttribute("href")!, StringComparison.Ordinal);
+        Assert.Contains("includeWaived=true", cut.Find(".page-head__actions a.brq-button").GetAttribute("href")!, StringComparison.Ordinal);
     }
 
     private ProjectsTestHelpers.MultiStubHttpMessageHandler RegisterClient()
