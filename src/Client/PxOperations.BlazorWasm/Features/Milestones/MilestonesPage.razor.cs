@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using PxOperations.BlazorWasm.Api;
 
 namespace PxOperations.BlazorWasm.Features.Milestones;
@@ -19,11 +20,13 @@ public partial class MilestonesPage : ComponentBase
 
     [Inject] private MilestonesClient MilestonesClient { get; set; } = default!;
     [Inject] private ProjectsClient ProjectsClient { get; set; } = default!;
+    [Inject] private ILogger<MilestonesPage> Logger { get; set; } = default!;
 
     private readonly CultureInfo portugueseCulture = CultureInfo.GetCultureInfo("pt-BR");
     private readonly DateOnly today = DateOnly.FromDateTime(DateTime.Today);
     private bool isLoading = true;
     private string? errorMessage;
+    private string? actionError;
     private List<MilestoneResponse> milestones = [];
     private List<ProjectResponse> projects = [];
 
@@ -49,6 +52,9 @@ public partial class MilestonesPage : ComponentBase
 
     private async Task LoadAsync()
     {
+        isLoading = true;
+        errorMessage = null;
+
         try
         {
             var milestonesResult = await MilestonesClient.ListAsync(null, null, null, null, null, null, null, default);
@@ -59,7 +65,8 @@ public partial class MilestonesPage : ComponentBase
         }
         catch (Exception ex)
         {
-            errorMessage = ex.Message;
+            Logger.LogError(ex, "Falha ao carregar os marcos.");
+            errorMessage = "Não foi possível carregar os marcos.";
         }
         finally
         {
@@ -118,6 +125,8 @@ public partial class MilestonesPage : ComponentBase
         if (selectedMilestone is null)
             return;
 
+        actionError = null;
+
         try
         {
             await MilestonesClient.DeleteAsync(selectedMilestone.Id, default);
@@ -127,7 +136,9 @@ public partial class MilestonesPage : ComponentBase
         }
         catch (Exception ex)
         {
-            errorMessage = ex.Message;
+            Logger.LogError(ex, "Falha ao remover o marco {MilestoneId}.", selectedMilestone.Id);
+            CloseDetail();
+            actionError = "Não foi possível remover o marco.";
         }
     }
 

@@ -1,9 +1,14 @@
 @page "/project-health"
 @using PxOperations.BlazorWasm.Api
+@using PxOperations.Ui.Components.DataDisplay
+@using PxOperations.Ui.Components.Navigation
 
-<div class="ph-header">
-    <div class="ph-header-title">Operations PX · Saúde de Projetos</div>
-    <a class="ph-header-link" href="/project-health/new">↗ Formulário do Líder</a>
+<div class="page-header-bar">
+    <BrqPageHeader Title="Saúde de Projetos" Description="Avaliação semanal dos líderes sobre cada projeto.">
+        <Actions>
+            <a class="brq-button brq-button--sm brq-button--secondary" href="/project-health/new">↗ Formulário do Líder</a>
+        </Actions>
+    </BrqPageHeader>
 </div>
 
 <ProjectHealthStatsBar TotalProjects="@summary?.TotalProjects"
@@ -20,14 +25,11 @@
 
 @if (isLoading)
 {
-    <div style="text-align:center;padding:60px;color:var(--muted)">Carregando…</div>
+    <div class="page-state"><BrqLoadingState AccessibleLabel="Carregando saúde dos projetos" /></div>
 }
 else if (loadError is not null)
 {
-    <div class="status-card error" style="margin:40px auto;max-width:480px;text-align:center;padding:24px;">
-        <p>@loadError</p>
-        <button class="btn btn-purple" style="margin-top:12px" @onclick="LoadDataAsync">Tentar novamente</button>
-    </div>
+    <div class="page-state"><BrqErrorState Description="@loadError" OnRetry="LoadDataAsync" /></div>
 }
 else if (activeTab == "dash")
 {

@@ -1,4 +1,4 @@
-<article class="kpi" role="listitem">
+<article class="@CssClass" role="listitem">
     <p class="kpi__label">@Label</p>
     <div class="kpi__row">
         <strong class="kpi__value" data-testid="@DataTestId">@Value</strong>
@@ -14,4 +14,14 @@
     [Parameter, EditorRequired] public string Value { get; set; } = string.Empty;
     [Parameter] public string? Context { get; set; }
     [Parameter] public string? DataTestId { get; set; }
+    [Parameter] public BrqStatusTone Tone { get; set; }
+
+    private string CssClass => Tone switch
+    {
+        BrqStatusTone.Positive => "kpi kpi--good",
+        BrqStatusTone.Warning => "kpi kpi--warn",
+        BrqStatusTone.Danger => "kpi kpi--danger",
+        BrqStatusTone.Info => "kpi kpi--info",
+        _ => "kpi"
+    };
 }

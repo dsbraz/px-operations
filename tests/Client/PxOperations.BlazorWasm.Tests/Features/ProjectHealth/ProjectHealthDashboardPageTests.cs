@@ -21,7 +21,38 @@ public sealed class ProjectHealthDashboardPageTests : BunitContext
 
         var cut = Render<ProjectHealthDashboardPage>();
 
-        Assert.Contains("Carregando", cut.Markup);
+        Assert.Single(cut.FindAll(".brq-loading-state"));
+    }
+
+    [Fact]
+    public void Page_should_show_the_load_error_with_retry()
+    {
+        Services.AddScoped(_ => ProjectsTestHelpers.CreateClient("{}", HttpStatusCode.InternalServerError));
+        Services.AddScoped<ProjectHealthClient>();
+
+        var cut = Render<ProjectHealthDashboardPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            var error = cut.Find(".brq-error-state");
+            Assert.Contains("Não foi possível carregar os dados.", error.TextContent);
+            Assert.Equal("Tentar novamente", error.QuerySelector("button")!.TextContent.Trim());
+        });
+    }
+
+    [Fact]
+    public void Page_should_render_the_design_system_header_with_the_leader_form_link()
+    {
+        Services.AddScoped(_ => ProjectsTestHelpers.CreateDelayedClient());
+        Services.AddScoped<ProjectHealthClient>();
+
+        var cut = Render<ProjectHealthDashboardPage>();
+
+        Assert.Equal("Saúde de Projetos", cut.Find("h1.page-head__title").TextContent.Trim());
+        Assert.Equal("Avaliação semanal dos líderes sobre cada projeto.", cut.Find(".page-head__sub").TextContent.Trim());
+        var link = cut.Find(".page-head__actions a.brq-button");
+        Assert.Equal("/project-health/new", link.GetAttribute("href"));
+        Assert.Equal("↗ Formulário do Líder", link.TextContent.Trim());
     }
 
     [Fact]
@@ -70,7 +101,7 @@ public sealed class ProjectHealthDashboardPageTests : BunitContext
             Assert.Contains("Saúde Geral", cut.Markup);
         });
 
-        var projetosTab = cut.FindAll(".vtab")[1];
+        var projetosTab = cut.FindAll(".toolbar-tabs button")[1];
         projetosTab.Click();
 
         cut.WaitForAssertion(() =>

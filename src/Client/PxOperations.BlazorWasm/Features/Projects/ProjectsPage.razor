@@ -1,12 +1,16 @@
 @page "/"
 @page "/projects"
+@using PxOperations.Ui.Components.DataDisplay
+@using PxOperations.Ui.Components.Navigation
 
 <PageTitle>Base de Projetos · Operations PX</PageTitle>
 
-<!-- PAGE ACTIONS BAR -->
-<div class="page-actions-bar">
-    <button class="btn btn-ghost">&#8595; Exportar CSV</button>
-    <button class="btn btn-purple" @onclick="OpenCreateModal">+ Novo Projeto</button>
+<div class="page-header-bar">
+    <BrqPageHeader Title="Projetos" Description="Carteira de projetos, status e renovações.">
+        <Actions>
+            <button type="button" class="brq-button brq-button--sm brq-button--primary" @onclick="OpenCreateModal">+ Novo Projeto</button>
+        </Actions>
+    </BrqPageHeader>
 </div>
 
 <ProjectsStatsBar
@@ -37,12 +41,18 @@
 <!-- WEEKLY PULSE -->
 <WeeklyPulse Projects="@projects" />
 
+@if (actionError is not null)
+{
+    <div class="page-alert"><BrqErrorState Title="Não foi possível concluir a ação" Description="@actionError" /></div>
+}
+
 @if (activeTab == "lista")
 {
     <ProjectListView
         Projects="@FilteredProjects"
         IsLoading="@isLoading"
         ErrorMessage="@errorMessage"
+        OnRetry="@LoadProjectsAsync"
         OnEdit="@OpenEditModal"
         OnDelete="@DeleteProject" />
 }

@@ -1,4 +1,5 @@
 @using PxOperations.BlazorWasm.Api
+@using PxOperations.Ui.Components.DataDisplay
 
 <div class="table-header">
     <div class="th-left">
@@ -14,16 +15,11 @@
 <div class="table-wrap @(tableOpen ? "open" : "")" style="@(tableOpen ? "" : "display:none")">
     @if (IsLoading)
     {
-        <div class="status-card" style="margin:16px 0">
-            <strong>Carregando projetos...</strong>
-        </div>
+        <BrqLoadingState AccessibleLabel="Carregando projetos" />
     }
     else if (ErrorMessage is not null)
     {
-        <div class="status-card error" style="margin:16px 0">
-            <strong>Erro</strong>
-            <p>@ErrorMessage</p>
-        </div>
+        <BrqErrorState Description="@ErrorMessage" OnRetry="OnRetry" />
     }
     else if (!Projects.Any())
     {

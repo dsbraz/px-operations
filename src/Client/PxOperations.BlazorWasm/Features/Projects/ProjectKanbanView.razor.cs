@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using PxOperations.BlazorWasm.Api;
 
 namespace PxOperations.BlazorWasm.Features.Projects;
@@ -6,6 +7,7 @@ namespace PxOperations.BlazorWasm.Features.Projects;
 public partial class ProjectKanbanView : ComponentBase
 {
     [Inject] private ProjectsClient ProjectsClient { get; set; } = default!;
+    [Inject] private ILogger<ProjectKanbanView> Logger { get; set; } = default!;
 
     [Parameter, EditorRequired] public List<ProjectResponse> Projects { get; set; } = [];
     [Parameter] public EventCallback<int> OnEdit { get; set; }
@@ -104,7 +106,8 @@ public partial class ProjectKanbanView : ComponentBase
         }
         catch (Exception ex)
         {
-            await OnError.InvokeAsync(ex.Message);
+            Logger.LogError(ex, "Falha ao mover o projeto {ProjectId}.", draggedProject.Id);
+            await OnError.InvokeAsync("Não foi possível mover o projeto.");
         }
         finally
         {

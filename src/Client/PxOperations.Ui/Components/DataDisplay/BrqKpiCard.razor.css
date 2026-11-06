@@ -35,3 +35,9 @@
     color: var(--color-text-muted);
     font-size: var(--fs-body-xs);
 }
+
+/* Tom de estado: só o valor muda de cor; o rótulo continua dizendo o que é. */
+.kpi--good .kpi__value { color: var(--color-good); }
+.kpi--warn .kpi__value { color: var(--color-warn); }
+.kpi--danger .kpi__value { color: var(--color-danger); }
+.kpi--info .kpi__value { color: var(--color-info); }

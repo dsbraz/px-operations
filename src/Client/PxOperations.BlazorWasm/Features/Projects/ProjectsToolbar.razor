@@ -1,3 +1,5 @@
+@using PxOperations.Ui.Components.Navigation
+
 <div class="toolbar">
     <div class="search-wrap">
         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -34,9 +36,10 @@
         <option value="Pendente">&#9873; Pendente</option>
         <option value="None">Sem status</option>
     </select>
-    <div class="view-tabs">
-        <button class="vtab @(ActiveTab == "lista" ? "active" : "")" @onclick='() => OnActiveTabChanged.InvokeAsync("lista")'>Lista</button>
-        <button class="vtab @(ActiveTab == "kanban" ? "active" : "")" @onclick='() => OnActiveTabChanged.InvokeAsync("kanban")'>Kanban</button>
-        <button class="vtab @(ActiveTab == "renewals" ? "active" : "")" @onclick='() => OnActiveTabChanged.InvokeAsync("renewals")'>Renovações</button>
+    <div class="toolbar-tabs">
+        <BrqTabs AccessibleName="Visões de projetos"
+                 Items="@(new BrqTabItem[] { new("lista", "Lista"), new("kanban", "Kanban"), new("renewals", "Renovações") })"
+                 SelectedKey="@ActiveTab"
+                 OnSelect="OnActiveTabChanged" />
     </div>
 </div>

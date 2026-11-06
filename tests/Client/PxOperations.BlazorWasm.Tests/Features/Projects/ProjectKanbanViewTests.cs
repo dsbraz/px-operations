@@ -3,6 +3,7 @@ using System.Net.Http;
 using Bunit;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using PxOperations.BlazorWasm.Api;
 using PxOperations.BlazorWasm.Features.Projects;
 using PxOperations.BlazorWasm.Tests.Helpers;
@@ -197,5 +198,32 @@ public sealed class ProjectKanbanViewTests : BunitContext
             Assert.NotNull(toastMessage);
             Assert.Contains("Projeto movido", toastMessage);
         });
+    }
+
+    /// <summary>
+    /// A falha ao mover chega à página como uma frase para o usuário, não como
+    /// o texto técnico da exceção do cliente HTTP.
+    /// </summary>
+    [Fact]
+    public void Should_report_a_friendly_error_when_the_move_fails()
+    {
+        var handler = new ProjectsTestHelpers.MultiStubHttpMessageHandler();
+        handler.AddResponse(HttpMethod.Patch, "{}", HttpStatusCode.InternalServerError);
+        Services.AddScoped(_ => new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
+        Services.AddScoped<ProjectsClient>();
+        var logger = new CapturingLogger<ProjectKanbanView>();
+        Services.AddSingleton<ILogger<ProjectKanbanView>>(logger);
+
+        string? error = null;
+        var cut = Render<ProjectKanbanView>(p => p
+            .Add(c => c.Projects, new[] { ProjectsTestHelpers.MakeProject(id: 1, status: "Programado", name: "Mover Projeto") }.ToList())
+            .Add(c => c.OnError, Microsoft.AspNetCore.Components.EventCallback.Factory.Create<string>(
+                this, message => error = message)));
+
+        cut.Find(".kanban-card").TriggerEvent("ondragstart", new DragEventArgs());
+        cut.FindAll(".kanban-col-body")[1].TriggerEvent("ondrop", new DragEventArgs());
+
+        cut.WaitForAssertion(() => Assert.Equal("Não foi possível mover o projeto.", error));
+        Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Error && entry.Exception is not null);
     }
 }
