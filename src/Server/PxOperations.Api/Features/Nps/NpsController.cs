@@ -1,4 +1,5 @@
 using System.Text;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using PxOperations.Application.Features.Nps;
@@ -167,6 +168,7 @@ public sealed class NpsController(
     }
 
     [HttpGet("public/{token:guid}")]
+    [AllowAnonymous]
     [ProducesResponseType<NpsPublicSurveyView>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<NpsPublicSurveyView>> GetPublic(Guid token, CancellationToken ct)
@@ -176,6 +178,7 @@ public sealed class NpsController(
     }
 
     [HttpPost("public/{token:guid}/responses")]
+    [AllowAnonymous]
     [EnableRateLimiting("nps-public")]
     [ProducesResponseType<NpsResponseView>(StatusCodes.Status201Created)]
     public async Task<ActionResult<NpsResponseView>> SubmitPublic(

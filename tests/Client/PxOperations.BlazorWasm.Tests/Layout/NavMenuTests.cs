@@ -1,4 +1,5 @@
 using Bunit;
+using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using PxOperations.BlazorWasm.Layout;
@@ -7,6 +8,35 @@ namespace PxOperations.BlazorWasm.Tests.Layout;
 
 public sealed class NavMenuTests : BunitContext
 {
+    private readonly BunitAuthorizationContext authorization;
+
+    public NavMenuTests()
+    {
+        authorization = AddAuthorization();
+    }
+
+    [Fact]
+    public void NavMenu_should_show_who_is_signed_in()
+    {
+        authorization.SetAuthorized("Pessoa BRQ");
+
+        var cut = Render<NavMenu>();
+
+        Assert.Equal("Pessoa BRQ", cut.Find(".topbar-user__name").TextContent.Trim());
+    }
+
+    [Fact]
+    public void Sign_out_should_go_through_the_microsoft_logout()
+    {
+        authorization.SetAuthorized("Pessoa BRQ");
+        var navigation = Services.GetRequiredService<NavigationManager>();
+
+        var cut = Render<NavMenu>();
+        cut.Find("button.topbar-user__logout").Click();
+
+        Assert.EndsWith("/authentication/logout", navigation.Uri, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void NavMenu_should_render_milestones_entry()
     {
@@ -38,6 +68,7 @@ public sealed class NavMenuTests : BunitContext
     {
         var navigation = Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo($"/nps/{Guid.NewGuid()}");
+        authorization.SetAuthorized("Pessoa BRQ");
 
         var cut = Render<NavMenu>();
 
@@ -47,5 +78,6 @@ public sealed class NavMenuTests : BunitContext
         Assert.DoesNotContain("/milestones", cut.Markup);
         Assert.DoesNotContain("/project-health", cut.Markup);
         Assert.DoesNotContain(">NPS<", cut.Markup);
+        Assert.DoesNotContain("Sair", cut.Markup);
     }
 }

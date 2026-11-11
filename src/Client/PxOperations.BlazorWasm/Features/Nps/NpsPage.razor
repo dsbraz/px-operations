@@ -13,7 +13,7 @@
     <div class="page-header-bar">
         <BrqPageHeader Title="NPS" Description="Coleta e leitura do relacionamento com clientes.">
             <Actions>
-                <a class="brq-button brq-button--sm brq-button--secondary" href="@ExportHref">&#8595; Exportar CSV</a>
+                <button type="button" class="brq-button brq-button--sm brq-button--secondary nps-export" @onclick="ExportResponsesAsync">&#8595; Exportar CSV</button>
                 <button type="button" class="brq-button brq-button--sm brq-button--primary" @onclick="OpenCreateDialog">+ Gerar link</button>
             </Actions>
         </BrqPageHeader>

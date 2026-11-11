@@ -1,4 +1,5 @@
 @using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @inject NavigationManager NavigationManager
 
 <header class="topbar">
@@ -15,10 +16,20 @@
             <NavLink href="/project-health">Saúde</NavLink>
             <NavLink href="/nps">NPS</NavLink>
         </nav>
+        <AuthorizeView>
+            <Authorized>
+                <div class="topbar-user">
+                    <span class="topbar-user__name">@context.User.Identity?.Name</span>
+                    <button type="button" class="topbar-user__logout" @onclick="SignOut">Sair</button>
+                </div>
+            </Authorized>
+        </AuthorizeView>
     }
 </header>
 
 @code {
+    private void SignOut() => NavigationManager.NavigateToLogout("authentication/logout");
+
     private bool IsPublicNpsForm
     {
         get
