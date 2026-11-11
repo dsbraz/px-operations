@@ -26,6 +26,17 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 
+    # A configuracao do cliente sai das variaveis do conteiner (ENTRA_TENANT_ID e
+    # ENTRA_CLIENT_ID, renderizadas pelo envsubst da imagem do nginx), nao do
+    # appsettings.json publicado: os IDs do Entra ficam no .env.gcp, fora do git.
+    # Sem as variaveis o envsubst deixa ${...} no arquivo e o nginx nem sobe.
+    location = /appsettings.json {
+        include /etc/nginx/security-headers.conf;
+        add_header Cache-Control "no-store" always;
+        default_type application/json;
+        return 200 '{"Api":{"BaseUrl":"/","Scope":"api://${ENTRA_CLIENT_ID}/access_as_user"},"AzureAd":{"Authority":"https://login.microsoftonline.com/${ENTRA_TENANT_ID}","ClientId":"${ENTRA_CLIENT_ID}","ValidateAuthority":true}}';
+    }
+
     location / {
         include /etc/nginx/security-headers.conf;
         add_header Cache-Control "no-store" always;

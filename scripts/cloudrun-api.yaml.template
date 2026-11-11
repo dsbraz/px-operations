@@ -34,6 +34,10 @@ spec:
             # Export to the collector sidecar over the shared loopback network.
             - name: OpenTelemetry__Otlp__Endpoint
               value: "http://localhost:4317"
+            - name: Authentication__TenantId
+              value: "${ENTRA_TENANT_ID}"
+            - name: Authentication__ClientId
+              value: "${ENTRA_CLIENT_ID}"
             - name: ConnectionStrings__Default
               valueFrom:
                 secretKeyRef:

@@ -11,3 +11,6 @@ riderModule.iml
 TestResults/
 
 .idea/
+
+# Gerado pelo compose a partir do .env (IDs do Entra ID)
+src/Client/PxOperations.BlazorWasm/wwwroot/appsettings.Development.json

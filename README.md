@@ -10,7 +10,7 @@
 
 ## Development with Docker Desktop
 
-1. Copy `.env.example` to `.env`.
+1. Copy `.env.example` to `.env` and fill in `ENTRA_TENANT_ID` and `ENTRA_CLIENT_ID` (see Authentication below).
 2. Optionally set `OTEL_EXPORTER_OTLP_ENDPOINT` if you want to export traces and metrics to a collector.
 3. Run `docker compose up`.
 4. Open `http://localhost:8080` for the Blazor client.
@@ -31,10 +31,27 @@ One app registration (single tenant) serves every environment:
 3. **Manifest**: `"accessTokenAcceptedVersion": 2`.
 4. **Token configuration**: add the optional claim `acct` to the **access token**. Without it, every user gets 403.
 
-Then fill in the public identifiers:
+Then set the two public identifiers in one place, outside git: `.env` for local development and `.env.gcp` for deploys.
 
-- `src/Server/PxOperations.Api/appsettings.json`: `Authentication:TenantId`, `Authentication:ClientId`.
-- `src/Client/PxOperations.BlazorWasm/wwwroot/appsettings.json`: `AzureAd:Authority` (`https://login.microsoftonline.com/<tenant-id>`, never `common`), `AzureAd:ClientId`, `Api:Scope` (`api://<client-id>/access_as_user`).
+```
+ENTRA_TENANT_ID=<tenant-id>
+ENTRA_CLIENT_ID=<client-id>
+```
+
+Everything else is derived from them:
+
+- **API**: `compose.yaml`, and `scripts/cloudrun-api.yaml.template` in deploys, pass them as `Authentication__TenantId` and `Authentication__ClientId`.
+- **Client in Cloud Run**: nginx renders `/appsettings.json` from the container variables, which `gcp-deploy.sh` sets. Without them nginx refuses to start.
+- **Client in `docker compose`**: the client container writes `wwwroot/appsettings.Development.json` (git-ignored) from `.env` on startup.
+
+Running the client with `dotnet run` outside Docker requires creating that file by hand:
+
+```json
+{
+  "Api": { "BaseUrl": "http://localhost:8081/", "Scope": "api://<client-id>/access_as_user" },
+  "AzureAd": { "Authority": "https://login.microsoftonline.com/<tenant-id>", "ClientId": "<client-id>", "ValidateAuthority": true }
+}
+```
 
 Before relying on it, decode a real access token and check `ver` = `2.0`, `iss` = `https://login.microsoftonline.com/<tenant-id>/v2.0`, `aud` = `<client-id>`, and that `acct` is present.
 
