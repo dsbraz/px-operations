@@ -1,3 +1,5 @@
+using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -5,6 +7,8 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.IdentityModel.Protocols;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using PxOperations.Api;
 using Testcontainers.PostgreSql;
 
@@ -35,8 +39,19 @@ public sealed class ApiWebApplicationFactory(
     string connectionString,
     TimeProvider? timeProvider = null,
     string? clientOrigin = null,
-    ILoggerProvider? loggerProvider = null) : WebApplicationFactory<Program>
+    ILoggerProvider? loggerProvider = null,
+    string tenantId = TestTokens.TenantId,
+    string clientId = TestTokens.ClientId) : WebApplicationFactory<Program>
 {
+    // Todo client nasce autenticado como membro da BRQ, para que os testes de
+    // cada módulo continuem falando só do módulo. Quem testa a autenticação
+    // limpa ou troca o cabeçalho.
+    protected override void ConfigureClient(HttpClient client)
+    {
+        base.ConfigureClient(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TestTokens.Member());
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
@@ -45,7 +60,9 @@ public sealed class ApiWebApplicationFactory(
             var settings = new Dictionary<string, string?>
             {
                 ["ConnectionStrings:Default"] = connectionString,
-                ["Database:MigrateOnStartup"] = "true"
+                ["Database:MigrateOnStartup"] = "true",
+                ["Authentication:TenantId"] = tenantId,
+                ["Authentication:ClientId"] = clientId
             };
             if (clientOrigin is not null)
             {
@@ -54,6 +71,16 @@ public sealed class ApiWebApplicationFactory(
 
             configuration.AddInMemoryCollection(settings);
         });
+        // Só a chave de assinatura é de teste: issuer, audience e a política de
+        // autorização seguem os de produção.
+        builder.ConfigureServices(services =>
+            services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
+            {
+                var configuration = new OpenIdConnectConfiguration();
+                configuration.SigningKeys.Add(TestTokens.SigningKey);
+                options.Configuration = configuration;
+                options.ConfigurationManager = new StaticConfigurationManager<OpenIdConnectConfiguration>(configuration);
+            }));
         if (timeProvider is not null)
         {
             builder.ConfigureServices(services =>

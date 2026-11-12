@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.RateLimiting;
+using PxOperations.Api.Authentication;
 using PxOperations.Api.Errors;
 using PxOperations.Api.Features.Projects;
 using PxOperations.Api.Observability;
@@ -44,10 +45,12 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(clientOrigins)
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .WithExposedHeaders("Content-Disposition");
     });
 });
 builder.Services.AddApiOpenTelemetry(builder.Configuration, builder.Environment);
+builder.Services.AddApiAuthentication(isOpenApiGeneration);
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<CreateProjectRequestValidator>();
 builder.Services.AddInfrastructureServices(builder.Configuration);
@@ -108,10 +111,12 @@ if (app.Environment.IsDevelopment())
         dbContext.Database.Migrate();
     }
 
-    app.MapOpenApi();
+    app.MapOpenApi().AllowAnonymous();
     app.UseCors("ClientDevelopment");
 }
 
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 
 app.Run();

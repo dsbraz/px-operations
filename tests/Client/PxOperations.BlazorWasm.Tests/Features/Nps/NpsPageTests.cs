@@ -351,7 +351,9 @@ public sealed class NpsPageTests : BunitContext
         });
         Assert.Contains(handler.RequestUris, uri => uri?.AbsolutePath == "/api/nps/filter-options");
         Assert.Contains(handler.RequestUris, uri => uri?.AbsolutePath == "/api/nps/responses" && uri.Query.Contains("format=complete") && !uri.Query.Contains("status="));
-        Assert.DoesNotContain("status=", cut.Find("a[href*='responses/export']").GetAttribute("href"));
+        cut.Find(".page-head__actions button.nps-export").Click();
+        cut.WaitForAssertion(() => Assert.Contains(handler.RequestUris, uri => uri?.AbsolutePath == "/api/nps/responses/export"));
+        Assert.DoesNotContain("status=", handler.RequestUris.Last(uri => uri?.AbsolutePath == "/api/nps/responses/export")!.Query);
     }
 
     /// <summary>
@@ -418,7 +420,7 @@ public sealed class NpsPageTests : BunitContext
 
         var cut = Render<NpsPage>();
         cut.WaitForAssertion(() => Assert.Contains("Projeto ativo", cut.Markup));
-        cut.Find(".page-head__actions button").Click();
+        cut.Find(".page-head__actions button.brq-button--primary").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -462,7 +464,7 @@ public sealed class NpsPageTests : BunitContext
 
         var cut = Render<NpsPage>();
         cut.WaitForAssertion(() => Assert.Contains("Projeto ativo", cut.Markup));
-        cut.Find(".page-head__actions button").Click();
+        cut.Find(".page-head__actions button.brq-button--primary").Click();
         cut.WaitForAssertion(() => cut.Find(".nps-create-collector option[value='Julia Pereira']"));
         cut.Find(".nps-create-project").Change("1");
         cut.Find(".nps-create-collector").Change("Julia Pereira");
@@ -659,11 +661,11 @@ public sealed class NpsPageTests : BunitContext
 
         var cut = Render<NpsPage>();
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".nps-primary-action")));
-        cut.Find(".page-head__actions button").Click();
+        cut.Find(".page-head__actions button.brq-button--primary").Click();
         cut.WaitForAssertion(() => Assert.NotNull(Dialog(cut, "Gerar link NPS").QuerySelector(".nps-action-error")));
 
         Dialog(cut, "Gerar link NPS").QuerySelector(".brq-dialog-footer .btn-ghost")!.Click();
-        cut.Find(".page-head__actions button").Click();
+        cut.Find(".page-head__actions button.brq-button--primary").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -903,7 +905,60 @@ public sealed class NpsPageTests : BunitContext
             var request = handler.RequestUris.Single(uri => uri!.AbsolutePath == "/api/nps/responses");
             Assert.Contains("includeWaived=true", request!.Query, StringComparison.Ordinal);
         });
-        Assert.Contains("includeWaived=true", cut.Find(".page-head__actions a.brq-button").GetAttribute("href")!, StringComparison.Ordinal);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/responses/export", "projeto;nota", HttpStatusCode.OK);
+        cut.Find(".page-head__actions button.nps-export").Click();
+        cut.WaitForAssertion(() =>
+        {
+            var export = handler.RequestUris.Single(uri => uri!.AbsolutePath == "/api/nps/responses/export");
+            Assert.Contains("includeWaived=true", export!.Query, StringComparison.Ordinal);
+        });
+    }
+
+    /// <summary>
+    /// Com login, um link direto para o CSV chegaria ao API sem o token e
+    /// voltaria 401. A exportação passa pelo HttpClient autenticado e só então
+    /// entrega o arquivo ao navegador.
+    /// </summary>
+    [Fact]
+    public void Export_should_download_the_csv_through_the_authenticated_client()
+    {
+        var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/responses/export", "projeto;nota", HttpStatusCode.OK);
+        var module = JSInterop.SetupModule("./Features/Nps/NpsPage.razor.js");
+        module.SetupVoid("downloadFile", _ => true);
+        Navigate("/nps/coleta");
+
+        var cut = Render<NpsPage>();
+        cut.Find(".page-head__actions button.nps-export").Click();
+
+        cut.WaitForAssertion(() => module.VerifyInvoke("downloadFile"));
+        Assert.Contains(handler.RequestUris, uri => uri?.AbsolutePath == "/api/nps/responses/export");
+    }
+
+    /// <summary>
+    /// As outras ações da tela mostram a explicação do servidor; a exportação
+    /// também, em vez de trocar o ProblemDetails por uma mensagem genérica.
+    /// </summary>
+    [Fact]
+    public void Export_should_show_the_server_explanation_when_it_is_refused()
+    {
+        var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(
+            HttpMethod.Get,
+            "/api/nps/responses/export",
+            """{"title":"Forbidden","status":403,"detail":"Access is restricted to BRQ members."}""",
+            HttpStatusCode.Forbidden);
+        Navigate("/nps/coleta");
+
+        var cut = Render<NpsPage>();
+        cut.Find(".page-head__actions button.nps-export").Click();
+
+        cut.WaitForAssertion(() =>
+            Assert.Contains("Access is restricted to BRQ members.", cut.Find(".nps-load-error").TextContent, StringComparison.Ordinal));
     }
 
     private ProjectsTestHelpers.MultiStubHttpMessageHandler RegisterClient()

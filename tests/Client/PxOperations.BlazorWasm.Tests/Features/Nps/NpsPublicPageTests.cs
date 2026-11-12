@@ -347,8 +347,9 @@ public sealed class NpsPublicPageTests : BunitContext, IAsyncLifetime
         var handler = new ProjectsTestHelpers.MultiStubHttpMessageHandler();
         handler.AddResponse(HttpMethod.Get, response, status);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
-        Services.AddScoped(_ => httpClient);
-        Services.AddScoped<NpsClient>();
+        // A pesquisa pública é respondida por quem não tem conta BRQ: ela usa o
+        // client anônimo, sem o handler que exige token.
+        Services.AddKeyedScoped(AnonymousApi.Key, (_, _) => new NpsClient(httpClient));
         return handler;
     }
 

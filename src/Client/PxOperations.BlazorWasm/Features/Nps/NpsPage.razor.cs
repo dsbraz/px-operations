@@ -67,7 +67,6 @@ public partial class NpsPage : ComponentBase, IDisposable
         ? string.Empty
         : PublicUrl(createdDispatch.Targets.Single(target => target.IsGeneric).Token);
 
-    private string ExportHref => new Uri(HttpClient.BaseAddress!, $"api/nps/responses/export{BuildResponseQuery()}").ToString();
     private int ActiveFacetCount => ActiveChips.Count;
 
     private IReadOnlyList<FilterChip> ActiveChips
@@ -416,6 +415,37 @@ public partial class NpsPage : ComponentBase, IDisposable
         catch (Exception exception)
         {
             actionError = ApiErrorFormatter.Format(exception, "Não foi possível carregar os responsáveis pela coleta.");
+        }
+    }
+
+    // Um link direto para o CSV chegaria ao API sem o token da pessoa logada.
+    // O arquivo vem pelo HttpClient autenticado e só então é entregue ao
+    // navegador; o nome é o que o servidor manda no Content-Disposition.
+    private async Task ExportResponsesAsync()
+    {
+        actionError = null;
+        try
+        {
+            using var response = await HttpClient.GetAsync($"api/nps/responses/export{BuildResponseQuery()}");
+            if (!response.IsSuccessStatusCode)
+            {
+                var problem = await response.Content.ReadAsStringAsync();
+                actionError = ApiErrorFormatter.Format(
+                    new ApiException("Export refused.", (int)response.StatusCode, problem, new Dictionary<string, IEnumerable<string>>(), null),
+                    "Não foi possível exportar as respostas.");
+                return;
+            }
+
+            var disposition = response.Content.Headers.ContentDisposition;
+            var fileName = disposition?.FileNameStar ?? disposition?.FileName?.Trim('"') ?? "nps.csv";
+            await using var content = await response.Content.ReadAsStreamAsync();
+            using var stream = new DotNetStreamReference(content);
+            await using var module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./Features/Nps/NpsPage.razor.js");
+            await module.InvokeVoidAsync("downloadFile", fileName, stream);
+        }
+        catch (Exception exception)
+        {
+            actionError = ApiErrorFormatter.Format(exception, "Não foi possível exportar as respostas.");
         }
     }
 

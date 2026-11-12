@@ -73,7 +73,7 @@ public sealed partial class ThemeBootstrapTests
             StringComparison.Ordinal);
     }
 
-    private static string ResolveAsset(params string[] segments)
+    internal static string ResolveAsset(params string[] segments)
     {
         var manifestPath = Path.Combine(
             AppContext.BaseDirectory,

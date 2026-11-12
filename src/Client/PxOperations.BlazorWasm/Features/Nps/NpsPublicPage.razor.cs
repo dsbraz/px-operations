@@ -7,7 +7,7 @@ namespace PxOperations.BlazorWasm.Features.Nps;
 public partial class NpsPublicPage : ComponentBase
 {
     [Parameter] public Guid Token { get; set; }
-    [Inject] private NpsClient NpsClient { get; set; } = default!;
+    [Inject(Key = AnonymousApi.Key)] private NpsClient NpsClient { get; set; } = default!;
     [Inject] private IJSRuntime JsRuntime { get; set; } = default!;
 
     private readonly Dictionary<string, int> aspects = new(StringComparer.Ordinal);

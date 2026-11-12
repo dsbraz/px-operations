@@ -6,3 +6,4 @@
 **/.vscode
 .env
 TestResults/
+src/Client/PxOperations.BlazorWasm/wwwroot/appsettings.Development.json

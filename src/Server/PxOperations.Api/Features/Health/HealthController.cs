@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PxOperations.Application.Features.Diagnostics;
 
 namespace PxOperations.Api.Features.Health;
 
 [ApiController]
+[AllowAnonymous]
 [Route("health")]
 public sealed class HealthController(IReadinessService readinessService) : ControllerBase
 {
