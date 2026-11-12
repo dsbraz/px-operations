@@ -427,7 +427,15 @@ public partial class NpsPage : ComponentBase, IDisposable
         try
         {
             using var response = await HttpClient.GetAsync($"api/nps/responses/export{BuildResponseQuery()}");
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                var problem = await response.Content.ReadAsStringAsync();
+                actionError = ApiErrorFormatter.Format(
+                    new ApiException("Export refused.", (int)response.StatusCode, problem, new Dictionary<string, IEnumerable<string>>(), null),
+                    "Não foi possível exportar as respostas.");
+                return;
+            }
+
             var disposition = response.Content.Headers.ContentDisposition;
             var fileName = disposition?.FileNameStar ?? disposition?.FileName?.Trim('"') ?? "nps.csv";
             await using var content = await response.Content.ReadAsStreamAsync();

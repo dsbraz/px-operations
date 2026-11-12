@@ -45,7 +45,8 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(clientOrigins)
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .WithExposedHeaders("Content-Disposition");
     });
 });
 builder.Services.AddApiOpenTelemetry(builder.Configuration, builder.Environment);

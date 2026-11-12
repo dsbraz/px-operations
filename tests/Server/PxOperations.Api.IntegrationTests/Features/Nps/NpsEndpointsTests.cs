@@ -496,6 +496,25 @@ public sealed class NpsEndpointsTests(PostgreSqlFixture fixture)
         Assert.Contains("HYPERLINK", csv, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Em dev o cliente (8080) chama o API (8081) em outra origem: sem expor o
+    /// header, o navegador esconde o Content-Disposition e o arquivo perde o nome.
+    /// </summary>
+    [Fact]
+    public async Task Csv_export_should_expose_the_file_name_to_the_development_client()
+    {
+        await using var factory = new ApiWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/nps/responses/export");
+        request.Headers.Add("Origin", "http://localhost:8080");
+
+        using var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(response.Headers.TryGetValues("Access-Control-Expose-Headers", out var exposed));
+        Assert.Contains("Content-Disposition", string.Join(",", exposed), StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public async Task Repository_should_recognize_the_database_duplicate_response_violation()
     {

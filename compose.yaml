@@ -63,7 +63,7 @@ services:
       - -lc
       # O appsettings.Development.json do cliente é gerado do .env (fora do git):
       # os IDs do Entra ficam num lugar só, o mesmo que o server lê.
-      - printf '{"Api":{"BaseUrl":"http://localhost:8081/","Scope":"api://%s/access_as_user"},"AzureAd":{"Authority":"https://login.microsoftonline.com/%s","ClientId":"%s","ValidateAuthority":true}}\n' "$${ENTRA_CLIENT_ID}" "$${ENTRA_TENANT_ID}" "$${ENTRA_CLIENT_ID}" > src/Client/PxOperations.BlazorWasm/wwwroot/appsettings.Development.json && (dotnet build src/Client/PxOperations.BlazorWasm/PxOperations.BlazorWasm.csproj >/tmp/px-client-build.log 2>&1 || dotnet build src/Client/PxOperations.BlazorWasm/PxOperations.BlazorWasm.csproj) && exec dotnet watch --no-hot-reload run --project src/Client/PxOperations.BlazorWasm --no-launch-profile --urls http://0.0.0.0:8080 --non-interactive
+      - printf '{"Api":{"BaseUrl":"http://localhost:8081/","Scope":"api://%s/access_as_user"},"AzureAd":{"Authority":"https://login.microsoftonline.com/%s","ClientId":"%s","ValidateAuthority":true}}\n' "$${ENTRA_CLIENT_ID}" "$${ENTRA_TENANT_ID}" "$${ENTRA_CLIENT_ID}" > src/Client/PxOperations.BlazorWasm/wwwroot/appsettings.Development.json && chmod a+rw src/Client/PxOperations.BlazorWasm/wwwroot/appsettings.Development.json && (dotnet build src/Client/PxOperations.BlazorWasm/PxOperations.BlazorWasm.csproj >/tmp/px-client-build.log 2>&1 || dotnet build src/Client/PxOperations.BlazorWasm/PxOperations.BlazorWasm.csproj) && exec dotnet watch --no-hot-reload run --project src/Client/PxOperations.BlazorWasm --no-launch-profile --urls http://0.0.0.0:8080 --non-interactive
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://0.0.0.0:8080

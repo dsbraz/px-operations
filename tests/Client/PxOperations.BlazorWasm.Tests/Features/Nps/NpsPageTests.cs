@@ -937,6 +937,30 @@ public sealed class NpsPageTests : BunitContext
         Assert.Contains(handler.RequestUris, uri => uri?.AbsolutePath == "/api/nps/responses/export");
     }
 
+    /// <summary>
+    /// As outras ações da tela mostram a explicação do servidor; a exportação
+    /// também, em vez de trocar o ProblemDetails por uma mensagem genérica.
+    /// </summary>
+    [Fact]
+    public void Export_should_show_the_server_explanation_when_it_is_refused()
+    {
+        var handler = RegisterClient();
+        handler.AddResponse(HttpMethod.Get, "/api/nps/dashboard", NpsTestHelpers.DashboardJson(), HttpStatusCode.OK);
+        handler.AddResponse(HttpMethod.Get, "/api/nps/projects", NpsTestHelpers.ProjectsJson(), HttpStatusCode.OK);
+        handler.AddResponse(
+            HttpMethod.Get,
+            "/api/nps/responses/export",
+            """{"title":"Forbidden","status":403,"detail":"Access is restricted to BRQ members."}""",
+            HttpStatusCode.Forbidden);
+        Navigate("/nps/coleta");
+
+        var cut = Render<NpsPage>();
+        cut.Find(".page-head__actions button.nps-export").Click();
+
+        cut.WaitForAssertion(() =>
+            Assert.Contains("Access is restricted to BRQ members.", cut.Find(".nps-load-error").TextContent, StringComparison.Ordinal));
+    }
+
     private ProjectsTestHelpers.MultiStubHttpMessageHandler RegisterClient()
     {
         var handler = new ProjectsTestHelpers.MultiStubHttpMessageHandler();
